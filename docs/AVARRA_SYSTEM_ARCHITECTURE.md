@@ -18,6 +18,8 @@ avarra/
 │   ├── avarra_ecs/
 │   ├── avarra_world/
 │   ├── avarra_content/
+│   ├── avarra_physics/
+│   ├── avarra_gameplay/
 │   ├── avarra_network/
 │   ├── avarra_replication/
 │   ├── avarra_persistence/

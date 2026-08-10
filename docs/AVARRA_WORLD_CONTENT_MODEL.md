@@ -240,7 +240,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4 Implementation
+# 14. Current Stage 4/5 Implementation
 
 The initial vertical slice now provides:
 
@@ -248,7 +248,8 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 1
+  content schema version 2, with version 1 still readable
+  collider, character-controller, player-control, and interactable definitions
 
 avarra_world
   immutable WorldDefinition
@@ -259,8 +260,9 @@ avarra_world
 ```
 
 The Game's isometric proof world is creator-style data rather than hard-coded
-entity construction. It declares asset, entity, transform, renderable, and
-isometric occlusion semantics in `isometric_proof.avarra`.
+entity construction. It declares asset, entity, transform, renderable,
+isometric occlusion, physics collider, character-controller, player-control,
+and interactable semantics in `isometric_proof.avarra`.
 
 The Stage 4 `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked

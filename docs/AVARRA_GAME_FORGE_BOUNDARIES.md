@@ -129,6 +129,8 @@ Recommended ownership:
 | `avarra_ecs` | ✓ | preview/tools | ✓ | canonical runtime entities/components |
 | `avarra_world` | ✓ | ✓ | ✓ | world definitions/chunks/IDs |
 | `avarra_content` | ✓ | ✓ | ✓ | RPG/content schemas/definitions |
+| `avarra_physics` | ✓ | preview/tools | ✓ | collision contracts and authoritative queries |
+| `avarra_gameplay` | ✓ | preview/tools | ✓ | character movement and interaction systems |
 | `avarra_persistence` | ✓ subset | project-related | ✓ authority | save contracts/storage abstractions |
 | `avarra_network` | ✓ | optional preview | ✓ | protocol/transport abstractions |
 | `avarra_replication` | ✓ | optional tools | ✓ | replicated state contracts |

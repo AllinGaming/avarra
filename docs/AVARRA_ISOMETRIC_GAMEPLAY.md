@@ -235,3 +235,20 @@ on platforms where the provisional backend returns no mesh entity.
 The first occlusion resolver deliberately uses presentation-space AABBs. It is
 a small deterministic foundation for the Stage 3 proof, not the eventual roof
 group, interior-volume, or physics visibility system.
+
+---
+
+# 12. Current Stage 5 Character Loop
+
+Stage 5 turns the Stage 3 ground point into an authoritative movement target.
+The Game also emits device-neutral direct-movement and interaction intents from
+WASD/arrow keys and touch controls.
+
+`avarra_gameplay` advances the authored player at a fixed delta, sweeps its box
+through `PhysicsCollisionWorld`, stops or wall-slides on stable-ID collisions,
+and writes the resulting transform back to ECS. Presentation is re-extracted
+after movement and the orthographic camera target follows the character.
+
+Interaction is an explicit proximity and line-of-sight query against an
+authored stable target. Navigation/pathfinding remains OD-006; the current tap
+loop moves directly toward a point and does not claim obstacle path planning.

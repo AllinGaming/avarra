@@ -32,22 +32,25 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 7. `docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md`
 8. `docs/AVARRA_ISOMETRIC_GAMEPLAY.md`
 9. `docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`
-10. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-11. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-12. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-13. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-14. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-15. `docs/AVARRA_OPEN_DECISIONS.md`
-16. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-17. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-18. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-19. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-20. ADRs under `docs/adr/`
+10. `docs/AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md`
+11. `docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md`
+12. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+13. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+14. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+15. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+16. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+17. `docs/AVARRA_OPEN_DECISIONS.md`
+18. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+19. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+20. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+21. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+22. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0 and 1 are complete. The physical-device remainder of Stage 2 is open,
-and the Stage 3 isometric interaction implementation is in progress.
+Stages 0, 1, 3, 4, and the Stage 5 prototype slice are implemented. Physical
+Android runtime/performance validation remains open for the presentation and
+character gates.
 
 ```text
 apps/
@@ -60,6 +63,10 @@ packages/
   avarra_ecs/     Dart — entity/component runtime and local transforms
   avarra_client/  Dart — immutable presentation extraction
   avarra_isometric/ Dart — camera, picking, input, and occlusion semantics
+  avarra_content/  Dart — versioned authored component schemas
+  avarra_world/    Dart — portable world decoding and ECS loading
+  avarra_physics/  Dart — server-safe ray and kinematic sweep queries
+  avarra_gameplay/ Dart — character movement and interaction systems
   avarra_scene_bridge/ Dart — renderer adapter contract and handle mapping
   avarra_thermion_bridge/ Flutter — Thermion/Filament scene adapter and viewport
 ```
@@ -89,6 +96,13 @@ Pixel 10 Pro Android emulator; physical Android remains a manual gate. Results
 and provisional Thermion findings are recorded in
 `docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`.
 
+Stage 5 adds content schema v2, a server-safe static-box collision-query
+boundary, a kinematic character controller with wall sliding, tap-to-move,
+WASD/arrow and touch controls, camera following, and proximity/line-of-sight
+interaction. The current query backend is deliberately not a general physics
+solver. See `docs/adr/ADR-018-stage-5-physics-query-backend.md` and
+`docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -101,6 +115,10 @@ Run workspace verification commands from the repository root:
 dart analyze .
 dart test packages/avarra_core
 dart test packages/avarra_ecs
+dart test packages/avarra_content
+dart test packages/avarra_world
+dart test packages/avarra_physics
+dart test packages/avarra_gameplay
 dart test packages/avarra_client
 dart test packages/avarra_scene_bridge
 dart test packages/avarra_isometric

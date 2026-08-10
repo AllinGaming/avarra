@@ -57,7 +57,17 @@ maintenance risk
 
 ## OD-002 — Physics
 
-Need spike.
+Current provisional decision:
+
+> Use AVARRA's narrow deterministic static-box query backend for the Stage 5
+> kinematic character slice. Keep the general rigid-body solver decision open.
+
+Current evidence (2026-08-10): `jolt_physics` 0.0.1-dev.1 publishes no usable
+Dart library and describes itself as coming soon. `flutter_scene_rapier` 0.4.0
+is coupled to Flutter Scene and Flutter UI rather than the server-safe runtime
+boundary. `box3d` 0.1.0 has the closest API and platform shape, but its
+hooks/native-toolchain v2 dependency cannot resolve with the pinned Thermion
+hooks-v1 toolchain. See ADR-018.
 
 Criteria:
 

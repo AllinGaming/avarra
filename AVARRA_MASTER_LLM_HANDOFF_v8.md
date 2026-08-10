@@ -247,6 +247,14 @@ canonical encoding, and stable-ID ECS instantiation. Avarra Game loads the
 isometric proof from the same bundled `.avarra` definition on Windows and
 Android targets.
 
+Stage 5 extends that boundary with content schema v2 and two server-safe
+packages. `avarra_physics` owns replaceable collision-query contracts plus the
+current deterministic static-box ray/sweep implementation. `avarra_gameplay`
+owns kinematic character movement, wall sliding, and line-of-sight interaction.
+Game converts keyboard, touch-button, and ground-pick input into semantic
+movement/interaction intents and follows the authored player. This narrow
+backend is not a general physics solver; OD-002 remains open for rigid bodies.
+
 The current single-JSON `.avarra` representation is explicitly a prototype,
 not the final archive or cooked serialization decision. See
 `AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.
@@ -967,6 +975,8 @@ Recommended ownership:
 | `avarra_ecs` | ✓ | preview/tools | ✓ | canonical runtime entities/components |
 | `avarra_world` | ✓ | ✓ | ✓ | world definitions/chunks/IDs |
 | `avarra_content` | ✓ | ✓ | ✓ | RPG/content schemas/definitions |
+| `avarra_physics` | ✓ | preview/tools | ✓ | collision contracts and authoritative queries |
+| `avarra_gameplay` | ✓ | preview/tools | ✓ | character movement and interaction systems |
 | `avarra_persistence` | ✓ subset | project-related | ✓ authority | save contracts/storage abstractions |
 | `avarra_network` | ✓ | optional preview | ✓ | protocol/transport abstractions |
 | `avarra_replication` | ✓ | optional tools | ✓ | replicated state contracts |
@@ -1147,6 +1157,8 @@ avarra/
 │   ├── avarra_ecs/
 │   ├── avarra_world/
 │   ├── avarra_content/
+│   ├── avarra_physics/
+│   ├── avarra_gameplay/
 │   ├── avarra_network/
 │   ├── avarra_replication/
 │   ├── avarra_persistence/
@@ -2465,6 +2477,23 @@ The first occlusion resolver deliberately uses presentation-space AABBs. It is
 a small deterministic foundation for the Stage 3 proof, not the eventual roof
 group, interior-volume, or physics visibility system.
 
+---
+
+# 12. Current Stage 5 Character Loop
+
+Stage 5 turns the Stage 3 ground point into an authoritative movement target.
+The Game also emits device-neutral direct-movement and interaction intents from
+WASD/arrow keys and touch controls.
+
+`avarra_gameplay` advances the authored player at a fixed delta, sweeps its box
+through `PhysicsCollisionWorld`, stops or wall-slides on stable-ID collisions,
+and writes the resulting transform back to ECS. Presentation is re-extracted
+after movement and the orthographic camera target follows the character.
+
+Interaction is an explicit proximity and line-of-sight query against an
+authored stable target. Navigation/pathfinding remains OD-006; the current tap
+loop moves directly toward a point and does not claim obstacle path planning.
+
 <!-- END AVARRA_ISOMETRIC_GAMEPLAY.md -->
 
 ---
@@ -2816,6 +2845,145 @@ after a physics-backend evaluation/ADR.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md -->
+
+# AVARRA — Stage 5 Character + Physics Validation
+
+**Status:** Prototype slice validated on Windows and Android emulator
+
+**Date:** 2026-08-10
+
+## Delivered slice
+
+Stage 5 now provides a complete small character loop across authored content,
+authoritative runtime state, presentation, desktop input, and mobile input:
+
+```text
+.avarra content schema v2
+  → ECS transform/collider/controller/player/interactable components
+  → deterministic server-safe static collision snapshot
+  → fixed-step direct or tap-target character movement
+  → box sweep, stop, and wall slide
+  → presentation transform refresh and camera follow
+  → stable-ID proximity plus line-of-sight interaction
+```
+
+The proof world contains four authored entities: player, occluder, barrier, and
+interactive console. All use the existing portable cube asset; no entity is
+constructed directly in the Game shell.
+
+## Package boundaries
+
+`avarra_physics` is pure Dart and owns:
+
+- `PhysicsCollisionWorld` and stable-ID query results;
+- validated collider components;
+- fail-closed world validation for the current axis-aligned collider limit;
+- deterministic static axis-aligned box raycasts;
+- Minkowski-expanded kinematic box sweeps.
+
+`avarra_gameplay` is pure Dart and owns:
+
+- validated controller/player/interactable components;
+- fixed-delta direct and move-to-point character movement;
+- collision stopping and one-step wall sliding;
+- proximity and collision-ray line-of-sight interaction.
+
+The Game owns device input, target/selection state, the fixed update timer,
+presentation extraction, controls, status UI, and camera follow. Thermion owns
+presentation only and is absent from authoritative packages.
+
+## Physics evaluation
+
+Current packages were evaluated against Windows, Android, headless Dart,
+ray/sweep support, licensing, API maturity, and build complexity. No current
+general 3D package passed the complete boundary:
+
+- `jolt_physics` has no usable published Dart implementation;
+- `flutter_scene_rapier` is coupled to Flutter Scene and Flutter UI;
+- `box3d` 0.1.0 requires Dart hooks 2 while the validated pinned Thermion stack
+  requires hooks 1, and Pub rejects the combined dependency graph.
+
+ADR-018 therefore accepts the narrow deterministic query backend for this
+slice while keeping OD-002 open for general rigid bodies. This is not a custom
+general physics solver.
+
+## Content compatibility
+
+Content schema version 2 adds:
+
+```text
+avarra.physics.collider
+avarra.character_controller
+avarra.player_controlled
+avarra.interactable
+```
+
+The world format remains version 1. Content schema version 1 worlds remain
+readable, while Stage 5 component types are rejected when claimed by a v1
+document. Relationship validation requires transforms for colliders, a
+character collider for controllers, a controller for player control, and a
+transform plus non-sensor static collider for interactables.
+
+## Automated validation
+
+The final workspace pass produced:
+
+- formatting check: 91 files, no changes;
+- analyzer: no issues;
+- 94 passing tests across all Dart and Flutter packages/apps;
+- dedicated server-safety checks for both new packages;
+- collision ray/sweep, stop, wall-slide, interaction, schema compatibility,
+  malformed relationship, runtime mapping, and bundled-world coverage;
+- Game Windows release build;
+- Game Android debug APK build;
+- headless Avarra Server AOT executable compile.
+
+Artifacts:
+
+```text
+apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe
+apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk
+build/avarra_server.exe
+```
+
+The Android build retains the known upstream Thermion warning about migration
+from plugin-applied Kotlin Gradle Plugin configuration to Built-in Kotlin. It
+does not fail the current build.
+
+## Pixel emulator smoke validation
+
+Validated on the connected `sdk gphone16k x86 64` Pixel-class emulator,
+Android 17/API 37:
+
+- APK streamed installation succeeded;
+- process launched and remained alive;
+- four authored entities rendered with the Stage 5/content-v2 HUD;
+- touch control clusters did not overlap after moving Interact above them;
+- camera rotation exposed the console;
+- picking returned console stable ID
+  `01890f47-e8b8-7a68-8000-000000000004`;
+- interaction produced `Interacted: Ancient console`;
+- a ground tap completed with `Arrived at ground target` while camera follow
+  remained active;
+- no AVARRA crash, Dart exception, Vulkan device loss, or application-owned
+  Android error was observed. The one process-filtered Android XR feature-flag
+  message came from the Android framework and did not affect the app.
+
+## Remaining gates
+
+- Repeat movement, collision, interaction, lifecycle, frame-time, thermal, and
+  touch-comfort checks on a physical Android device.
+- Add authored visual differentiation/labels for proof interactables.
+- Select a mature general 3D physics backend before dynamic rigid bodies.
+- Add navigation/path planning rather than treating direct tap movement as
+  obstacle-aware navigation.
+- Revisit fixed simulation tick rate under networking and mobile profiling.
+
+<!-- END AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_WORLD_CONTENT_MODEL.md -->
 
 # AVARRA — World & Content Model
@@ -3060,7 +3228,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4 Implementation
+# 14. Current Stage 4/5 Implementation
 
 The initial vertical slice now provides:
 
@@ -3068,7 +3236,8 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 1
+  content schema version 2, with version 1 still readable
+  collider, character-controller, player-control, and interactable definitions
 
 avarra_world
   immutable WorldDefinition
@@ -3079,8 +3248,9 @@ avarra_world
 ```
 
 The Game's isometric proof world is creator-style data rather than hard-coded
-entity construction. It declares asset, entity, transform, renderable, and
-isometric occlusion semantics in `isometric_proof.avarra`.
+entity construction. It declares asset, entity, transform, renderable,
+isometric occlusion, physics collider, character-controller, player-control,
+and interactable semantics in `isometric_proof.avarra`.
 
 The Stage 4 `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked
@@ -5802,6 +5972,8 @@ See `AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md`.
 
 # Stage 5 — Character + Physics
 
+**Status:** Prototype slice implemented on 2026-08-10
+
 Evaluate/select physics backend.
 
 Build:
@@ -5818,6 +5990,23 @@ interaction
 Gate:
 
 > Same controllable character behaves correctly Windows/Android.
+
+Implementation:
+
+- `avarra_physics` provides server-safe, deterministic static-box raycasts and
+  kinematic box sweeps behind a replaceable query contract.
+- `avarra_gameplay` owns direct/tap-target character movement, collision wall
+  sliding, and proximity/line-of-sight interaction.
+- Content schema v2 authors colliders, character-controller settings,
+  player-control markers, and interactables while schema v1 remains readable.
+- Game follows the authored player and exposes desktop keyboard, touch buttons,
+  ground targeting, and interaction using stable entity IDs.
+- A general rigid-body backend remains open because current candidates failed
+  the server/toolchain boundary; the Stage 5 backend is not a custom solver.
+
+The headless, Windows, and Android-emulator portions of the gate pass. Physical
+Android behavior/performance remains open. See
+`AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md` and ADR-018.
 
 ---
 
@@ -6085,7 +6274,17 @@ maintenance risk
 
 ## OD-002 — Physics
 
-Need spike.
+Current provisional decision:
+
+> Use AVARRA's narrow deterministic static-box query backend for the Stage 5
+> kinematic character slice. Keep the general rigid-body solver decision open.
+
+Current evidence (2026-08-10): `jolt_physics` 0.0.1-dev.1 publishes no usable
+Dart library and describes itself as coming soon. `flutter_scene_rapier` 0.4.0
+is coupled to Flutter Scene and Flutter UI rather than the server-safe runtime
+boundary. `box3d` 0.1.0 has the closest API and platform shape, but its
+hooks/native-toolchain v2 dependency cannot resolve with the pinned Thermion
+hooks-v1 toolchain. See ADR-018.
 
 Criteria:
 
@@ -7256,5 +7455,74 @@ open, so Stage 2 is not yet complete.
 - <https://github.com/nmfisher/thermion/blob/caad37835e7d379621247b24b7de9d84071bd474/thermion_dart/native/src/vulkan/windows/WindowsVulkanContext.cpp>
 
 <!-- END adr/ADR-017-thermion-windows-runtime-compatibility.md -->
+
+---
+
+<!-- BEGIN adr/ADR-018-stage-5-physics-query-backend.md -->
+
+# ADR-018 — Stage 5 Physics Query Backend
+
+**Status:** Accepted interim query backend; general solver deferred
+
+**Date:** 2026-08-10
+
+## Context
+
+Stage 5 needs authoritative character collision, raycasts, box sweeps, direct
+movement, tap targets, and interaction on Windows, Android, and a headless Dart
+server. The project explicitly defers building a custom general physics solver.
+
+The evaluated current Dart candidates did not satisfy all boundaries:
+
+- `jolt_physics` 0.0.1-dev.1 contains no usable `lib` implementation and its
+  package page says the binding is coming soon;
+- `flutter_scene_rapier` 0.4.0 is coupled to Flutter Scene/Flutter UI, so it is
+  not a server-safe authoritative dependency and inherits the renderer's stable
+  Flutter compatibility problem;
+- `box3d` 0.1.0 has the best server/platform/query shape, but requires Dart
+  hooks 2 and `native_toolchain_c ^0.19.2`; pinned Thermion requires hooks 1 and
+  `native_toolchain_c ^0.17.6`. Pub correctly rejects the combined graph.
+
+Forcing incompatible hook generations or vendoring a speculative native fork
+would expand Stage 5 risk into the already-validated renderer toolchain.
+
+## Decision
+
+Introduce `avarra_physics` as a pure-Dart, renderer-neutral collision-query
+boundary. Its interim `DeterministicPhysicsCollisionWorld` snapshots authored
+static axis-aligned box colliders and implements deterministic nearest-hit
+raycasts and Minkowski-expanded kinematic box sweeps with stable `EntityId`
+results.
+
+Introduce `avarra_gameplay` above that contract for the authoritative
+kinematic character controller, collision response/wall sliding, and
+proximity plus line-of-sight interaction.
+
+This implementation is deliberately not a general rigid-body solver. It does
+not add forces, joints, stacks, dynamic bodies, continuous world simulation,
+or broad engine abstractions. OD-002 remains open for a mature solver once a
+candidate satisfies the runtime and toolchain boundary.
+
+## Consequences
+
+- Headless server tests use the same collision and gameplay code as clients.
+- Windows and Android builds add no new FFI or native build-hook dependency.
+- Stage 5 authored colliders are axis-aligned static boxes or character boxes;
+  world validation rejects collider rotation rather than silently ignoring it.
+- Static collision state is snapshotted when a world is created; later moving
+  obstacles require an explicit rebuild or a future backend.
+- The stable query interface limits migration cost when a mature 3D backend is
+  selected.
+- Dynamic rigid bodies, rotated collider fidelity, and physics performance at
+  streamed-world scale remain future validation work.
+
+## Sources
+
+- <https://pub.dev/packages/jolt_physics>
+- <https://pub.dev/packages/flutter_scene_rapier>
+- <https://pub.dev/packages/flutter_scene>
+- <https://pub.dev/packages/box3d>
+
+<!-- END adr/ADR-018-stage-5-physics-query-backend.md -->
 
 ---

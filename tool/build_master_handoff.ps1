@@ -16,6 +16,7 @@ $sourcePaths = @(
     'docs/AVARRA_ISOMETRIC_GAMEPLAY.md'
     'docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md'
     'docs/AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md'
+    'docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md'
     'docs/AVARRA_WORLD_CONTENT_MODEL.md'
     'docs/AVARRA_MULTIPLAYER_SERVER.md'
     'docs/AVARRA_FORGE_ARCHITECTURE.md'
@@ -36,6 +37,7 @@ $sourcePaths = @(
     'docs/adr/ADR-015-flutter-scene-stable-sdk-compatibility.md'
     'docs/adr/ADR-016-initial-thermion-renderer.md'
     'docs/adr/ADR-017-thermion-windows-runtime-compatibility.md'
+    'docs/adr/ADR-018-stage-5-physics-query-backend.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

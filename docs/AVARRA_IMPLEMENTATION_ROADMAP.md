@@ -175,6 +175,8 @@ See `AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md`.
 
 # Stage 5 — Character + Physics
 
+**Status:** Prototype slice implemented on 2026-08-10
+
 Evaluate/select physics backend.
 
 Build:
@@ -191,6 +193,23 @@ interaction
 Gate:
 
 > Same controllable character behaves correctly Windows/Android.
+
+Implementation:
+
+- `avarra_physics` provides server-safe, deterministic static-box raycasts and
+  kinematic box sweeps behind a replaceable query contract.
+- `avarra_gameplay` owns direct/tap-target character movement, collision wall
+  sliding, and proximity/line-of-sight interaction.
+- Content schema v2 authors colliders, character-controller settings,
+  player-control markers, and interactables while schema v1 remains readable.
+- Game follows the authored player and exposes desktop keyboard, touch buttons,
+  ground targeting, and interaction using stable entity IDs.
+- A general rigid-body backend remains open because current candidates failed
+  the server/toolchain boundary; the Stage 5 backend is not a custom solver.
+
+The headless, Windows, and Android-emulator portions of the gate pass. Physical
+Android behavior/performance remains open. See
+`AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md` and ADR-018.
 
 ---
 

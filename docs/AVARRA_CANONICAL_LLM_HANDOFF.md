@@ -238,6 +238,14 @@ canonical encoding, and stable-ID ECS instantiation. Avarra Game loads the
 isometric proof from the same bundled `.avarra` definition on Windows and
 Android targets.
 
+Stage 5 extends that boundary with content schema v2 and two server-safe
+packages. `avarra_physics` owns replaceable collision-query contracts plus the
+current deterministic static-box ray/sweep implementation. `avarra_gameplay`
+owns kinematic character movement, wall sliding, and line-of-sight interaction.
+Game converts keyboard, touch-button, and ground-pick input into semantic
+movement/interaction intents and follows the authored player. This narrow
+backend is not a general physics solver; OD-002 remains open for rigid bodies.
+
 The current single-JSON `.avarra` representation is explicitly a prototype,
 not the final archive or cooked serialization decision. See
 `AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.
