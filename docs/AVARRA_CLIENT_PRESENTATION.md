@@ -275,7 +275,6 @@ Gradle application path presents a future Flutter compatibility risk.
 
 Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
-decision. Human confirmation of Windows visual content, physical Android
+decision. Windows visual and lifecycle validation passes. Physical Android
 rendering/performance, animation, picking, selection, shadows, transparency,
-and Forge viewport embedding still require validation. See ADR-016 and
-ADR-017.
+and Forge viewport embedding still require validation. See ADR-016 and ADR-017.

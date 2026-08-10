@@ -79,9 +79,10 @@ headless server.
 The Stage 2 implementation now includes a static Khronos glTF cube, one ECS
 entity synchronized through the scene bridge, a camera, and a direct light.
 Passing compile and packaging gates is not equivalent to passing the roadmap's
-runtime render gate. Stage 2 remains in progress until the same entity is
-visually confirmed on Windows and a physical Android device and basic runtime
-performance/lifecycle behavior is recorded.
+runtime render gate. The Windows visual and lifecycle gate passed on
+2026-08-10. Stage 2 remains in progress until the same entity is confirmed on a
+physical Android device and its basic runtime performance/lifecycle behavior is
+recorded.
 
 ## Consequences
 

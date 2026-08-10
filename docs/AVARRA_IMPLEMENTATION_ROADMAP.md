@@ -95,9 +95,9 @@ Gate:
 
 > Same world entities render on Windows and Android.
 
-The compile, asset-packaging, Windows process-stability, and controlled-close
-parts of the gate pass. The gate is not yet fully met: visually confirm the
-same entity in the Windows window and on a physical Android device, then record
+The compile, asset-packaging, Windows visual, process-stability, resize,
+minimize/restore, and controlled-close parts of the gate pass. The gate is not
+yet fully met: confirm the same entity on a physical Android device, then record
 basic frame, lifecycle, and device behavior.
 
 ---

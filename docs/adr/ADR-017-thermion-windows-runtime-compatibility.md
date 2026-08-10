@@ -75,9 +75,10 @@ asset directory. This was independent of the Vulkan compatibility decision.
 AVARRA now packages the exact Khronos texture and tests that every external
 buffer and image URI in the glTF resolves to a non-empty file.
 
-The visual content of the Windows scene still needs human confirmation. A
-physical Android runtime/performance check also remains open. Stage 2 is not
-complete until those checks pass.
+The corrected Windows scene was visually confirmed on 2026-08-10. It preserved
+the cube and HUD through resize and minimize/restore while the process remained
+responsive. A physical Android runtime/performance check remains open, so
+Stage 2 is not yet complete.
 
 ## Consequences
 

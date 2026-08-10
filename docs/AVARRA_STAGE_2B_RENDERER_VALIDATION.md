@@ -1,6 +1,6 @@
 # AVARRA — Stage 2B Renderer Validation
 
-**Status:** Windows runtime and package gates passed; corrected visual recheck and device validation pending
+**Status:** Windows validation passed; physical Android runtime validation pending
 **Date:** 2026-08-10
 
 ## Implemented proof
@@ -48,6 +48,8 @@ Passed on 2026-08-10:
 - Game Android debug APK build;
 - Windows visible-process stability for more than three minutes;
 - Windows controlled launch/close with process exit within 15 seconds;
+- corrected Windows visual confirmation and resize/minimize/restore lifecycle
+  validation;
 - no Windows Vulkan device-loss or unsupported-update errors on the pinned
   pre-release;
 - Forge Windows release build;
@@ -111,14 +113,20 @@ copied. Thermion correctly reported the missing asset instead of rendering the
 cube. The exact Khronos texture is now packaged, a regression test checks every
 external glTF URI, and both product bundles contain all three files.
 
-The corrected Windows build has been relaunched and remains responsive. Human
-confirmation still must establish:
+The corrected Windows build passed on 2026-08-10:
 
-1. the cube is visible and lit;
-2. the HUD reports one ECS entity bound to the scene;
+1. the user confirmed that the cube is visible;
+2. the captured window shows the lit Khronos cube and the one-entity HUD;
 3. no initialization error overlay appears;
-4. resize and minimize/restore preserve the scene;
-5. the observed content matches the intended cube proof.
+4. the process remained responsive after resizing from 1280x720 to 1000x700;
+5. minimize/restore preserved the scene and the original window size was
+   restored;
+6. a graceful close after the lifecycle cycle exited in 0.24 seconds.
+
+![AVARRA Windows visual pass](images/stage-2b-windows-visual-pass.png)
+
+The evidence image SHA-256 is
+`4FDB07D9F141F6AEFE2B4D10EEA2E91274561C61A489EFF80D8D9E46F02DA8C0`.
 
 Physical Android device:
 
@@ -127,6 +135,10 @@ cd apps/avarra_game
 flutter devices
 flutter run -d <device-id>
 ```
+
+No physical Android device was connected on 2026-08-10; `flutter devices`
+reported only Windows, Chrome, and Edge. This is the remaining Stage 2 runtime
+gate.
 
 Confirm the same visual result, then background/resume the app and record:
 
@@ -139,9 +151,9 @@ surface/lifecycle errors
 thermal behavior during a short run
 ```
 
-Do not mark the Stage 2 roadmap gate complete until both manual runs pass. The
-next implementation milestone after that is Stage 3's isometric camera,
-picking, and desktop/mobile selection loop.
+Do not mark the Stage 2 roadmap gate complete until the physical Android run
+passes. The next implementation milestone after that is Stage 3's isometric
+camera, picking, and desktop/mobile selection loop.
 
 ## Decision record
 

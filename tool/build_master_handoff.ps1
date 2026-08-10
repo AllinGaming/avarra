@@ -44,6 +44,12 @@ $sections = foreach ($relativePath in $sourcePaths) {
 
     $label = $relativePath -replace '^docs/', ''
     $content = (Get-Content -Raw -Encoding UTF8 -LiteralPath $fullPath).TrimEnd()
+    $sourceDirectory = (Split-Path -Parent $relativePath) -replace '\\', '/'
+    if ($sourceDirectory) {
+        # Image links are relative to each source document, while the generated
+        # handoff lives at the repository root.
+        $content = $content -replace '\]\(images/', "]($sourceDirectory/images/"
+    }
 
     @"
 <!-- BEGIN $label -->

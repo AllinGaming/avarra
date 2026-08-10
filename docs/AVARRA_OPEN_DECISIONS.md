@@ -30,9 +30,9 @@ not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 passes
 Windows and Android compile gates but deterministically loses the Vulkan device
 at live Windows startup. The pinned official pre-release fixes the queue race,
 passes Windows live-process/close and Android package checks, and still needs a
-scoped Android compile-SDK override. Human Windows visual confirmation,
-physical Android validation, Stage 3 interaction features, editor embedding,
-and performance remain open. See ADR-015 through ADR-017.
+scoped Android compile-SDK override. The Windows visual and lifecycle gate now
+passes. Physical Android validation, Stage 3 interaction features, editor
+embedding, and performance remain open. See ADR-015 through ADR-017.
 
 Decision criteria:
 

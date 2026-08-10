@@ -193,8 +193,9 @@ Thermion is pinned to official `v0.5.0-pre.5` commit `caad378…` after publishe
 0.4.1 passed compile gates but failed the live Windows Vulkan gate. The pinned
 commit passes Windows runtime stability/close and Android package gates on
 Flutter 3.44.4 stable, with a scoped Android compile-SDK workaround. The
-renderer choice is not irreversible and remains subject to visual and physical
-device validation. See ADR-015 through ADR-017.
+Windows visual and lifecycle gate also passes. The renderer choice is not
+irreversible and remains subject to physical Android and later interaction
+validation. See ADR-015 through ADR-017.
 
 The scene bridge exists to avoid coupling simulation to one 3D dependency.
 
@@ -1960,10 +1961,9 @@ Gradle application path presents a future Flutter compatibility risk.
 
 Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
-decision. Human confirmation of Windows visual content, physical Android
+decision. Windows visual and lifecycle validation passes. Physical Android
 rendering/performance, animation, picking, selection, shadows, transparency,
-and Forge viewport embedding still require validation. See ADR-016 and
-ADR-017.
+and Forge viewport embedding still require validation. See ADR-016 and ADR-017.
 
 <!-- END AVARRA_CLIENT_PRESENTATION.md -->
 
@@ -1973,7 +1973,7 @@ ADR-017.
 
 # AVARRA — Stage 2B Renderer Validation
 
-**Status:** Windows runtime and package gates passed; corrected visual recheck and device validation pending
+**Status:** Windows validation passed; physical Android runtime validation pending
 **Date:** 2026-08-10
 
 ## Implemented proof
@@ -2021,6 +2021,8 @@ Passed on 2026-08-10:
 - Game Android debug APK build;
 - Windows visible-process stability for more than three minutes;
 - Windows controlled launch/close with process exit within 15 seconds;
+- corrected Windows visual confirmation and resize/minimize/restore lifecycle
+  validation;
 - no Windows Vulkan device-loss or unsupported-update errors on the pinned
   pre-release;
 - Forge Windows release build;
@@ -2084,14 +2086,20 @@ copied. Thermion correctly reported the missing asset instead of rendering the
 cube. The exact Khronos texture is now packaged, a regression test checks every
 external glTF URI, and both product bundles contain all three files.
 
-The corrected Windows build has been relaunched and remains responsive. Human
-confirmation still must establish:
+The corrected Windows build passed on 2026-08-10:
 
-1. the cube is visible and lit;
-2. the HUD reports one ECS entity bound to the scene;
+1. the user confirmed that the cube is visible;
+2. the captured window shows the lit Khronos cube and the one-entity HUD;
 3. no initialization error overlay appears;
-4. resize and minimize/restore preserve the scene;
-5. the observed content matches the intended cube proof.
+4. the process remained responsive after resizing from 1280x720 to 1000x700;
+5. minimize/restore preserved the scene and the original window size was
+   restored;
+6. a graceful close after the lifecycle cycle exited in 0.24 seconds.
+
+![AVARRA Windows visual pass](docs/images/stage-2b-windows-visual-pass.png)
+
+The evidence image SHA-256 is
+`4FDB07D9F141F6AEFE2B4D10EEA2E91274561C61A489EFF80D8D9E46F02DA8C0`.
 
 Physical Android device:
 
@@ -2100,6 +2108,10 @@ cd apps/avarra_game
 flutter devices
 flutter run -d <device-id>
 ```
+
+No physical Android device was connected on 2026-08-10; `flutter devices`
+reported only Windows, Chrome, and Edge. This is the remaining Stage 2 runtime
+gate.
 
 Confirm the same visual result, then background/resume the app and record:
 
@@ -2112,9 +2124,9 @@ surface/lifecycle errors
 thermal behavior during a short run
 ```
 
-Do not mark the Stage 2 roadmap gate complete until both manual runs pass. The
-next implementation milestone after that is Stage 3's isometric camera,
-picking, and desktop/mobile selection loop.
+Do not mark the Stage 2 roadmap gate complete until the physical Android run
+passes. The next implementation milestone after that is Stage 3's isometric
+camera, picking, and desktop/mobile selection loop.
 
 ## Decision record
 
@@ -5216,9 +5228,9 @@ Gate:
 
 > Same world entities render on Windows and Android.
 
-The compile, asset-packaging, Windows process-stability, and controlled-close
-parts of the gate pass. The gate is not yet fully met: visually confirm the
-same entity in the Windows window and on a physical Android device, then record
+The compile, asset-packaging, Windows visual, process-stability, resize,
+minimize/restore, and controlled-close parts of the gate pass. The gate is not
+yet fully met: confirm the same entity on a physical Android device, then record
 basic frame, lifecycle, and device behavior.
 
 ---
@@ -5522,9 +5534,9 @@ not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 passes
 Windows and Android compile gates but deterministically loses the Vulkan device
 at live Windows startup. The pinned official pre-release fixes the queue race,
 passes Windows live-process/close and Android package checks, and still needs a
-scoped Android compile-SDK override. Human Windows visual confirmation,
-physical Android validation, Stage 3 interaction features, editor embedding,
-and performance remain open. See ADR-015 through ADR-017.
+scoped Android compile-SDK override. The Windows visual and lifecycle gate now
+passes. Physical Android validation, Stage 3 interaction features, editor
+embedding, and performance remain open. See ADR-015 through ADR-017.
 
 Decision criteria:
 
@@ -6557,9 +6569,10 @@ headless server.
 The Stage 2 implementation now includes a static Khronos glTF cube, one ECS
 entity synchronized through the scene bridge, a camera, and a direct light.
 Passing compile and packaging gates is not equivalent to passing the roadmap's
-runtime render gate. Stage 2 remains in progress until the same entity is
-visually confirmed on Windows and a physical Android device and basic runtime
-performance/lifecycle behavior is recorded.
+runtime render gate. The Windows visual and lifecycle gate passed on
+2026-08-10. Stage 2 remains in progress until the same entity is confirmed on a
+physical Android device and its basic runtime performance/lifecycle behavior is
+recorded.
 
 ## Consequences
 
@@ -6667,9 +6680,10 @@ asset directory. This was independent of the Vulkan compatibility decision.
 AVARRA now packages the exact Khronos texture and tests that every external
 buffer and image URI in the glTF resolves to a non-empty file.
 
-The visual content of the Windows scene still needs human confirmation. A
-physical Android runtime/performance check also remains open. Stage 2 is not
-complete until those checks pass.
+The corrected Windows scene was visually confirmed on 2026-08-10. It preserved
+the cube and HUD through resize and minimize/restore while the process remained
+responsive. A physical Android runtime/performance check remains open, so
+Stage 2 is not yet complete.
 
 ## Consequences
 
