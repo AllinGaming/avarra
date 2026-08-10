@@ -5,18 +5,26 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
 const _fixedDeltaSeconds = 1 / 60;
+final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000401');
+final _proofPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
+final _proofConsoleEntityId = EntityId.parse(
+  '01890f47-e8b8-7a68-8000-000000000004',
+);
 
 typedef WorldPackageSourceLoader = Future<String> Function();
+typedef SaveStoreLoader = Future<SaveStore> Function();
 
 void main() {
   runApp(const AvarraGameApp());
@@ -26,11 +34,13 @@ class AvarraGameApp extends StatelessWidget {
   const AvarraGameApp({
     this.enableRenderer = true,
     this.worldPackageSourceLoader,
+    this.saveStoreLoader,
     super.key,
   });
 
   final bool enableRenderer;
   final WorldPackageSourceLoader? worldPackageSourceLoader;
+  final SaveStoreLoader? saveStoreLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +57,7 @@ class AvarraGameApp extends StatelessWidget {
       home: _WorldBootstrapScreen(
         enableRenderer: enableRenderer,
         sourceLoader: worldPackageSourceLoader ?? _loadBundledProofWorld,
+        saveStoreLoader: saveStoreLoader ?? _loadDefaultSaveStore,
       ),
     );
   }
@@ -56,10 +67,12 @@ class _WorldBootstrapScreen extends StatefulWidget {
   const _WorldBootstrapScreen({
     required this.enableRenderer,
     required this.sourceLoader,
+    required this.saveStoreLoader,
   });
 
   final bool enableRenderer;
   final WorldPackageSourceLoader sourceLoader;
+  final SaveStoreLoader saveStoreLoader;
 
   @override
   State<_WorldBootstrapScreen> createState() => _WorldBootstrapScreenState();
@@ -96,6 +109,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           enableRenderer: widget.enableRenderer,
           runtimeWorld: loadedWorld.runtimeWorld,
           streaming: loadedWorld.streaming,
+          persistence: loadedWorld.persistence,
+          restoredSave: loadedWorld.restoredSave,
         );
       },
     );
@@ -106,6 +121,20 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
     final definition = WorldPackageCodec().decode(source);
     final runtimeWorld = const RuntimeWorldLoader().load(definition);
     final player = runtimeWorld.ecs.query<PlayerControlledComponent>().single;
+    final persistence = WorldSaveSession(
+      ecs: runtimeWorld.ecs,
+      repository: SaveRepository(store: await widget.saveStoreLoader()),
+      dirtyState: DirtyStateTracker(),
+      saveId: _proofSaveId,
+      worldId: definition.id,
+      sourceWorldFormatVersion: definition.worldFormatVersion,
+      chunkSize: definition.chunkSize!,
+      players: {_proofPlayerId: player.entityId},
+      knownPersistentEntityIds: definition.allEntities.map(
+        (entity) => entity.id,
+      ),
+    );
+    final restoreResult = await persistence.restore();
     final playerPosition = runtimeWorld.ecs
         .component<TransformComponent>(player.handle)
         .position;
@@ -118,6 +147,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
         entityActivationsPerPump: 3,
         entityDeactivationsPerPump: 3,
       ),
+      unloadGuard: DirtyStateChunkUnloadGuard(persistence.dirtyState),
+      onEntityActivated: persistence.applyEntity,
     );
     streaming.reconcile([
       ChunkStreamingRequest(
@@ -129,15 +160,27 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       ),
     ]);
     await streaming.pumpUntilStable();
-    return _LoadedWorld(runtimeWorld: runtimeWorld, streaming: streaming);
+    return _LoadedWorld(
+      runtimeWorld: runtimeWorld,
+      streaming: streaming,
+      persistence: persistence,
+      restoredSave: restoreResult.found,
+    );
   }
 }
 
 final class _LoadedWorld {
-  const _LoadedWorld({required this.runtimeWorld, required this.streaming});
+  const _LoadedWorld({
+    required this.runtimeWorld,
+    required this.streaming,
+    required this.persistence,
+    required this.restoredSave,
+  });
 
   final RuntimeWorld runtimeWorld;
   final ChunkStreamingController streaming;
+  final WorldSaveSession persistence;
+  final bool restoredSave;
 }
 
 class _PresentationBoundaryScreen extends StatefulWidget {
@@ -145,11 +188,15 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.enableRenderer,
     required this.runtimeWorld,
     required this.streaming,
+    required this.persistence,
+    required this.restoredSave,
   });
 
   final bool enableRenderer;
   final RuntimeWorld runtimeWorld;
   final ChunkStreamingController streaming;
+  final WorldSaveSession persistence;
+  final bool restoredSave;
 
   @override
   State<_PresentationBoundaryScreen> createState() {
@@ -158,7 +205,8 @@ class _PresentationBoundaryScreen extends StatefulWidget {
 }
 
 class _PresentationBoundaryScreenState
-    extends State<_PresentationBoundaryScreen> {
+    extends State<_PresentationBoundaryScreen>
+    with WidgetsBindingObserver {
   late PresentationSnapshot _presentation;
   late final ThermionAssetUriResolver _assetUriResolver;
   late DeterministicPhysicsCollisionWorld _collisionWorld;
@@ -171,13 +219,20 @@ class _PresentationBoundaryScreenState
   EntityId? _selectedEntityId;
   SetGroundTargetIntent? _groundTarget;
   Timer? _movementTimer;
+  Timer? _saveTimer;
   bool _streamingInFlight = false;
   bool _streamingDirty = false;
+  bool _saveInFlight = false;
+  late String _saveStatus;
   String _interactionStatus = 'Select the console, then interact';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _saveStatus = widget.restoredSave
+        ? 'Restored revision ${widget.persistence.revision}'
+        : 'No save yet';
     _presentation = const PresentationExtractor().extract(
       widget.runtimeWorld.ecs,
     );
@@ -212,9 +267,24 @@ class _PresentationBoundaryScreenState
   @override
   void dispose() {
     _movementTimer?.cancel();
+    _saveTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    if (!_saveInFlight && widget.persistence.dirtyState.hasDirtyState) {
+      unawaited(widget.persistence.saveIfDirty());
+    }
     _keyboardFocus.dispose();
     _collisionWorld.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _saveTimer?.cancel();
+      unawaited(_flushSave());
+    }
   }
 
   @override
@@ -226,7 +296,7 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 6 · World Streaming'),
+        const Text('Stage 7 · Persistence'),
         Text(widget.runtimeWorld.definition.name),
         Text('${_presentation.length} ECS entities bound to the scene'),
         Text(
@@ -239,6 +309,14 @@ class _PresentationBoundaryScreenState
           '${widget.streaming.snapshot.activeChunkCount}/'
           '${widget.streaming.totalChunkCount} active',
           key: const Key('streaming_status'),
+        ),
+        Text(
+          'Save r${widget.persistence.revision} · $_saveStatus',
+          key: const Key('save_status'),
+        ),
+        Text(
+          'Ancient console: $_consolePersistenceStatus',
+          key: const Key('persistent_console_status'),
         ),
         Text(
           'Camera ${_cameraRig.quarterTurns + 1}/4 · '
@@ -459,6 +537,17 @@ class _PresentationBoundaryScreenState
           _interactionStatus = result.accepted
               ? 'Interacted: ${result.label}'
               : 'Cannot interact: ${result.rejection!.name}';
+          if (result.accepted && entityId == _proofConsoleEntityId) {
+            final changed = widget.persistence.setFlag(
+              entityId,
+              'activated',
+              true,
+            );
+            if (changed) {
+              _interactionStatus = 'Activated and queued atomic save';
+              _scheduleSave();
+            }
+          }
         case RotateCameraIntent(:final deltaQuarterTurns):
           _cameraRig = _cameraRig.rotateBy(deltaQuarterTurns);
         case ZoomCameraIntent(:final factor):
@@ -522,7 +611,66 @@ class _PresentationBoundaryScreenState
       _interactionStatus =
           'Movement blocked by ${result.collidedEntityIds.first.value}';
     }
+    widget.persistence.markPlayerDirty(_proofPlayerId);
+    _scheduleSave();
     _scheduleStreamingRefresh();
+  }
+
+  String get _consolePersistenceStatus {
+    return switch (widget.persistence.flagValue(
+      _proofConsoleEntityId,
+      'activated',
+    )) {
+      true => 'activated',
+      false => 'inactive',
+      null => 'not loaded',
+    };
+  }
+
+  void _scheduleSave() {
+    _saveStatus = 'Unsaved changes';
+    _saveTimer?.cancel();
+    _saveTimer = Timer(
+      const Duration(milliseconds: 500),
+      () => unawaited(_flushSave()),
+    );
+  }
+
+  Future<void> _flushSave() async {
+    if (_saveInFlight || !widget.persistence.dirtyState.hasDirtyState) {
+      return;
+    }
+    _saveInFlight = true;
+    if (mounted) {
+      setState(() {
+        _saveStatus = 'Saving';
+      });
+    }
+    try {
+      final save = await widget.persistence.saveIfDirty();
+      if (mounted) {
+        widget.streaming.retryBlockedUnloads();
+        _scheduleStreamingRefresh();
+        setState(() {
+          _saveStatus = 'Saved revision ${save?.revision ?? 0}';
+        });
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _saveStatus = 'Save failed: $error';
+        });
+      }
+    } finally {
+      _saveInFlight = false;
+      if (widget.persistence.dirtyState.hasDirtyState && mounted) {
+        _saveTimer?.cancel();
+        _saveTimer = Timer(
+          const Duration(milliseconds: 100),
+          () => unawaited(_flushSave()),
+        );
+      }
+    }
   }
 
   WorldChunkCoordinate get _currentChunkCoordinate {
@@ -665,4 +813,8 @@ final _movementKeys = {
 
 Future<String> _loadBundledProofWorld() {
   return rootBundle.loadString(_proofWorldAssetPath);
+}
+
+Future<SaveStore> _loadDefaultSaveStore() async {
+  return FileSaveStore(await getApplicationSupportDirectory());
 }

@@ -1,5 +1,5 @@
-name: avarra_streaming
-description: Server-safe AVARRA chunk indexing, budgets, and lifecycle control.
+name: avarra_persistence
+description: Server-safe AVARRA save schemas, dirty tracking, and atomic storage.
 version: 0.1.0
 publish_to: none
 
@@ -11,10 +11,7 @@ resolution: workspace
 dependencies:
   avarra_core: ^0.1.0
   avarra_ecs: ^0.1.0
-  avarra_persistence: ^0.1.0
-  avarra_world: ^0.1.0
   vector_math: ^2.2.0
 
 dev_dependencies:
-  avarra_content: ^0.1.0
   test: ^1.26.3

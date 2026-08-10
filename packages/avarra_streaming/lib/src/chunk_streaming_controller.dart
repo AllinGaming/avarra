@@ -15,6 +15,7 @@ final class ChunkStreamingController {
     required this.source,
     this.budget = const ChunkStreamingBudget(),
     this.unloadGuard = const AllowAllChunkUnloadGuard(),
+    this.onEntityActivated,
   }) : index = ChunkSpatialIndex(world),
        _entries = {
          for (final chunk in world.chunks) chunk.id: _ChunkEntry(chunk),
@@ -26,6 +27,7 @@ final class ChunkStreamingController {
   final ChunkStreamingSource source;
   final ChunkStreamingBudget budget;
   final ChunkUnloadGuard unloadGuard;
+  final void Function(EntityId entityId)? onEntityActivated;
   final ChunkSpatialIndex index;
   static const RuntimeEntityLoader _entityLoader = RuntimeEntityLoader();
   final Map<ChunkId, _ChunkEntry> _entries;
@@ -278,6 +280,7 @@ final class ChunkStreamingController {
             entry.activationCursor += 1;
             activationBudget -= 1;
             activatedEntities.add(entity.id);
+            onEntityActivated?.call(entity.id);
             changed = true;
           }
           if (entry.activationCursor >= definition.entities.length) {

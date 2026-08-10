@@ -16,6 +16,7 @@ void main() {
           AvarraComponentType.interactable,
           AvarraComponentType.isometricOccluder,
           AvarraComponentType.isometricOcclusionTarget,
+          AvarraComponentType.persistentFlags,
           AvarraComponentType.physicsCollider,
           AvarraComponentType.playerControlled,
           AvarraComponentType.renderableReference,
@@ -92,6 +93,33 @@ void main() {
       () => registry.decode(AvarraComponentType.playerControlled, {
         'schemaVersion': 1,
       }, contentSchemaVersion: 1),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes Stage 7 persistent authored defaults', () {
+    final persistent = registry.decode(AvarraComponentType.persistentFlags, {
+      'schemaVersion': 1,
+      'flags': {'activated': false, 'opened': true},
+    });
+
+    expect(persistent, isA<PersistentFlagsDefinition>());
+    expect((persistent as PersistentFlagsDefinition).flags, {
+      'activated': false,
+      'opened': true,
+    });
+    expect(
+      () => registry.decode(AvarraComponentType.persistentFlags, {
+        'schemaVersion': 1,
+        'flags': {'Invalid Key': true},
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.persistentFlags, {
+        'schemaVersion': 1,
+        'flags': {'activated': false},
+      }, contentSchemaVersion: 2),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

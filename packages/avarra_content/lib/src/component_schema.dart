@@ -11,6 +11,7 @@ enum ComponentFieldKind {
   vector3,
   quaternion,
   stableId,
+  booleanMap,
 }
 
 /// Machine-readable description of one serialized component field.
@@ -112,6 +113,9 @@ final class ComponentSchema {
       ComponentFieldKind.quaternion => _isFiniteNumberList(value, 4),
       ComponentFieldKind.stableId =>
         value is String && AssetId.tryParse(value) != null,
+      ComponentFieldKind.booleanMap =>
+        value is Map<String, dynamic> &&
+            value.values.every((entry) => entry is bool),
     };
   }
 
@@ -241,6 +245,17 @@ final class ComponentSchemaRegistry {
             ),
           ],
         ),
+        ComponentSchema(
+          type: AvarraComponentType.persistentFlags,
+          version: 1,
+          introducedInContentSchemaVersion: 3,
+          fields: const [
+            ComponentFieldSchema(
+              name: 'flags',
+              kind: ComponentFieldKind.booleanMap,
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -301,6 +316,7 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.playerControlled =>
         const PlayerControlledDefinition(),
       AvarraComponentType.interactable => _decodeInteractable(data),
+      AvarraComponentType.persistentFlags => _decodePersistentFlags(data),
       _ => throw StateError('Validated component type has no decoder: $type'),
     };
   }
@@ -349,6 +365,21 @@ final class ComponentSchemaRegistry {
       );
     }
     return InteractableDefinition(label: label, range: range);
+  }
+
+  PersistentFlagsDefinition _decodePersistentFlags(Map<String, Object?> data) {
+    final encodedFlags = data['flags']! as Map<String, dynamic>;
+    final keyPattern = RegExp(r'^[a-z][a-z0-9_.-]{0,63}$');
+    if (encodedFlags.length > 64 ||
+        encodedFlags.keys.any((key) => !keyPattern.hasMatch(key))) {
+      _invalidComponent(
+        AvarraComponentType.persistentFlags,
+        'Persistent flag keys or count are invalid.',
+      );
+    }
+    return PersistentFlagsDefinition({
+      for (final entry in encodedFlags.entries) entry.key: entry.value as bool,
+    });
   }
 
   Never _invalidComponent(String type, String message) {

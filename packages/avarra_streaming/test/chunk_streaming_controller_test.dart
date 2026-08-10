@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:test/test.dart';
@@ -177,13 +178,13 @@ void main() {
 
     test('retains dirty entities until persistence allows unload', () async {
       final world = _world();
-      final guard = _TestUnloadGuard();
+      final dirtyState = DirtyStateTracker();
       final ecs = EcsWorld();
       final controller = ChunkStreamingController(
         world: world,
         ecs: ecs,
         source: MemoryChunkStreamingSource(world.chunks),
-        unloadGuard: guard,
+        unloadGuard: DirtyStateChunkUnloadGuard(dirtyState),
       );
       const coordinate = WorldChunkCoordinate(0, 0);
       controller.reconcile([
@@ -193,7 +194,7 @@ void main() {
         ),
       ]);
       await controller.pumpUntilStable();
-      guard.blocked = {EntityId.parse(_chunkZeroEntityA)};
+      dirtyState.markDirty(EntityId.parse(_chunkZeroEntityA));
 
       controller.reconcile(const []);
       final blockedUpdate = await controller.pump();
@@ -206,7 +207,7 @@ void main() {
       expect(blockedUpdate.blockedUnloads, isNotEmpty);
       expect(controller.snapshot.blockedUnloads, isNotEmpty);
 
-      guard.blocked = const {};
+      dirtyState.markPersisted(dirtyState.snapshot());
       controller.retryBlockedUnloads();
       await controller.pumpUntilStable();
       expect(
@@ -288,18 +289,6 @@ final class _ControlledSource implements ChunkStreamingSource {
 
   @override
   Future<void> release(WorldChunkDefinition chunk) async {}
-}
-
-final class _TestUnloadGuard implements ChunkUnloadGuard {
-  Set<EntityId> blocked = const {};
-
-  @override
-  Future<Set<EntityId>> blockedEntityIds({
-    required WorldChunkDefinition chunk,
-    required Set<EntityId> activeEntityIds,
-  }) async {
-    return blocked.intersection(activeEntityIds);
-  }
 }
 
 WorldDefinition _world() {

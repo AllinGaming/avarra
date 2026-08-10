@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,7 +32,7 @@ void main() {
       ]);
       await streaming.pumpUntilStable();
 
-      expect(definition.name, 'Isometric Streaming Proof');
+      expect(definition.name, 'Isometric Persistence Proof');
       expect(definition.worldFormatVersion, 2);
       expect(definition.chunkSize, 4);
       expect(definition.chunks, hasLength(3));
@@ -40,6 +41,15 @@ void main() {
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
       expect(streaming.activeOccluderEntityIds, hasLength(1));
+      final consoleHandle = runtime.ecs.handleFor(
+        EntityId.parse('01890f47-e8b8-7a68-8000-000000000004'),
+      )!;
+      expect(
+        runtime.ecs
+            .component<PersistentFlagsComponent>(consoleHandle)
+            .flags['activated'],
+        isFalse,
+      );
       for (final entry in runtime.assetPaths.entries) {
         expect(entry.key, isA<AssetId>());
         final assetFile = File.fromUri(packageRoot.uri.resolve(entry.value));

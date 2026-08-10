@@ -2,6 +2,7 @@ import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -130,6 +131,8 @@ final class RuntimeEntityLoader {
               range: component.range,
             ),
           );
+        case PersistentFlagsDefinition():
+          ecs.addComponent(handle, PersistentFlagsComponent(component.flags));
       }
     }
     return RuntimeEntityLoadResult(

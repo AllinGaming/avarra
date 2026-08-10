@@ -1,4 +1,5 @@
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_world/avarra_world.dart';
 
 import 'streaming_error_codes.dart';
@@ -133,6 +134,21 @@ final class AllowAllChunkUnloadGuard implements ChunkUnloadGuard {
     required Set<EntityId> activeEntityIds,
   }) async {
     return const {};
+  }
+}
+
+/// Blocks chunk destruction while any member has uncommitted save state.
+final class DirtyStateChunkUnloadGuard implements ChunkUnloadGuard {
+  const DirtyStateChunkUnloadGuard(this.dirtyState);
+
+  final DirtyStateTracker dirtyState;
+
+  @override
+  Future<Set<EntityId>> blockedEntityIds({
+    required WorldChunkDefinition chunk,
+    required Set<EntityId> activeEntityIds,
+  }) async {
+    return dirtyState.dirtyAmong(activeEntityIds);
   }
 }
 

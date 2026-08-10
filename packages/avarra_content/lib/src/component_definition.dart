@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:avarra_core/avarra_core.dart';
 
 import 'component_types.dart';
@@ -242,5 +244,24 @@ final class InteractableDefinition extends ContentComponentDefinition {
     'schemaVersion': schemaVersion,
     'label': label,
     'range': range,
+  };
+}
+
+final class PersistentFlagsDefinition extends ContentComponentDefinition {
+  PersistentFlagsDefinition(Map<String, bool> flags)
+    : flags = Map.unmodifiable(SplayTreeMap.of(flags));
+
+  final Map<String, bool> flags;
+
+  @override
+  String get type => AvarraComponentType.persistentFlags;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'flags': flags,
   };
 }
