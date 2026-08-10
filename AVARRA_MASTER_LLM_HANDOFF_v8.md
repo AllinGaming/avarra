@@ -193,9 +193,10 @@ Thermion is pinned to official `v0.5.0-pre.5` commit `caad378…` after publishe
 0.4.1 passed compile gates but failed the live Windows Vulkan gate. The pinned
 commit passes Windows runtime stability/close and Android package gates on
 Flutter 3.44.4 stable, with a scoped Android compile-SDK workaround. The
-Windows visual and lifecycle gate also passes. The renderer choice is not
-irreversible and remains subject to physical Android and later interaction
-validation. See ADR-015 through ADR-017.
+Windows visual/lifecycle gate and Pixel 10 Pro Android emulator
+cold-start/lifecycle checks also pass. The renderer choice is not irreversible
+and remains subject to physical Android and later interaction validation. See
+ADR-015 through ADR-017.
 
 The scene bridge exists to avoid coupling simulation to one 3D dependency.
 
@@ -1816,7 +1817,9 @@ canonical entity identity.
 The Game proof packages a Khronos glTF cube, creates one renderer asset from one
 ECS presentation entity, applies its transform, and provides an initial camera
 and direct light. Windows and Android builds package the model successfully.
-Live rendering and physical-device behavior remain manual validation gates.
+Windows live rendering passes. A Pixel 10 Pro Android emulator also preserves
+the scene through repeated cold starts and background/resume cycles. Physical
+Android behavior remains a manual validation gate.
 
 ---
 
@@ -1961,9 +1964,10 @@ Gradle application path presents a future Flutter compatibility risk.
 
 Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
-decision. Windows visual and lifecycle validation passes. Physical Android
-rendering/performance, animation, picking, selection, shadows, transparency,
-and Forge viewport embedding still require validation. See ADR-016 and ADR-017.
+decision. Windows visual/lifecycle validation and Pixel 10 Pro Android emulator
+cold-start/lifecycle checks pass. Physical Android rendering/performance,
+animation, picking, selection, shadows, transparency, and Forge viewport
+embedding still require validation. See ADR-016 and ADR-017.
 
 <!-- END AVARRA_CLIENT_PRESENTATION.md -->
 
@@ -1973,7 +1977,7 @@ and Forge viewport embedding still require validation. See ADR-016 and ADR-017.
 
 # AVARRA — Stage 2B Renderer Validation
 
-**Status:** Windows validation passed; physical Android runtime validation pending
+**Status:** Windows and Android emulator validation passed; physical Android runtime validation pending
 **Date:** 2026-08-10
 
 ## Implemented proof
@@ -2007,7 +2011,7 @@ Dart 3.12.2
 thermion_flutter/thermion_dart 0.5.0-pre.5
 exact Git commit caad37835e7d379621247b24b7de9d84071bd474
 Windows x64
-Android debug APK
+Android debug APK on Pixel_10_Pro AVD, Android 17 / API 37, x86_64
 ```
 
 Passed on 2026-08-10:
@@ -2023,6 +2027,9 @@ Passed on 2026-08-10:
 - Windows controlled launch/close with process exit within 15 seconds;
 - corrected Windows visual confirmation and resize/minimize/restore lifecycle
   validation;
+- three clean Android emulator cold launches with the complete cube and HUD;
+- five same-process Android emulator background/resume cycles with the scene
+  preserved and stable memory;
 - no Windows Vulkan device-loss or unsupported-update errors on the pinned
   pre-release;
 - Forge Windows release build;
@@ -2043,7 +2050,7 @@ Cube_BaseColor.png  0750D5A03C1BEBC640571E309F66C6E88EFBFF2EF4C120619466A7014551
 The fixture is the CC0 Khronos glTF Sample Assets Cube. Attribution and source
 links are in `apps/avarra_game/assets/models/THIRD_PARTY.md`.
 
-## Android workaround
+## Android build workaround
 
 The pinned Thermion pre-release declares compile SDK 33 in its Android plugin
 while current AndroidX dependencies require 34 or newer. Game overrides only the
@@ -2069,6 +2076,11 @@ single-queue hardware; see ADR-017.
 
 Treat any escalation from warning to error as a dependency-compatibility event,
 not as a reason to bypass the scene boundary.
+
+The pinned Thermion asset helper also writes two non-fatal `invalid renderable`
+diagnostics while applying shadow flags: it first visits the non-renderable glTF
+root, then applies the flags to the renderable child. The child renders
+correctly. Re-evaluate this diagnostic on the next pinned Thermion update.
 
 ## Manual runtime gate
 
@@ -2101,6 +2113,41 @@ The corrected Windows build passed on 2026-08-10:
 The evidence image SHA-256 is
 `4FDB07D9F141F6AEFE2B4D10EEA2E91274561C61A489EFF80D8D9E46F02DA8C0`.
 
+Android emulator:
+
+```text
+AVD: Pixel_10_Pro
+reported model: sdk_gphone16k_x86_64
+Android: 17 / API 37
+ABI: x86_64
+build: debug APK
+display: 1280x2856 at density 480
+```
+
+The exact clean baseline APK passed on 2026-08-10:
+
+1. three launches from absent processes reported `COLD`, completed in
+   2.233–2.519 seconds, and displayed the textured cube and one-entity HUD;
+2. five Home/foreground cycles reported `HOT` in 295–323 milliseconds,
+   retained the same PID, and preserved the complete scene;
+3. no fatal exception, Flutter error, or initialization-failure overlay was
+   recorded during those cycles;
+4. total PSS was 220,964 kB before the lifecycle sequence and remained within
+   219,709–220,184 kB across all five resumes; total RSS remained within
+   321,784–325,152 kB after a 321,240 kB baseline;
+5. a 62-interval SurfaceFlinger diagnostic on the static debug scene measured
+   32.07 ms average compositor presentation, 32.95 ms p50, and 36.65 ms p95
+   against a 16.67 ms display refresh period.
+
+The SurfaceFlinger number is an emulator compositor cadence, not physical GPU
+frame time or a release/profile performance result. It does not close the
+physical-device performance gate.
+
+![AVARRA Android emulator resume pass](docs/images/stage-2b-android-emulator-resume.png)
+
+The Android emulator evidence image SHA-256 is
+`859A75322FC040F8FE48FD5EB71870CA88E85E83D536768D83C939E869F2F3FA`.
+
 Physical Android device:
 
 ```powershell
@@ -2109,9 +2156,9 @@ flutter devices
 flutter run -d <device-id>
 ```
 
-No physical Android device was connected on 2026-08-10; `flutter devices`
-reported only Windows, Chrome, and Edge. This is the remaining Stage 2 runtime
-gate.
+The connected Pixel 10 Pro target was an Android Virtual Device, not physical
+hardware. No physical Android device was connected on 2026-08-10. This is the
+remaining Stage 2 runtime gate.
 
 Confirm the same visual result, then background/resume the app and record:
 
@@ -2132,7 +2179,9 @@ camera, picking, and desktop/mobile selection loop.
 
 See ADR-015 for the Flutter Scene stable-SDK finding, ADR-016 for the
 provisional Thermion decision, and ADR-017 for the Windows runtime failure and
-exact upstream dependency pin.
+exact upstream dependency pin. The emulator evidence above validates packaging,
+presentation, and lifecycle behavior but does not alter the provisional status
+or physical-device gate.
 
 <!-- END AVARRA_STAGE_2B_RENDERER_VALIDATION.md -->
 
@@ -5217,6 +5266,7 @@ initial camera and direct light
 Windows release build
 Windows live-process stability and controlled-close validation
 Android debug APK build with scoped Thermion compile-SDK workaround
+Pixel 10 Pro Android emulator cold-start and background/resume validation
 ```
 
 The Flutter Scene compatibility finding is preserved in ADR-015. ADR-016
@@ -5229,9 +5279,10 @@ Gate:
 > Same world entities render on Windows and Android.
 
 The compile, asset-packaging, Windows visual, process-stability, resize,
-minimize/restore, and controlled-close parts of the gate pass. The gate is not
-yet fully met: confirm the same entity on a physical Android device, then record
-basic frame, lifecycle, and device behavior.
+minimize/restore, controlled-close, and Android emulator lifecycle parts of the
+gate pass. The gate is not yet fully met: confirm the same entity on a physical
+Android device, then record basic frame, lifecycle, thermal, and device
+behavior.
 
 ---
 
@@ -5535,8 +5586,10 @@ Windows and Android compile gates but deterministically loses the Vulkan device
 at live Windows startup. The pinned official pre-release fixes the queue race,
 passes Windows live-process/close and Android package checks, and still needs a
 scoped Android compile-SDK override. The Windows visual and lifecycle gate now
-passes. Physical Android validation, Stage 3 interaction features, editor
-embedding, and performance remain open. See ADR-015 through ADR-017.
+passes. A Pixel 10 Pro Android emulator also passes repeated cold-start and
+background/resume checks with stable memory. Physical Android validation,
+Stage 3 interaction features, editor embedding, and performance remain open.
+See ADR-015 through ADR-017.
 
 Decision criteria:
 
@@ -6524,6 +6577,7 @@ An isolated probe and then the product integration were tested on Flutter
 | glTF asset packaging | Passed for Windows and Android |
 | Static asset, camera, light, transform bridge | Implemented |
 | Live Windows rendering | 0.4.1 failed with device loss; see ADR-017 |
+| Android emulator rendering/lifecycle | Passed on Pixel 10 Pro AVD |
 | Physical Android rendering/performance | Pending device validation |
 | Animation, picking, selection, shadows | Pending Stage 3/product validation |
 
@@ -6570,9 +6624,10 @@ The Stage 2 implementation now includes a static Khronos glTF cube, one ECS
 entity synchronized through the scene bridge, a camera, and a direct light.
 Passing compile and packaging gates is not equivalent to passing the roadmap's
 runtime render gate. The Windows visual and lifecycle gate passed on
-2026-08-10. Stage 2 remains in progress until the same entity is confirmed on a
-physical Android device and its basic runtime performance/lifecycle behavior is
-recorded.
+2026-08-10. Repeated cold-start and lifecycle checks also passed on a Pixel 10
+Pro Android Virtual Device. Stage 2 remains in progress until the same entity
+is confirmed on physical Android hardware and its basic runtime
+performance/lifecycle behavior is recorded.
 
 ## Consequences
 
@@ -6682,8 +6737,10 @@ buffer and image URI in the glTF resolves to a non-empty file.
 
 The corrected Windows scene was visually confirmed on 2026-08-10. It preserved
 the cube and HUD through resize and minimize/restore while the process remained
-responsive. A physical Android runtime/performance check remains open, so
-Stage 2 is not yet complete.
+responsive. A Pixel 10 Pro Android emulator subsequently preserved the same
+scene through three cold launches and five same-process background/resume
+cycles with stable memory. A physical Android runtime/performance check remains
+open, so Stage 2 is not yet complete.
 
 ## Consequences
 

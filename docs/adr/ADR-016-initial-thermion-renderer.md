@@ -34,6 +34,7 @@ An isolated probe and then the product integration were tested on Flutter
 | glTF asset packaging | Passed for Windows and Android |
 | Static asset, camera, light, transform bridge | Implemented |
 | Live Windows rendering | 0.4.1 failed with device loss; see ADR-017 |
+| Android emulator rendering/lifecycle | Passed on Pixel 10 Pro AVD |
 | Physical Android rendering/performance | Pending device validation |
 | Animation, picking, selection, shadows | Pending Stage 3/product validation |
 
@@ -80,9 +81,10 @@ The Stage 2 implementation now includes a static Khronos glTF cube, one ECS
 entity synchronized through the scene bridge, a camera, and a direct light.
 Passing compile and packaging gates is not equivalent to passing the roadmap's
 runtime render gate. The Windows visual and lifecycle gate passed on
-2026-08-10. Stage 2 remains in progress until the same entity is confirmed on a
-physical Android device and its basic runtime performance/lifecycle behavior is
-recorded.
+2026-08-10. Repeated cold-start and lifecycle checks also passed on a Pixel 10
+Pro Android Virtual Device. Stage 2 remains in progress until the same entity
+is confirmed on physical Android hardware and its basic runtime
+performance/lifecycle behavior is recorded.
 
 ## Consequences
 

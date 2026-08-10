@@ -130,7 +130,9 @@ canonical entity identity.
 The Game proof packages a Khronos glTF cube, creates one renderer asset from one
 ECS presentation entity, applies its transform, and provides an initial camera
 and direct light. Windows and Android builds package the model successfully.
-Live rendering and physical-device behavior remain manual validation gates.
+Windows live rendering passes. A Pixel 10 Pro Android emulator also preserves
+the scene through repeated cold starts and background/resume cycles. Physical
+Android behavior remains a manual validation gate.
 
 ---
 
@@ -275,6 +277,7 @@ Gradle application path presents a future Flutter compatibility risk.
 
 Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
-decision. Windows visual and lifecycle validation passes. Physical Android
-rendering/performance, animation, picking, selection, shadows, transparency,
-and Forge viewport embedding still require validation. See ADR-016 and ADR-017.
+decision. Windows visual/lifecycle validation and Pixel 10 Pro Android emulator
+cold-start/lifecycle checks pass. Physical Android rendering/performance,
+animation, picking, selection, shadows, transparency, and Forge viewport
+embedding still require validation. See ADR-016 and ADR-017.

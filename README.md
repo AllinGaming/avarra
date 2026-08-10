@@ -68,8 +68,9 @@ and Android compile/package gates pass, including closure of every external
 glTF resource. Windows process stability and controlled close also pass with
 the exact upstream Thermion pre-release pin. A first visual run exposed and
 closed an omitted texture fixture; the corrected Windows visual and lifecycle
-gate now passes. Physical Android rendering/performance is the remaining
-Stage 2 gate. See
+gate now passes. A Pixel 10 Pro Android Virtual Device also passes repeated
+cold-launch and background/resume checks with stable memory. Physical Android
+rendering/performance is the remaining Stage 2 gate. See
 `docs/adr/ADR-016-initial-thermion-renderer.md` and
 `docs/adr/ADR-017-thermion-windows-runtime-compatibility.md` plus
 `docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md`.

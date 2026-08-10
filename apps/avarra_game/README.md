@@ -10,8 +10,10 @@ Windows and Android compile/package gates pass. The exact Thermion
 checks after published 0.4.1 failed with `VK_ERROR_DEVICE_LOST`. The packaged
 Khronos fixture includes its glTF, binary buffer, and texture; a Game test
 checks that every external glTF resource exists. The corrected Windows visual,
-resize, and minimize/restore checks pass. Physical Android
-rendering/performance remains the open Stage 2 gate; see ADR-016 and ADR-017.
+resize, and minimize/restore checks pass. A Pixel 10 Pro Android emulator also
+passes repeated cold-launch and background/resume checks with stable memory.
+Physical Android rendering/performance remains the open Stage 2 gate; see
+ADR-016 and ADR-017.
 
 This app may depend on client/presentation and server-safe shared packages. It
 must not depend on Avarra Forge or creator/AI packages.

@@ -84,6 +84,7 @@ initial camera and direct light
 Windows release build
 Windows live-process stability and controlled-close validation
 Android debug APK build with scoped Thermion compile-SDK workaround
+Pixel 10 Pro Android emulator cold-start and background/resume validation
 ```
 
 The Flutter Scene compatibility finding is preserved in ADR-015. ADR-016
@@ -96,9 +97,10 @@ Gate:
 > Same world entities render on Windows and Android.
 
 The compile, asset-packaging, Windows visual, process-stability, resize,
-minimize/restore, and controlled-close parts of the gate pass. The gate is not
-yet fully met: confirm the same entity on a physical Android device, then record
-basic frame, lifecycle, and device behavior.
+minimize/restore, controlled-close, and Android emulator lifecycle parts of the
+gate pass. The gate is not yet fully met: confirm the same entity on a physical
+Android device, then record basic frame, lifecycle, thermal, and device
+behavior.
 
 ---
 
