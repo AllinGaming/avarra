@@ -12,3 +12,12 @@ workspace:
 
 dev_dependencies:
   flutter_lints: ^6.0.0
+
+# Thermion 0.5.0-pre.5 is pinned to one upstream commit because its Windows
+# single-queue Vulkan serialization fix has not been published to pub.dev yet.
+dependency_overrides:
+  thermion_dart:
+    git:
+      url: https://github.com/nmfisher/thermion.git
+      ref: caad37835e7d379621247b24b7de9d84071bd474
+      path: thermion_dart

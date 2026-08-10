@@ -65,6 +65,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.0"
+  cli_util:
+    dependency: transitive
+    description:
+      name: cli_util
+      sha256: ff6785f7e9e3c38ac98b2fb035701789de90154024a75b6cb926445e83197d1c
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.2"
   clock:
     dependency: transitive
     description:
@@ -133,10 +141,10 @@ packages:
     dependency: transitive
     description:
       name: ffigen_js
-      sha256: f91a2cbb2c99cd42405d4977660774e03a0aa065abe8f577bbcdbd4b370c21b6
+      sha256: "54739988e0f047456f31a007e566892c1535630ff1cd1f87a2bfd86fd8fcd22d"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.12-pre"
+    version: "0.0.14-pre"
   file:
     dependency: transitive
     description:
@@ -392,6 +400,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  quiver:
+    dependency: transitive
+    description:
+      name: quiver
+      sha256: ea0b925899e64ecdfbf9c7becb60d5b50e706ade44a85b2363be2a22d88117d2
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
   record_use:
     dependency: transitive
     description:
@@ -518,21 +534,23 @@ packages:
     source: hosted
     version: "0.6.17"
   thermion_dart:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: thermion_dart
-      sha256: ebbe039188591f24f76ddc0e7c4166c44b9d37f3e64fdb483717a94233b0d6a6
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.1"
+      path: thermion_dart
+      ref: caad37835e7d379621247b24b7de9d84071bd474
+      resolved-ref: caad37835e7d379621247b24b7de9d84071bd474
+      url: "https://github.com/nmfisher/thermion.git"
+    source: git
+    version: "0.5.0-pre.5"
   thermion_flutter:
     dependency: transitive
     description:
-      name: thermion_flutter
-      sha256: "1db15d6e8dc2f29f860c47459917b1413c410334df032519198dc57ed689cc0b"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.1"
+      path: "thermion_flutter/thermion_flutter"
+      ref: caad37835e7d379621247b24b7de9d84071bd474
+      resolved-ref: caad37835e7d379621247b24b7de9d84071bd474
+      url: "https://github.com/nmfisher/thermion.git"
+    source: git
+    version: "0.5.0-pre.5"
   typed_data:
     dependency: transitive
     description:
@@ -621,6 +639,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.3"
+  yaml_edit:
+    dependency: transitive
+    description:
+      name: yaml_edit
+      sha256: "07c9e63ba42519745182b88ca12264a7ba2484d8239958778dfe4d44fe760488"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.4"
 sdks:
   dart: ">=3.12.2 <4.0.0"
-  flutter: ">=3.32.0"
+  flutter: ">=3.38.0"

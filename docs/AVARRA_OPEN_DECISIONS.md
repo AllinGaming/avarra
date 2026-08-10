@@ -20,18 +20,19 @@ other future solution
 
 Current provisional decision:
 
-> Use Thermion/Filament behind `avarra_scene_bridge`, pinned exactly at
-> `thermion_flutter` 0.4.1.
+> Use Thermion/Filament behind `avarra_scene_bridge`, pinned to official
+> `v0.5.0-pre.5` commit `caad378…` until its Windows fix is published.
 
 Current evidence (2026-08-10):
 
 `flutter_scene` 0.20.0 resolves and analyzes on Flutter 3.44.4 stable but does
-not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 now passes
-Windows and Android product compile/package gates; Android currently needs a
-scoped plugin compile-SDK override. Static asset, transform, camera, and light
-integration is implemented. Live Windows and physical Android validation,
-Stage 3 interaction features, editor embedding, and performance remain open.
-See ADR-015 and ADR-016.
+not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 passes
+Windows and Android compile gates but deterministically loses the Vulkan device
+at live Windows startup. The pinned official pre-release fixes the queue race,
+passes Windows live-process/close and Android package checks, and still needs a
+scoped Android compile-SDK override. Human Windows visual confirmation,
+physical Android validation, Stage 3 interaction features, editor embedding,
+and performance remain open. See ADR-015 through ADR-017.
 
 Decision criteria:
 

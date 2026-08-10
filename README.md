@@ -64,9 +64,12 @@ packages/
 The Stage 2A headless boundary and Stage 2B provisional Thermion/Filament
 integration are implemented. Game packages a static glTF cube, synchronizes it
 from ECS presentation state, and includes a camera and direct light. Windows
-and Android compile/package gates pass; live Windows rendering and physical
-Android rendering/performance remain manual gates. See
+and Android compile/package gates pass. Windows process stability and
+controlled close also pass with the exact upstream Thermion pre-release pin;
+Windows visual confirmation and physical Android rendering/performance remain
+manual gates. See
 `docs/adr/ADR-016-initial-thermion-renderer.md` and
+`docs/adr/ADR-017-thermion-windows-runtime-compatibility.md` plus
 `docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md`.
 
 The root uses a native Dart Pub workspace. Resolve dependencies with:

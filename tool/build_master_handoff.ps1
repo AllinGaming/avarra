@@ -33,6 +33,7 @@ $sourcePaths = @(
     'docs/adr/ADR-014-initial-ecs-storage-model.md'
     'docs/adr/ADR-015-flutter-scene-stable-sdk-compatibility.md'
     'docs/adr/ADR-016-initial-thermion-renderer.md'
+    'docs/adr/ADR-017-thermion-windows-runtime-compatibility.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

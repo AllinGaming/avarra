@@ -15,7 +15,8 @@
     "ADR-013-uuid-v7-stable-identifiers.md",
     "ADR-014-initial-ecs-storage-model.md",
     "ADR-015-flutter-scene-stable-sdk-compatibility.md",
-    "ADR-016-initial-thermion-renderer.md"
+    "ADR-016-initial-thermion-renderer.md",
+    "ADR-017-thermion-windows-runtime-compatibility.md"
   ],
   "ai_creator_docs": [
     "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",

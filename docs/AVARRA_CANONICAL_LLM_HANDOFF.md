@@ -180,10 +180,12 @@ Thermion Bridge
 Thermion / Filament
 ```
 
-Thermion 0.4.1 passes the Windows and Android compile/package gates on Flutter
-3.44.4 stable, with a scoped Android compile-SDK workaround. The renderer
-choice is not irreversible and remains subject to live-device validation. See
-ADR-015 and ADR-016.
+Thermion is pinned to official `v0.5.0-pre.5` commit `caad378…` after published
+0.4.1 passed compile gates but failed the live Windows Vulkan gate. The pinned
+commit passes Windows runtime stability/close and Android package gates on
+Flutter 3.44.4 stable, with a scoped Android compile-SDK workaround. The
+renderer choice is not irreversible and remains subject to visual and physical
+device validation. See ADR-015 through ADR-017.
 
 The scene bridge exists to avoid coupling simulation to one 3D dependency.
 

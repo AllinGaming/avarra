@@ -189,10 +189,12 @@ Thermion Bridge
 Thermion / Filament
 ```
 
-Thermion 0.4.1 passes the Windows and Android compile/package gates on Flutter
-3.44.4 stable, with a scoped Android compile-SDK workaround. The renderer
-choice is not irreversible and remains subject to live-device validation. See
-ADR-015 and ADR-016.
+Thermion is pinned to official `v0.5.0-pre.5` commit `caad378…` after published
+0.4.1 passed compile gates but failed the live Windows Vulkan gate. The pinned
+commit passes Windows runtime stability/close and Android package gates on
+Flutter 3.44.4 stable, with a scoped Android compile-SDK workaround. The
+renderer choice is not irreversible and remains subject to visual and physical
+device validation. See ADR-015 through ADR-017.
 
 The scene bridge exists to avoid coupling simulation to one 3D dependency.
 
@@ -1936,22 +1938,32 @@ implementation without rejecting it permanently. See
 
 ## 10.2 Current Thermion Finding
 
-Thermion 0.4.1 resolves, analyzes, and builds in the AVARRA Game for Windows
-x64 and Android on Flutter 3.44.4 stable. The adapter implements asset
+Published Thermion 0.4.1 resolves, analyzes, and builds in the AVARRA Game for
+Windows x64 and Android on Flutter 3.44.4 stable, but a live Windows launch
+deterministically lost the Vulkan device when the blit worker and Filament
+shared queue 0. The initial viewport also recreated its direct-light object on
+rebuild; AVARRA now retains immutable renderer configuration objects for the
+State lifetime.
+
+The official `v0.5.0-pre.5` commit adds Windows queue selection/serialization
+and passes AVARRA's live process stability and controlled-close checks. Both
+Thermion packages are pinned to full commit
+`caad37835e7d379621247b24b7de9d84071bd474`. The adapter implements asset
 create/update/destroy behavior and transform conversion behind
 `SceneBackend<THandle>`.
 
-The Android plugin currently declares compile SDK 33, while resolved AndroidX
-dependencies require 34 or newer. Game applies a narrowly scoped compile-SDK
-36 override to only the `thermion_flutter` subproject. Builds also emit
+The pinned Android plugin still declares compile SDK 33, while resolved
+AndroidX dependencies require 34 or newer. Game applies a narrowly scoped
+compile-SDK 36 override to only the `thermion_flutter` subproject. Builds emit
 non-fatal upstream native warnings, and the Android plugin's legacy Kotlin
 Gradle application path presents a future Flutter compatibility risk.
 
-Thermion/Filament is therefore the provisional initial backend, pinned exactly
-at 0.4.1. It is not yet a permanent renderer decision. Live Windows rendering,
-physical Android rendering/performance, lifecycle, animation, picking,
-selection, shadows, transparency, and Forge viewport embedding still require
-validation. See `adr/ADR-016-initial-thermion-renderer.md`.
+Thermion/Filament is therefore the provisional initial backend, pinned to an
+immutable upstream pre-release commit. It is not yet a permanent renderer
+decision. Human confirmation of Windows visual content, physical Android
+rendering/performance, animation, picking, selection, shadows, transparency,
+and Forge viewport embedding still require validation. See ADR-016 and
+ADR-017.
 
 <!-- END AVARRA_CLIENT_PRESENTATION.md -->
 
@@ -1961,7 +1973,7 @@ validation. See `adr/ADR-016-initial-thermion-renderer.md`.
 
 # AVARRA — Stage 2B Renderer Validation
 
-**Status:** Compile integration complete; live-device validation pending  
+**Status:** Windows runtime process gate passed; visual/device validation pending  
 **Date:** 2026-08-10
 
 ## Implemented proof
@@ -1992,7 +2004,8 @@ Environment:
 ```text
 Flutter 3.44.4 stable
 Dart 3.12.2
-thermion_flutter 0.4.1 (exact pin)
+thermion_flutter/thermion_dart 0.5.0-pre.5
+exact Git commit caad37835e7d379621247b24b7de9d84071bd474
 Windows x64
 Android debug APK
 ```
@@ -2006,6 +2019,10 @@ Passed on 2026-08-10:
 - headless server native compilation and three-tick execution;
 - Game Windows release build;
 - Game Android debug APK build;
+- Windows visible-process stability for more than three minutes;
+- Windows controlled launch/close with process exit within 15 seconds;
+- no Windows Vulkan device-loss, unsupported-update, or asset errors on the
+  pinned pre-release;
 - Forge Windows release build;
 - Windows and Android packaging of both `Cube.gltf` and `Cube.bin`;
 - deterministic regeneration of `AVARRA_MASTER_LLM_HANDOFF_v8.md`.
@@ -2022,8 +2039,8 @@ links are in `apps/avarra_game/assets/models/THIRD_PARTY.md`.
 
 ## Android workaround
 
-Thermion 0.4.1 declares compile SDK 33 in its Android plugin while current
-AndroidX dependencies require 34 or newer. Game overrides only the
+The pinned Thermion pre-release declares compile SDK 33 in its Android plugin
+while current AndroidX dependencies require 34 or newer. Game overrides only the
 `thermion_flutter` library subproject to compile SDK 36 in
 `apps/avarra_game/android/build.gradle.kts`.
 
@@ -2039,6 +2056,11 @@ Current builds emit non-fatal warnings for:
 - Thermion's legacy Kotlin Gradle Plugin application path;
 - native dependency download/compilation on cold builds.
 
+Published 0.4.1 also fails the live Windows gate with
+`VK_ERROR_DEVICE_LOST`. Do not downgrade to it. The current upstream commit
+selects a separate Vulkan queue when available or serializes access on
+single-queue hardware; see ADR-017.
+
 Treat any escalation from warning to error as a dependency-compatibility event,
 not as a reason to bypass the scene boundary.
 
@@ -2051,13 +2073,14 @@ cd apps/avarra_game
 flutter run -d windows
 ```
 
-Confirm:
+Automated launch, sustained responsiveness, and controlled-close checks pass.
+Human confirmation still must establish:
 
 1. the cube is visible and lit;
 2. the HUD reports one ECS entity bound to the scene;
 3. no initialization error overlay appears;
-4. resize, minimize/restore, and close do not crash or leak a process;
-5. logs contain no asset-load or native renderer errors.
+4. resize and minimize/restore preserve the scene;
+5. the observed content matches the intended cube proof.
 
 Physical Android device:
 
@@ -2084,8 +2107,9 @@ picking, and desktop/mobile selection loop.
 
 ## Decision record
 
-See ADR-015 for the Flutter Scene stable-SDK finding and ADR-016 for the
-provisional Thermion decision, risks, and replacement boundary.
+See ADR-015 for the Flutter Scene stable-SDK finding, ADR-016 for the
+provisional Thermion decision, and ADR-017 for the Windows runtime failure and
+exact upstream dependency pin.
 
 <!-- END AVARRA_STAGE_2B_RENDERER_VALIDATION.md -->
 
@@ -5163,26 +5187,28 @@ Implemented Stage 2B compile integration:
 
 ```text
 provisional Thermion/Filament backend behind avarra_scene_bridge
-exact thermion_flutter 0.4.1 pin
+exact official v0.5.0-pre.5 commit pin after 0.4.1 runtime failure
 Khronos glTF static cube packaged for Windows and Android
 one ECS entity synchronized to a renderer asset and transform
 initial camera and direct light
 Windows release build
+Windows live-process stability and controlled-close validation
 Android debug APK build with scoped Thermion compile-SDK workaround
 ```
 
 The Flutter Scene compatibility finding is preserved in ADR-015. ADR-016
-records the selected provisional backend, its build evidence, and known
-upstream warnings.
+records the selected provisional backend. ADR-017 records the 0.4.1 live
+Windows failure and exact upstream pre-release commit containing the required
+Vulkan queue fix.
 
 Gate:
 
 > Same world entities render on Windows and Android.
 
-The compile and asset-packaging parts of the gate pass. The gate is not yet
-fully met: visually confirm the same entity in a live Windows process and on a
-physical Android device, then record basic frame, lifecycle, and device
-behavior.
+The compile, asset-packaging, Windows process-stability, and controlled-close
+parts of the gate pass. The gate is not yet fully met: visually confirm the
+same entity in the Windows window and on a physical Android device, then record
+basic frame, lifecycle, and device behavior.
 
 ---
 
@@ -5475,18 +5501,19 @@ other future solution
 
 Current provisional decision:
 
-> Use Thermion/Filament behind `avarra_scene_bridge`, pinned exactly at
-> `thermion_flutter` 0.4.1.
+> Use Thermion/Filament behind `avarra_scene_bridge`, pinned to official
+> `v0.5.0-pre.5` commit `caad378…` until its Windows fix is published.
 
 Current evidence (2026-08-10):
 
 `flutter_scene` 0.20.0 resolves and analyzes on Flutter 3.44.4 stable but does
-not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 now passes
-Windows and Android product compile/package gates; Android currently needs a
-scoped plugin compile-SDK override. Static asset, transform, camera, and light
-integration is implemented. Live Windows and physical Android validation,
-Stage 3 interaction features, editor embedding, and performance remain open.
-See ADR-015 and ADR-016.
+not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 passes
+Windows and Android compile gates but deterministically loses the Vulkan device
+at live Windows startup. The pinned official pre-release fixes the queue race,
+passes Windows live-process/close and Android package checks, and still needs a
+scoped Android compile-SDK override. Human Windows visual confirmation,
+physical Android validation, Stage 3 interaction features, editor embedding,
+and performance remain open. See ADR-015 through ADR-017.
 
 Decision criteria:
 
@@ -6443,6 +6470,11 @@ backend.
 **Status:** Accepted provisional implementation decision  
 **Date:** 2026-08-10
 
+> **Follow-up:** ADR-017 records the deterministic Windows runtime failure in
+> published 0.4.1 and pins the official `v0.5.0-pre.5` commit containing the
+> upstream Vulkan queue-coordination fix. This ADR's backend boundary remains
+> accepted; its exact 0.4.1 version pin is superseded.
+
 ## Context
 
 Stage 2 needs a maintained 3D presentation dependency that builds for Windows
@@ -6468,7 +6500,7 @@ An isolated probe and then the product integration were tested on Flutter
 | Android debug APK build | Passed with the scoped workaround below |
 | glTF asset packaging | Passed for Windows and Android |
 | Static asset, camera, light, transform bridge | Implemented |
-| Live Windows rendering | Pending manual runtime validation |
+| Live Windows rendering | 0.4.1 failed with device loss; see ADR-017 |
 | Physical Android rendering/performance | Pending device validation |
 | Animation, picking, selection, shadows | Pending Stage 3/product validation |
 
@@ -6505,8 +6537,9 @@ avarra_thermion_bridge
   Thermion / Filament
 ```
 
-Pin `thermion_flutter` exactly to 0.4.1 while the package is pre-1.0 and the
-integration surface is still changing. Thermion types must not enter
+Pin Thermion exactly while the package is pre-1.0 and the integration surface
+is still changing. ADR-017 owns the current immutable commit. Thermion types
+must not enter
 `avarra_core`, `avarra_ecs`, `avarra_client`, `avarra_scene_bridge`, or the
 headless server.
 
@@ -6529,6 +6562,8 @@ performance/lifecycle behavior is recorded.
   embedding, and Stage 3 interaction requirements are demonstrated.
 - ADR-015's stable-SDK policy remains accepted; its open backend-selection
   outcome is superseded by this decision.
+- Passing the initial compile gate did not predict Windows runtime viability;
+  ADR-017 adds the required live-launch evidence and dependency update.
 
 ## Sources
 
@@ -6539,5 +6574,102 @@ performance/lifecycle behavior is recorded.
 - <https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Cube>
 
 <!-- END adr/ADR-016-initial-thermion-renderer.md -->
+
+---
+
+<!-- BEGIN adr/ADR-017-thermion-windows-runtime-compatibility.md -->
+
+# ADR-017 — Thermion Windows Runtime Compatibility
+
+**Status:** Accepted interim dependency pin  
+**Date:** 2026-08-10
+
+## Context
+
+ADR-016 selected published `thermion_flutter` 0.4.1 provisionally after both
+product compile gates passed. A live Windows launch then proved why compiling
+is not a sufficient renderer gate.
+
+The first launch exposed an AVARRA integration defect: rebuilding
+`ViewerWidget` constructed a new `DirectLight.sun()` object, which Thermion
+rejects as an unsupported runtime configuration change. AVARRA now retains the
+camera and direct-light objects for the full viewport State lifetime.
+
+After that application fix, Thermion 0.4.1 still failed before loading the glTF
+asset. Its Windows Vulkan/D3D external-texture worker and Filament render thread
+both used Vulkan queue family 0. The NVIDIA RTX 3090 driver reported:
+
+```text
+vkQueueSubmit failed: -4
+vkWaitForFences failed: -4
+vkGetQueryPoolResults error=-4
+```
+
+`-4` is `VK_ERROR_DEVICE_LOST`. Windows recorded application error `0xc0000409`
+in `ucrtbase.dll` and produced a crash dump. The failure was deterministic on
+the validation machine.
+
+## Upstream finding
+
+Thermion's official `v0.5.0-pre.5` tag adds Windows queue coordination absent
+from 0.4.1. It selects another queue from the graphics family when available.
+When the hardware exposes only one queue, it serializes Filament and blit-worker
+queue calls through a process-wide mutex.
+
+The pre-release has not yet been published to pub.dev. AVARRA therefore tested
+the exact tagged commit:
+
+```text
+caad37835e7d379621247b24b7de9d84071bd474
+```
+
+On the same machine, it selected `family 0, queue index 1`, remained responsive
+for more than three minutes without device-loss or asset errors, and completed
+a controlled visible launch/close cycle within 15 seconds.
+
+## Decision
+
+Pin `thermion_flutter` and its `thermion_dart` dependency to official Thermion
+commit `caad37835e7d379621247b24b7de9d84071bd474` (`v0.5.0-pre.5`). Keep the
+Git dependency isolated to `avarra_thermion_bridge` and the root dependency
+override. Do not vendor or patch Thermion native source into AVARRA.
+
+Keep the Android compile-SDK workaround: the pre-release still declares
+compile SDK 33 and uses the legacy Kotlin Gradle Plugin path.
+
+## Verification
+
+Passed with the exact commit:
+
+- bridge and Game analysis;
+- 3 bridge tests and 1 Game widget test;
+- Game Windows release build;
+- Game Android debug APK build;
+- visible Windows process startup and sustained responsiveness;
+- no `VK_ERROR_DEVICE_LOST`, unsupported widget update, or asset error;
+- controlled Windows close and process exit;
+- Android packaging of both cube asset files.
+
+The visual content of the Windows scene still needs human confirmation. A
+physical Android runtime/performance check also remains open. Stage 2 is not
+complete until those checks pass.
+
+## Consequences
+
+- `flutter pub get` currently requires GitHub access in addition to pub.dev.
+- The full commit hash makes the dependency immutable and reviewable.
+- CI cold builds compile the newer native layer and may take longer.
+- Move back to a published version when it contains the queue fix and passes
+  the same Windows/Android compile and live runtime gates.
+- Any future Thermion update must be deliberate; never widen this pin to a
+  branch or floating pre-release constraint.
+
+## Sources
+
+- <https://pub.dev/packages/thermion_flutter>
+- <https://github.com/nmfisher/thermion/tree/v0.5.0-pre.5>
+- <https://github.com/nmfisher/thermion/blob/caad37835e7d379621247b24b7de9d84071bd474/thermion_dart/native/src/vulkan/windows/WindowsVulkanContext.cpp>
+
+<!-- END adr/ADR-017-thermion-windows-runtime-compatibility.md -->
 
 ---

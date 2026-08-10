@@ -3,6 +3,11 @@
 **Status:** Accepted provisional implementation decision  
 **Date:** 2026-08-10
 
+> **Follow-up:** ADR-017 records the deterministic Windows runtime failure in
+> published 0.4.1 and pins the official `v0.5.0-pre.5` commit containing the
+> upstream Vulkan queue-coordination fix. This ADR's backend boundary remains
+> accepted; its exact 0.4.1 version pin is superseded.
+
 ## Context
 
 Stage 2 needs a maintained 3D presentation dependency that builds for Windows
@@ -28,7 +33,7 @@ An isolated probe and then the product integration were tested on Flutter
 | Android debug APK build | Passed with the scoped workaround below |
 | glTF asset packaging | Passed for Windows and Android |
 | Static asset, camera, light, transform bridge | Implemented |
-| Live Windows rendering | Pending manual runtime validation |
+| Live Windows rendering | 0.4.1 failed with device loss; see ADR-017 |
 | Physical Android rendering/performance | Pending device validation |
 | Animation, picking, selection, shadows | Pending Stage 3/product validation |
 
@@ -65,8 +70,9 @@ avarra_thermion_bridge
   Thermion / Filament
 ```
 
-Pin `thermion_flutter` exactly to 0.4.1 while the package is pre-1.0 and the
-integration surface is still changing. Thermion types must not enter
+Pin Thermion exactly while the package is pre-1.0 and the integration surface
+is still changing. ADR-017 owns the current immutable commit. Thermion types
+must not enter
 `avarra_core`, `avarra_ecs`, `avarra_client`, `avarra_scene_bridge`, or the
 headless server.
 
@@ -89,6 +95,8 @@ performance/lifecycle behavior is recorded.
   embedding, and Stage 3 interaction requirements are demonstrated.
 - ADR-015's stable-SDK policy remains accepted; its open backend-selection
   outcome is superseded by this decision.
+- Passing the initial compile gate did not predict Windows runtime viability;
+  ADR-017 adds the required live-launch evidence and dependency update.
 
 ## Sources
 
@@ -97,4 +105,3 @@ performance/lifecycle behavior is recorded.
 - <https://github.com/nmfisher/thermion>
 - <https://github.com/google/filament>
 - <https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Cube>
-

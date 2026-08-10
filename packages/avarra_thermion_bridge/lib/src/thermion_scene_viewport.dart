@@ -27,6 +27,11 @@ final class AvarraThermionViewport extends StatefulWidget {
 }
 
 final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
+  // Thermion compares these configuration objects during widget updates and
+  // rejects identity changes at runtime. Keep them stable for this State's
+  // entire lifetime instead of recreating them from build().
+  final Vector3 _initialCameraPosition = Vector3(4, 3, 6);
+  final DirectLight _directLight = DirectLight.sun();
   SceneBridge<ThermionSceneObject>? _bridge;
   Future<void> _syncTail = Future<void>.value();
   Object? _error;
@@ -85,8 +90,8 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
             color: Color(0xFF101820),
             child: Center(child: CircularProgressIndicator()),
           ),
-          initialCameraPosition: Vector3(4, 3, 6),
-          directLight: DirectLight.sun(),
+          initialCameraPosition: _initialCameraPosition,
+          directLight: _directLight,
           manipulatorType: ManipulatorType.NONE,
           background: const Color(0xFF101820),
           destroyEngineOnUnload: true,

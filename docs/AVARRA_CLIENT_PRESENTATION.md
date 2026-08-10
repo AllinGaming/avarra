@@ -253,19 +253,29 @@ implementation without rejecting it permanently. See
 
 ## 10.2 Current Thermion Finding
 
-Thermion 0.4.1 resolves, analyzes, and builds in the AVARRA Game for Windows
-x64 and Android on Flutter 3.44.4 stable. The adapter implements asset
+Published Thermion 0.4.1 resolves, analyzes, and builds in the AVARRA Game for
+Windows x64 and Android on Flutter 3.44.4 stable, but a live Windows launch
+deterministically lost the Vulkan device when the blit worker and Filament
+shared queue 0. The initial viewport also recreated its direct-light object on
+rebuild; AVARRA now retains immutable renderer configuration objects for the
+State lifetime.
+
+The official `v0.5.0-pre.5` commit adds Windows queue selection/serialization
+and passes AVARRA's live process stability and controlled-close checks. Both
+Thermion packages are pinned to full commit
+`caad37835e7d379621247b24b7de9d84071bd474`. The adapter implements asset
 create/update/destroy behavior and transform conversion behind
 `SceneBackend<THandle>`.
 
-The Android plugin currently declares compile SDK 33, while resolved AndroidX
-dependencies require 34 or newer. Game applies a narrowly scoped compile-SDK
-36 override to only the `thermion_flutter` subproject. Builds also emit
+The pinned Android plugin still declares compile SDK 33, while resolved
+AndroidX dependencies require 34 or newer. Game applies a narrowly scoped
+compile-SDK 36 override to only the `thermion_flutter` subproject. Builds emit
 non-fatal upstream native warnings, and the Android plugin's legacy Kotlin
 Gradle application path presents a future Flutter compatibility risk.
 
-Thermion/Filament is therefore the provisional initial backend, pinned exactly
-at 0.4.1. It is not yet a permanent renderer decision. Live Windows rendering,
-physical Android rendering/performance, lifecycle, animation, picking,
-selection, shadows, transparency, and Forge viewport embedding still require
-validation. See `adr/ADR-016-initial-thermion-renderer.md`.
+Thermion/Filament is therefore the provisional initial backend, pinned to an
+immutable upstream pre-release commit. It is not yet a permanent renderer
+decision. Human confirmation of Windows visual content, physical Android
+rendering/performance, animation, picking, selection, shadows, transparency,
+and Forge viewport embedding still require validation. See ADR-016 and
+ADR-017.

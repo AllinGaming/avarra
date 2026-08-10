@@ -14,7 +14,11 @@ dependencies:
   avarra_scene_bridge: ^0.1.0
   flutter:
     sdk: flutter
-  thermion_flutter: 0.4.1
+  thermion_flutter:
+    git:
+      url: https://github.com/nmfisher/thermion.git
+      ref: caad37835e7d379621247b24b7de9d84071bd474
+      path: thermion_flutter/thermion_flutter
   vector_math: ^2.2.0
 
 dev_dependencies:

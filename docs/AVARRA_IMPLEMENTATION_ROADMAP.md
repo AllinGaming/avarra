@@ -77,26 +77,28 @@ Implemented Stage 2B compile integration:
 
 ```text
 provisional Thermion/Filament backend behind avarra_scene_bridge
-exact thermion_flutter 0.4.1 pin
+exact official v0.5.0-pre.5 commit pin after 0.4.1 runtime failure
 Khronos glTF static cube packaged for Windows and Android
 one ECS entity synchronized to a renderer asset and transform
 initial camera and direct light
 Windows release build
+Windows live-process stability and controlled-close validation
 Android debug APK build with scoped Thermion compile-SDK workaround
 ```
 
 The Flutter Scene compatibility finding is preserved in ADR-015. ADR-016
-records the selected provisional backend, its build evidence, and known
-upstream warnings.
+records the selected provisional backend. ADR-017 records the 0.4.1 live
+Windows failure and exact upstream pre-release commit containing the required
+Vulkan queue fix.
 
 Gate:
 
 > Same world entities render on Windows and Android.
 
-The compile and asset-packaging parts of the gate pass. The gate is not yet
-fully met: visually confirm the same entity in a live Windows process and on a
-physical Android device, then record basic frame, lifecycle, and device
-behavior.
+The compile, asset-packaging, Windows process-stability, and controlled-close
+parts of the gate pass. The gate is not yet fully met: visually confirm the
+same entity in the Windows window and on a physical Android device, then record
+basic frame, lifecycle, and device behavior.
 
 ---
 
