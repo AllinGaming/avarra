@@ -172,6 +172,8 @@ Current provisional implementation:
 
 ```text
 Avarra Client
+    +
+Avarra Isometric
     ↓
 Avarra Scene Bridge
     ↓
@@ -190,6 +192,17 @@ and remains subject to physical Android and later interaction validation. See
 ADR-015 through ADR-017.
 
 The scene bridge exists to avoid coupling simulation to one 3D dependency.
+
+Stage 3 isometric state is renderer neutral. `avarra_isometric` owns the
+orthographic four-angle camera rig, screen/ground projection, semantic input
+and pick values, and simple occlusion resolution. Game owns selected stable
+IDs and camera intent. Thermion owns only camera application, renderer picking,
+selection tint, and blend-material opacity behind its adapter.
+
+The Stage 3 select/rotate/zoom/occlusion loop passes on Windows and the Pixel
+10 Pro Android emulator. Physical Android remains an open manual gate. Pinned
+Thermion compatibility details and adapter fallbacks are recorded in
+`AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`.
 
 ## Isometric first
 

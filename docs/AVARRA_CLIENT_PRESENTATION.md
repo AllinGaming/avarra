@@ -127,12 +127,26 @@ The first three packages remain free of Flutter and GPU dependencies. Only the
 Thermion adapter package imports the Flutter renderer. Its handles never become
 canonical entity identity.
 
-The Game proof packages a Khronos glTF cube, creates one renderer asset from one
-ECS presentation entity, applies its transform, and provides an initial camera
-and direct light. Windows and Android builds package the model successfully.
+The Game proof packages a Khronos glTF cube and creates a target plus an
+alpha-blended occluder from two ECS presentation entities. It applies their
+transforms and provides an orthographic isometric camera and direct light.
+Windows and Android Stage 2 builds package the model successfully.
 Windows live rendering passes. A Pixel 10 Pro Android emulator also preserves
 the scene through repeated cold starts and background/resume cycles. Physical
 Android behavior remains a manual validation gate.
+
+Stage 3 adds renderer-neutral camera, ground-projection, semantic input/pick,
+and simple occlusion math in `avarra_isometric`. The Thermion adapter owns
+camera projection, screen picking, stable-ID handle lookup, selection tint,
+and alpha application. Game owns selected entity, ground target, and camera
+intent state; no Thermion handle crosses that boundary.
+
+Windows and Pixel 10 Pro Android-emulator Stage 3 interaction checks pass. The
+adapter uses a material selection tint because Thermion's optional highlight
+overlay initializes before the Android swapchain, and it falls back to nearest
+presentation bounds when the pinned Android mesh pick returns no entity. It
+also reapplies the orthographic rig after Thermion surface attachment/resizes.
+See `AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`.
 
 ---
 
@@ -279,5 +293,5 @@ Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
 decision. Windows visual/lifecycle validation and Pixel 10 Pro Android emulator
 cold-start/lifecycle checks pass. Physical Android rendering/performance,
-animation, picking, selection, shadows, transparency, and Forge viewport
+animation, physical-device Stage 3 interaction, shadows, and Forge viewport
 embedding still require validation. See ADR-016 and ADR-017.

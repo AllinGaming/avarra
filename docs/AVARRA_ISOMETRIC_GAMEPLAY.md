@@ -204,3 +204,34 @@ occluder/roof diagnostics
 ```
 
 Creators should see the world using real game rules before export.
+
+---
+
+# 11. Current Stage 3 Implementation
+
+The first implementation keeps shared behavior in the pure-Dart
+`avarra_isometric` package:
+
+```text
+IsometricCameraRig
+four stepped orthographic angles
+bounded zoom
+screen-to-world ray and ground projection
+semantic select/ground/rotate/zoom values
+stable-ID pick results
+nearest presentation-bounds entity picking
+axis-aligned camera-target occlusion resolution
+```
+
+Game owns camera intent, selected `EntityId`, and ground-target state. The
+Thermion adapter converts the rig to renderer camera calls, maps picked
+renderer entities back to stable IDs, applies the selection tint, and
+expresses occlusion as alpha on blend-authored materials.
+
+The adapter prefers the backend mesh result and falls back to the nearest
+presentation AABB on the shared camera ray. This preserves click/tap selection
+on platforms where the provisional backend returns no mesh entity.
+
+The first occlusion resolver deliberately uses presentation-space AABBs. It is
+a small deterministic foundation for the Stage 3 proof, not the eventual roof
+group, interior-volume, or physics visibility system.

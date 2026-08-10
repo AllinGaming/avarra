@@ -31,21 +31,23 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 6. `docs/AVARRA_CLIENT_PRESENTATION.md`
 7. `docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md`
 8. `docs/AVARRA_ISOMETRIC_GAMEPLAY.md`
-9. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-10. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-11. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-12. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-13. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-14. `docs/AVARRA_OPEN_DECISIONS.md`
-15. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-16. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-17. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-18. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-19. ADRs under `docs/adr/`
+9. `docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`
+10. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+11. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+12. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+13. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+14. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+15. `docs/AVARRA_OPEN_DECISIONS.md`
+16. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+17. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+18. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+19. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+20. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0 and 1 are complete. Stage 2 — Client 3D Bridge is in progress.
+Stages 0 and 1 are complete. The physical-device remainder of Stage 2 is open,
+and the Stage 3 isometric interaction implementation is in progress.
 
 ```text
 apps/
@@ -57,6 +59,7 @@ packages/
   avarra_core/    Dart — server-safe shared foundation
   avarra_ecs/     Dart — entity/component runtime and local transforms
   avarra_client/  Dart — immutable presentation extraction
+  avarra_isometric/ Dart — camera, picking, input, and occlusion semantics
   avarra_scene_bridge/ Dart — renderer adapter contract and handle mapping
   avarra_thermion_bridge/ Flutter — Thermion/Filament scene adapter and viewport
 ```
@@ -75,6 +78,17 @@ rendering/performance is the remaining Stage 2 gate. See
 `docs/adr/ADR-017-thermion-windows-runtime-compatibility.md` plus
 `docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md`.
 
+Stage 3 now has a renderer-neutral orthographic camera rig, four stepped
+angles, zoom, screen-to-ground rays, semantic click/tap results, stable-ID
+entity selection, and axis-aligned occlusion resolution. The Game proof uses
+two ECS presentation entities: a selectable target and an alpha-blended
+occluder whose visibility is restored when the camera rotates clear. Thermion
+camera, picking, tint, and material operations remain confined to the
+adapter. The same select/rotate/zoom/occlusion loop passes on Windows and a
+Pixel 10 Pro Android emulator; physical Android remains a manual gate. Results
+and provisional Thermion findings are recorded in
+`docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -89,6 +103,7 @@ dart test packages/avarra_core
 dart test packages/avarra_ecs
 dart test packages/avarra_client
 dart test packages/avarra_scene_bridge
+dart test packages/avarra_isometric
 flutter test packages/avarra_thermion_bridge
 dart test apps/avarra_server
 flutter test apps/avarra_game

@@ -6,6 +6,7 @@
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
   "stage_2b_validation": "docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md",
+  "stage_3_validation": "docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md",
   "adrs": [
     "ADR-008-build-avarra-not-an-engine.md",
     "ADR-009-scene-bridge-boundary.md",

@@ -124,6 +124,19 @@ Gate:
 
 > Same isometric interaction loop works Windows/Android.
 
+Implementation status:
+
+- `avarra_isometric` owns the pure-Dart camera rig, projection math, semantic
+  input/pick values, and simple camera-target occlusion resolver.
+- Game exposes click/tap selection, wheel/pinch/button zoom, four-angle camera
+  rotation, ground targets, and an alpha-blended occluder proof.
+- Thermion entity handles map back to stable AVARRA `EntityId` values only in
+  the adapter.
+- Windows and Pixel 10 Pro Android-emulator interaction validation pass. The
+  separate physical Android performance/lifecycle gate remains open.
+
+See `AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`.
+
 ---
 
 # Stage 4 — Content/World Definition
