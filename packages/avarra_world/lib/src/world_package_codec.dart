@@ -72,7 +72,7 @@ final class WorldPackageCodec {
     }
 
     final assets = _decodeAssets(root['assets']);
-    final entities = _decodeEntities(root['entities']);
+    final entities = _decodeEntities(root['entities'], contentVersion);
     _validateReferences(assets, entities);
 
     return WorldDefinition(
@@ -109,7 +109,10 @@ final class WorldPackageCodec {
     return result;
   }
 
-  List<WorldEntityDefinition> _decodeEntities(Object? encoded) {
+  List<WorldEntityDefinition> _decodeEntities(
+    Object? encoded,
+    int contentSchemaVersion,
+  ) {
     final values = _list(encoded, r'$.entities');
     final result = <WorldEntityDefinition>[];
     final ids = <EntityId>{};
@@ -124,7 +127,13 @@ final class WorldPackageCodec {
       final encodedComponents = _object(data['components'], '$path.components');
       final components = <ContentComponentDefinition>[];
       for (final entry in encodedComponents.entries) {
-        components.add(componentSchemas.decode(entry.key, entry.value));
+        components.add(
+          componentSchemas.decode(
+            entry.key,
+            entry.value,
+            contentSchemaVersion: contentSchemaVersion,
+          ),
+        );
       }
       _validateEntityComponents(id, components, path);
       result.add(WorldEntityDefinition(id: id, components: components));
@@ -145,6 +154,57 @@ final class WorldPackageCodec {
         'A renderable entity must also define a transform.',
         context: {'entityId': entityId.value},
       );
+    }
+    if (types.contains(AvarraComponentType.physicsCollider) &&
+        !types.contains(AvarraComponentType.transform)) {
+      _invalid(
+        '$path.components',
+        'A collider entity must also define a transform.',
+        context: {'entityId': entityId.value},
+      );
+    }
+    final collider = components
+        .whereType<PhysicsColliderDefinition>()
+        .firstOrNull;
+    final transform = components.whereType<TransformDefinition>().firstOrNull;
+    if (collider != null &&
+        transform != null &&
+        (transform.rotation.x.abs() > 1e-9 ||
+            transform.rotation.y.abs() > 1e-9 ||
+            transform.rotation.z.abs() > 1e-9)) {
+      _invalid(
+        '$path.components',
+        'Stage 5 box colliders must remain axis aligned.',
+        context: {'entityId': entityId.value},
+      );
+    }
+    if (types.contains(AvarraComponentType.characterController)) {
+      if (collider?.bodyKind != ContentPhysicsBodyKind.character) {
+        _invalid(
+          '$path.components',
+          'A character controller requires a character collider.',
+          context: {'entityId': entityId.value},
+        );
+      }
+    }
+    if (types.contains(AvarraComponentType.playerControlled) &&
+        !types.contains(AvarraComponentType.characterController)) {
+      _invalid(
+        '$path.components',
+        'A player-controlled entity requires a character controller.',
+        context: {'entityId': entityId.value},
+      );
+    }
+    if (types.contains(AvarraComponentType.interactable)) {
+      if (!types.contains(AvarraComponentType.transform) ||
+          collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||
+          collider?.isSensor == true) {
+        _invalid(
+          '$path.components',
+          'An interactable requires a transform and non-sensor static collider.',
+          context: {'entityId': entityId.value},
+        );
+      }
     }
   }
 

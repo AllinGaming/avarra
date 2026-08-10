@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
+import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:test/test.dart';
 
@@ -65,6 +67,48 @@ void main() {
     );
   });
 
+  test('continues to decode content schema v1 worlds', () {
+    final json = _validWorldJson()..['contentSchemaVersion'] = 1;
+    expect(() => codec.decode(jsonEncode(json)), returnsNormally);
+  });
+
+  test('instantiates Stage 5 components into server-safe runtime state', () {
+    final json = _validWorldJson();
+    final entities = json['entities']! as List<dynamic>;
+    final target = entities.first as Map<String, dynamic>;
+    final components = target['components']! as Map<String, dynamic>;
+    components
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.4, 0.4, 0.4],
+        'bodyKind': 'character',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.characterController] = {
+        'schemaVersion': 1,
+        'moveSpeed': 2.5,
+        'skinWidth': 0.03,
+        'arrivalTolerance': 0.08,
+      }
+      ..[AvarraComponentType.playerControlled] = {'schemaVersion': 1};
+
+    final runtime = const RuntimeWorldLoader().load(
+      codec.decode(jsonEncode(json)),
+    );
+    final handle = runtime.ecs.handleFor(EntityId.parse(_targetEntityId))!;
+
+    expect(runtime.ecs.hasComponent<PhysicsColliderComponent>(handle), isTrue);
+    expect(
+      runtime.ecs.component<PhysicsColliderComponent>(handle).bodyKind,
+      PhysicsBodyKind.character,
+    );
+    expect(
+      runtime.ecs.component<CharacterControllerComponent>(handle).moveSpeed,
+      2.5,
+    );
+    expect(runtime.ecs.hasComponent<PlayerControlledComponent>(handle), isTrue);
+  });
+
   test('rejects duplicate stable IDs', () {
     final json = _validWorldJson();
     final entities = json['entities']! as List<dynamic>;
@@ -120,6 +164,61 @@ void main() {
 
     expect(
       () => codec.decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
+
+  test('rejects invalid Stage 5 component relationships', () {
+    final json = _validWorldJson();
+    final entities = json['entities']! as List<dynamic>;
+    final target = entities.first as Map<String, dynamic>;
+    final components = target['components']! as Map<String, dynamic>;
+    components[AvarraComponentType.playerControlled] = {'schemaVersion': 1};
+
+    expect(
+      () => codec.decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+
+    final sensorJson = _validWorldJson();
+    final sensorEntities = sensorJson['entities']! as List<dynamic>;
+    final sensorTarget = sensorEntities.first as Map<String, dynamic>;
+    final sensorComponents =
+        sensorTarget['components']! as Map<String, dynamic>;
+    sensorComponents
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.5, 0.5, 0.5],
+        'bodyKind': 'static',
+        'isSensor': true,
+      }
+      ..[AvarraComponentType.interactable] = {
+        'schemaVersion': 1,
+        'label': 'Invalid sensor target',
+        'range': 2,
+      };
+    expect(
+      () => codec.decode(jsonEncode(sensorJson)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+
+    final rotatedJson = _validWorldJson();
+    final rotatedEntities = rotatedJson['entities']! as List<dynamic>;
+    final rotatedTarget = rotatedEntities.first as Map<String, dynamic>;
+    final rotatedComponents =
+        rotatedTarget['components']! as Map<String, dynamic>;
+    final rotatedTransform =
+        rotatedComponents[AvarraComponentType.transform]!
+            as Map<String, dynamic>;
+    rotatedTransform['rotation'] = [0, 0.382683, 0, 0.92388];
+    rotatedComponents[AvarraComponentType.physicsCollider] = {
+      'schemaVersion': 1,
+      'halfExtents': [0.5, 0.5, 0.5],
+      'bodyKind': 'static',
+      'isSensor': false,
+    };
+    expect(
+      () => codec.decode(jsonEncode(rotatedJson)),
       _throwsCode(WorldErrorCodes.invalidDefinition),
     );
   });

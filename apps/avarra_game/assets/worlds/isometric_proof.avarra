@@ -1,10 +1,10 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 1,
-  "contentSchemaVersion": 1,
+  "contentSchemaVersion": 2,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
-    "name": "Isometric Interaction Proof"
+    "name": "Isometric Character Proof"
   },
   "assets": [
     {
@@ -18,17 +18,28 @@
       "components": {
         "avarra.transform": {
           "schemaVersion": 1,
-          "position": [0, 0.6, 0],
+          "position": [0, 0.45, 0],
           "rotation": [0, 0, 0, 1],
-          "scale": [0.6, 0.6, 0.6]
+          "scale": [0.45, 0.45, 0.45]
         },
         "avarra.renderable_reference": {
           "schemaVersion": 1,
           "assetId": "01890f47-e8b8-7a68-9000-000000000001"
         },
-        "avarra.isometric.occlusion_target": {
-          "schemaVersion": 1
-        }
+        "avarra.physics.collider": {
+          "schemaVersion": 1,
+          "halfExtents": [0.4, 0.4, 0.4],
+          "bodyKind": "character",
+          "isSensor": false
+        },
+        "avarra.character_controller": {
+          "schemaVersion": 1,
+          "moveSpeed": 2.5,
+          "skinWidth": 0.03,
+          "arrivalTolerance": 0.08
+        },
+        "avarra.player_controlled": {"schemaVersion": 1},
+        "avarra.isometric.occlusion_target": {"schemaVersion": 1}
       }
     },
     {
@@ -44,8 +55,59 @@
           "schemaVersion": 1,
           "assetId": "01890f47-e8b8-7a68-9000-000000000001"
         },
-        "avarra.isometric.occluder": {
-          "schemaVersion": 1
+        "avarra.physics.collider": {
+          "schemaVersion": 1,
+          "halfExtents": [0.45, 1.5, 1.5],
+          "bodyKind": "static",
+          "isSensor": false
+        },
+        "avarra.isometric.occluder": {"schemaVersion": 1}
+      }
+    },
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000003",
+      "components": {
+        "avarra.transform": {
+          "schemaVersion": 1,
+          "position": [1.2, 0.6, 0],
+          "rotation": [0, 0, 0, 1],
+          "scale": [0.3, 0.6, 1.2]
+        },
+        "avarra.renderable_reference": {
+          "schemaVersion": 1,
+          "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+        },
+        "avarra.physics.collider": {
+          "schemaVersion": 1,
+          "halfExtents": [0.3, 0.6, 1.2],
+          "bodyKind": "static",
+          "isSensor": false
+        }
+      }
+    },
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000004",
+      "components": {
+        "avarra.transform": {
+          "schemaVersion": 1,
+          "position": [-1.5, 0.4, -1],
+          "rotation": [0, 0, 0, 1],
+          "scale": [0.4, 0.4, 0.4]
+        },
+        "avarra.renderable_reference": {
+          "schemaVersion": 1,
+          "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+        },
+        "avarra.physics.collider": {
+          "schemaVersion": 1,
+          "halfExtents": [0.4, 0.4, 0.4],
+          "bodyKind": "static",
+          "isSensor": false
+        },
+        "avarra.interactable": {
+          "schemaVersion": 1,
+          "label": "Ancient console",
+          "range": 2.4
         }
       }
     }

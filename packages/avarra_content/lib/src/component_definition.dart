@@ -146,3 +146,101 @@ final class IsometricOccluderDefinition extends ContentComponentDefinition {
   @override
   Map<String, Object?> toJson() => {'schemaVersion': schemaVersion};
 }
+
+enum ContentPhysicsBodyKind {
+  staticBody('static'),
+  character('character');
+
+  const ContentPhysicsBodyKind(this.serializedName);
+
+  final String serializedName;
+
+  static ContentPhysicsBodyKind fromJson(String value) {
+    return values.firstWhere((kind) => kind.serializedName == value);
+  }
+}
+
+final class PhysicsColliderDefinition extends ContentComponentDefinition {
+  const PhysicsColliderDefinition({
+    required this.halfExtents,
+    required this.bodyKind,
+    required this.isSensor,
+  });
+
+  final ContentVector3 halfExtents;
+  final ContentPhysicsBodyKind bodyKind;
+  final bool isSensor;
+
+  @override
+  String get type => AvarraComponentType.physicsCollider;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'halfExtents': halfExtents.toJson(),
+    'bodyKind': bodyKind.serializedName,
+    'isSensor': isSensor,
+  };
+}
+
+final class CharacterControllerDefinition extends ContentComponentDefinition {
+  const CharacterControllerDefinition({
+    required this.moveSpeed,
+    required this.skinWidth,
+    required this.arrivalTolerance,
+  });
+
+  final double moveSpeed;
+  final double skinWidth;
+  final double arrivalTolerance;
+
+  @override
+  String get type => AvarraComponentType.characterController;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'moveSpeed': moveSpeed,
+    'skinWidth': skinWidth,
+    'arrivalTolerance': arrivalTolerance,
+  };
+}
+
+final class PlayerControlledDefinition extends ContentComponentDefinition {
+  const PlayerControlledDefinition();
+
+  @override
+  String get type => AvarraComponentType.playerControlled;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {'schemaVersion': schemaVersion};
+}
+
+final class InteractableDefinition extends ContentComponentDefinition {
+  const InteractableDefinition({required this.label, required this.range});
+
+  final String label;
+  final double range;
+
+  @override
+  String get type => AvarraComponentType.interactable;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'label': label,
+    'range': range,
+  };
+}

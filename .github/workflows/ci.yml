@@ -48,6 +48,14 @@ jobs:
         working-directory: packages/avarra_world
         run: dart test
 
+      - name: Test Physics Queries
+        working-directory: packages/avarra_physics
+        run: dart test
+
+      - name: Test Gameplay Systems
+        working-directory: packages/avarra_gameplay
+        run: dart test
+
       - name: Test Client Presentation
         working-directory: packages/avarra_client
         run: dart test

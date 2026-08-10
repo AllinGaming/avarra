@@ -22,6 +22,22 @@ final class SetGroundTargetIntent extends IsometricInputIntent {
   Vector3 get position => Vector3.copy(_position);
 }
 
+/// Requests direct planar character movement from any input device.
+final class MoveCharacterIntent extends IsometricInputIntent {
+  MoveCharacterIntent(Vector3 direction) : _direction = Vector3.copy(direction);
+
+  final Vector3 _direction;
+
+  Vector3 get direction => Vector3.copy(_direction);
+}
+
+/// Requests interaction with a stable authored entity.
+final class InteractEntityIntent extends IsometricInputIntent {
+  const InteractEntityIntent(this.entityId);
+
+  final EntityId entityId;
+}
+
 /// Rotates the stepped gameplay camera by [deltaQuarterTurns].
 final class RotateCameraIntent extends IsometricInputIntent {
   const RotateCameraIntent(this.deltaQuarterTurns);

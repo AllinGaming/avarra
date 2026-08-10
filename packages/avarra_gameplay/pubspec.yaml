@@ -1,5 +1,5 @@
-name: avarra_world
-description: Portable AVARRA world definitions, validation, and ECS loading.
+name: avarra_gameplay
+description: Server-safe AVARRA character movement and interaction systems.
 version: 0.1.0
 publish_to: none
 
@@ -9,10 +9,8 @@ environment:
 resolution: workspace
 
 dependencies:
-  avarra_content: ^0.1.0
   avarra_core: ^0.1.0
   avarra_ecs: ^0.1.0
-  avarra_gameplay: ^0.1.0
   avarra_physics: ^0.1.0
   vector_math: ^2.2.0
 

@@ -1,6 +1,8 @@
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
+import 'package:avarra_physics/avarra_physics.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'world_definition.dart';
@@ -72,6 +74,42 @@ final class RuntimeWorldLoader {
             targets.add(entity.id);
           case IsometricOccluderDefinition():
             occluders.add(entity.id);
+          case PhysicsColliderDefinition():
+            ecs.addComponent(
+              handle,
+              PhysicsColliderComponent.box(
+                halfExtents: Vector3(
+                  component.halfExtents.x,
+                  component.halfExtents.y,
+                  component.halfExtents.z,
+                ),
+                bodyKind: switch (component.bodyKind) {
+                  ContentPhysicsBodyKind.staticBody =>
+                    PhysicsBodyKind.staticBody,
+                  ContentPhysicsBodyKind.character => PhysicsBodyKind.character,
+                },
+                isSensor: component.isSensor,
+              ),
+            );
+          case CharacterControllerDefinition():
+            ecs.addComponent(
+              handle,
+              CharacterControllerComponent(
+                moveSpeed: component.moveSpeed,
+                skinWidth: component.skinWidth,
+                arrivalTolerance: component.arrivalTolerance,
+              ),
+            );
+          case PlayerControlledDefinition():
+            ecs.addComponent(handle, const PlayerControlledComponent());
+          case InteractableDefinition():
+            ecs.addComponent(
+              handle,
+              InteractableComponent(
+                label: component.label,
+                range: component.range,
+              ),
+            );
         }
       }
     }

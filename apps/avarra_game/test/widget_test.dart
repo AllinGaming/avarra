@@ -8,10 +8,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 4 · Portable World Loading'), findsOneWidget);
-    expect(find.text('Isometric Interaction Proof'), findsOneWidget);
-    expect(find.text('2 ECS entities bound to the scene'), findsOneWidget);
-    expect(find.text('Click or tap the cube to select'), findsOneWidget);
+    expect(find.text('Stage 5 · Character + Physics'), findsOneWidget);
+    expect(find.text('Isometric Character Proof'), findsOneWidget);
+    expect(find.text('4 ECS entities bound to the scene'), findsOneWidget);
+    expect(
+      find.text('Tap ground to move · WASD/arrow keys for direct movement'),
+      findsOneWidget,
+    );
+    expect(find.text('Select the console, then interact'), findsOneWidget);
     expect(find.byKey(const Key('camera_status')), findsOneWidget);
     expect(find.byKey(const Key('world_version_status')), findsOneWidget);
   });

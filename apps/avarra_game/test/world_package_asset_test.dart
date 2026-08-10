@@ -16,8 +16,8 @@ void main() {
     final definition = codec.decode(packageFile.readAsStringSync());
     final runtime = const RuntimeWorldLoader().load(definition);
 
-    expect(definition.name, 'Isometric Interaction Proof');
-    expect(runtime.ecs.entityCount, 2);
+    expect(definition.name, 'Isometric Character Proof');
+    expect(runtime.ecs.entityCount, 4);
     expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
     expect(runtime.isometricOccluderEntityIds, hasLength(1));
     for (final entry in runtime.assetPaths.entries) {
