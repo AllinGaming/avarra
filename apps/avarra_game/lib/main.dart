@@ -6,6 +6,7 @@ import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
 import 'package:avarra_physics/avarra_physics.dart';
+import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
@@ -65,12 +66,12 @@ class _WorldBootstrapScreen extends StatefulWidget {
 }
 
 class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
-  late final Future<RuntimeWorld> _runtimeWorld = _loadWorld();
+  late final Future<_LoadedWorld> _loadedWorld = _loadWorld();
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<RuntimeWorld>(
-      future: _runtimeWorld,
+    return FutureBuilder<_LoadedWorld>(
+      future: _loadedWorld,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Scaffold(
@@ -83,8 +84,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
             ),
           );
         }
-        final runtimeWorld = snapshot.data;
-        if (runtimeWorld == null) {
+        final loadedWorld = snapshot.data;
+        if (loadedWorld == null) {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(key: Key('world_loading')),
@@ -93,27 +94,62 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
         }
         return _PresentationBoundaryScreen(
           enableRenderer: widget.enableRenderer,
-          runtimeWorld: runtimeWorld,
+          runtimeWorld: loadedWorld.runtimeWorld,
+          streaming: loadedWorld.streaming,
         );
       },
     );
   }
 
-  Future<RuntimeWorld> _loadWorld() async {
+  Future<_LoadedWorld> _loadWorld() async {
     final source = await widget.sourceLoader();
     final definition = WorldPackageCodec().decode(source);
-    return const RuntimeWorldLoader().load(definition);
+    final runtimeWorld = const RuntimeWorldLoader().load(definition);
+    final player = runtimeWorld.ecs.query<PlayerControlledComponent>().single;
+    final playerPosition = runtimeWorld.ecs
+        .component<TransformComponent>(player.handle)
+        .position;
+    final streaming = ChunkStreamingController(
+      world: definition,
+      ecs: runtimeWorld.ecs,
+      source: MemoryChunkStreamingSource(definition.chunks),
+      budget: const ChunkStreamingBudget(
+        maximumActiveChunks: 2,
+        entityActivationsPerPump: 3,
+        entityDeactivationsPerPump: 3,
+      ),
+    );
+    streaming.reconcile([
+      ChunkStreamingRequest(
+        coordinate: streaming.index.coordinateForPosition(
+          worldX: playerPosition.x,
+          worldZ: playerPosition.z,
+        ),
+        source: ChunkInterestSource.localPlayer,
+      ),
+    ]);
+    await streaming.pumpUntilStable();
+    return _LoadedWorld(runtimeWorld: runtimeWorld, streaming: streaming);
   }
+}
+
+final class _LoadedWorld {
+  const _LoadedWorld({required this.runtimeWorld, required this.streaming});
+
+  final RuntimeWorld runtimeWorld;
+  final ChunkStreamingController streaming;
 }
 
 class _PresentationBoundaryScreen extends StatefulWidget {
   const _PresentationBoundaryScreen({
     required this.enableRenderer,
     required this.runtimeWorld,
+    required this.streaming,
   });
 
   final bool enableRenderer;
   final RuntimeWorld runtimeWorld;
+  final ChunkStreamingController streaming;
 
   @override
   State<_PresentationBoundaryScreen> createState() {
@@ -125,9 +161,9 @@ class _PresentationBoundaryScreenState
     extends State<_PresentationBoundaryScreen> {
   late PresentationSnapshot _presentation;
   late final ThermionAssetUriResolver _assetUriResolver;
-  late final DeterministicPhysicsCollisionWorld _collisionWorld;
-  late final CharacterMovementSystem _movementSystem;
-  late final InteractionSystem _interactionSystem;
+  late DeterministicPhysicsCollisionWorld _collisionWorld;
+  late CharacterMovementSystem _movementSystem;
+  late InteractionSystem _interactionSystem;
   late final EntityId _playerEntityId;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
@@ -135,6 +171,8 @@ class _PresentationBoundaryScreenState
   EntityId? _selectedEntityId;
   SetGroundTargetIntent? _groundTarget;
   Timer? _movementTimer;
+  bool _streamingInFlight = false;
+  bool _streamingDirty = false;
   String _interactionStatus = 'Select the console, then interact';
 
   @override
@@ -188,13 +226,19 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 5 · Character + Physics'),
+        const Text('Stage 6 · World Streaming'),
         Text(widget.runtimeWorld.definition.name),
         Text('${_presentation.length} ECS entities bound to the scene'),
         Text(
           'World v${widget.runtimeWorld.definition.worldFormatVersion} · '
           'content v${widget.runtimeWorld.definition.contentSchemaVersion}',
           key: const Key('world_version_status'),
+        ),
+        Text(
+          'Chunk $_currentChunkCoordinate · '
+          '${widget.streaming.snapshot.activeChunkCount}/'
+          '${widget.streaming.totalChunkCount} active',
+          key: const Key('streaming_status'),
         ),
         Text(
           'Camera ${_cameraRig.quarterTurns + 1}/4 · '
@@ -223,7 +267,10 @@ class _PresentationBoundaryScreenState
               assetUriResolver: _assetUriResolver,
               cameraRig: _cameraRig,
               occlusionTargetEntityId: _playerEntityId,
-              occluderEntityIds: widget.runtimeWorld.isometricOccluderEntityIds,
+              occluderEntityIds: {
+                ...widget.runtimeWorld.isometricOccluderEntityIds,
+                ...widget.streaming.activeOccluderEntityIds,
+              },
               onPick: _handlePick,
               onZoom: (factor) => _dispatchIntent(ZoomCameraIntent(factor)),
             ),
@@ -418,6 +465,9 @@ class _PresentationBoundaryScreenState
           _cameraRig = _cameraRig.zoomBy(factor);
       }
     });
+    if (intent is SetGroundTargetIntent) {
+      _scheduleStreamingRefresh();
+    }
   }
 
   void _handleKeyEvent(KeyEvent event) {
@@ -472,6 +522,111 @@ class _PresentationBoundaryScreenState
       _interactionStatus =
           'Movement blocked by ${result.collidedEntityIds.first.value}';
     }
+    _scheduleStreamingRefresh();
+  }
+
+  WorldChunkCoordinate get _currentChunkCoordinate {
+    final position = _playerPosition;
+    return widget.streaming.index.coordinateForPosition(
+      worldX: position.x,
+      worldZ: position.z,
+    );
+  }
+
+  void _scheduleStreamingRefresh() {
+    _streamingDirty = true;
+    if (_streamingInFlight) {
+      return;
+    }
+    _streamingInFlight = true;
+    unawaited(_drainStreaming());
+  }
+
+  Future<void> _drainStreaming() async {
+    try {
+      while (_streamingDirty && mounted) {
+        _streamingDirty = false;
+        final currentCoordinate = _currentChunkCoordinate;
+        final activeBefore = widget.streaming.activeChunkIds;
+        final requests = <ChunkStreamingRequest>[
+          ChunkStreamingRequest(
+            coordinate: currentCoordinate,
+            source: ChunkInterestSource.localPlayer,
+          ),
+        ];
+        final groundTarget = _groundTarget;
+        if (groundTarget != null) {
+          final targetCoordinate = widget.streaming.index.coordinateForPosition(
+            worldX: groundTarget.position.x,
+            worldZ: groundTarget.position.z,
+          );
+          if (targetCoordinate != currentCoordinate) {
+            requests.add(
+              ChunkStreamingRequest(
+                coordinate: targetCoordinate,
+                source: ChunkInterestSource.moveDestination,
+              ),
+            );
+          }
+        }
+
+        final unavailable = widget.streaming.reconcile(requests);
+        await widget.streaming.pumpUntilStable();
+        if (!mounted) {
+          return;
+        }
+
+        final activeAfter = widget.streaming.activeChunkIds;
+        final activeSetChanged =
+            activeBefore.length != activeAfter.length ||
+            !activeBefore.containsAll(activeAfter);
+        if (activeSetChanged) {
+          _rebuildGameplayQueries();
+          setState(() {
+            _presentation = const PresentationExtractor().extract(
+              widget.runtimeWorld.ecs,
+            );
+            final selectedEntityId = _selectedEntityId;
+            if (selectedEntityId != null &&
+                widget.runtimeWorld.ecs.handleFor(selectedEntityId) == null) {
+              _selectedEntityId = null;
+            }
+          });
+        }
+        if (unavailable.isNotEmpty) {
+          setState(() {
+            _interactionStatus = 'Reached the authored world edge';
+          });
+        }
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _interactionStatus = 'Streaming failed: $error';
+        });
+      }
+    } finally {
+      _streamingInFlight = false;
+      if (_streamingDirty && mounted) {
+        _scheduleStreamingRefresh();
+      }
+    }
+  }
+
+  void _rebuildGameplayQueries() {
+    final previousCollisionWorld = _collisionWorld;
+    _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
+      widget.runtimeWorld.ecs,
+    );
+    _movementSystem = CharacterMovementSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    _interactionSystem = InteractionSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    previousCollisionWorld.dispose();
   }
 
   Vector3 get _keyboardDirection {

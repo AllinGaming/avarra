@@ -30,7 +30,121 @@ final class RuntimeWorld {
   final Set<EntityId> isometricOccluderEntityIds;
 }
 
-/// Deterministically instantiates a validated definition into the ECS.
+/// Metadata returned when one definition is instantiated into an ECS world.
+final class RuntimeEntityLoadResult {
+  const RuntimeEntityLoadResult({
+    required this.handle,
+    required this.isIsometricOcclusionTarget,
+    required this.isIsometricOccluder,
+  });
+
+  final EntityHandle handle;
+  final bool isIsometricOcclusionTarget;
+  final bool isIsometricOccluder;
+}
+
+/// Instantiates one validated definition into an existing ECS world.
+///
+/// Streamed chunks supply a world-space offset while authored transforms stay
+/// chunk local. This class remains server safe and renderer independent.
+final class RuntimeEntityLoader {
+  const RuntimeEntityLoader();
+
+  RuntimeEntityLoadResult loadInto(
+    EcsWorld ecs,
+    WorldEntityDefinition definition, {
+    Vector3? positionOffset,
+  }) {
+    final offset = positionOffset ?? Vector3.zero();
+    final handle = ecs.createEntity(entityId: definition.id);
+    var isTarget = false;
+    var isOccluder = false;
+
+    for (final component in definition.components.values) {
+      switch (component) {
+        case TransformDefinition():
+          ecs.addComponent(
+            handle,
+            TransformComponent(
+              position:
+                  Vector3(
+                    component.position.x,
+                    component.position.y,
+                    component.position.z,
+                  ) +
+                  offset,
+              rotation: Quaternion(
+                component.rotation.x,
+                component.rotation.y,
+                component.rotation.z,
+                component.rotation.w,
+              ),
+              scale: Vector3(
+                component.scale.x,
+                component.scale.y,
+                component.scale.z,
+              ),
+            ),
+          );
+        case RenderableReferenceDefinition():
+          ecs.addComponent(
+            handle,
+            RenderableReferenceComponent(assetId: component.assetId),
+          );
+        case IsometricOcclusionTargetDefinition():
+          isTarget = true;
+        case IsometricOccluderDefinition():
+          isOccluder = true;
+        case PhysicsColliderDefinition():
+          ecs.addComponent(
+            handle,
+            PhysicsColliderComponent.box(
+              halfExtents: Vector3(
+                component.halfExtents.x,
+                component.halfExtents.y,
+                component.halfExtents.z,
+              ),
+              bodyKind: switch (component.bodyKind) {
+                ContentPhysicsBodyKind.staticBody => PhysicsBodyKind.staticBody,
+                ContentPhysicsBodyKind.character => PhysicsBodyKind.character,
+              },
+              isSensor: component.isSensor,
+            ),
+          );
+        case CharacterControllerDefinition():
+          ecs.addComponent(
+            handle,
+            CharacterControllerComponent(
+              moveSpeed: component.moveSpeed,
+              skinWidth: component.skinWidth,
+              arrivalTolerance: component.arrivalTolerance,
+            ),
+          );
+        case PlayerControlledDefinition():
+          ecs.addComponent(handle, const PlayerControlledComponent());
+        case InteractableDefinition():
+          ecs.addComponent(
+            handle,
+            InteractableComponent(
+              label: component.label,
+              range: component.range,
+            ),
+          );
+      }
+    }
+    return RuntimeEntityLoadResult(
+      handle: handle,
+      isIsometricOcclusionTarget: isTarget,
+      isIsometricOccluder: isOccluder,
+    );
+  }
+}
+
+/// Deterministically instantiates the always-active part of a world.
+///
+/// World-format v1 stores every entity in [WorldDefinition.entities], so this
+/// preserves legacy whole-world loading. Version 2 chunk entities are activated
+/// separately by `avarra_streaming`.
 final class RuntimeWorldLoader {
   const RuntimeWorldLoader();
 
@@ -38,79 +152,15 @@ final class RuntimeWorldLoader {
     final ecs = EcsWorld();
     final targets = <EntityId>{};
     final occluders = <EntityId>{};
+    const entityLoader = RuntimeEntityLoader();
 
     for (final entity in definition.entities) {
-      final handle = ecs.createEntity(entityId: entity.id);
-      for (final component in entity.components.values) {
-        switch (component) {
-          case TransformDefinition():
-            ecs.addComponent(
-              handle,
-              TransformComponent(
-                position: Vector3(
-                  component.position.x,
-                  component.position.y,
-                  component.position.z,
-                ),
-                rotation: Quaternion(
-                  component.rotation.x,
-                  component.rotation.y,
-                  component.rotation.z,
-                  component.rotation.w,
-                ),
-                scale: Vector3(
-                  component.scale.x,
-                  component.scale.y,
-                  component.scale.z,
-                ),
-              ),
-            );
-          case RenderableReferenceDefinition():
-            ecs.addComponent(
-              handle,
-              RenderableReferenceComponent(assetId: component.assetId),
-            );
-          case IsometricOcclusionTargetDefinition():
-            targets.add(entity.id);
-          case IsometricOccluderDefinition():
-            occluders.add(entity.id);
-          case PhysicsColliderDefinition():
-            ecs.addComponent(
-              handle,
-              PhysicsColliderComponent.box(
-                halfExtents: Vector3(
-                  component.halfExtents.x,
-                  component.halfExtents.y,
-                  component.halfExtents.z,
-                ),
-                bodyKind: switch (component.bodyKind) {
-                  ContentPhysicsBodyKind.staticBody =>
-                    PhysicsBodyKind.staticBody,
-                  ContentPhysicsBodyKind.character => PhysicsBodyKind.character,
-                },
-                isSensor: component.isSensor,
-              ),
-            );
-          case CharacterControllerDefinition():
-            ecs.addComponent(
-              handle,
-              CharacterControllerComponent(
-                moveSpeed: component.moveSpeed,
-                skinWidth: component.skinWidth,
-                arrivalTolerance: component.arrivalTolerance,
-              ),
-            );
-          case PlayerControlledDefinition():
-            ecs.addComponent(handle, const PlayerControlledComponent());
-          case InteractableDefinition():
-            ecs.addComponent(
-              handle,
-              InteractableComponent(
-                label: component.label,
-                range: component.range,
-              ),
-            );
-        }
+      final result = entityLoader.loadInto(ecs, entity);
+      if (result.isIsometricOcclusionTarget) {
+        targets.add(entity.id);
+      }
+      if (result.isIsometricOccluder) {
+        occluders.add(entity.id);
       }
     }
 

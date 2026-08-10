@@ -6,10 +6,10 @@ import 'package:avarra_core/avarra_core.dart';
 import 'world_definition.dart';
 import 'world_error_codes.dart';
 
-/// JSON codec for the Stage 4 single-document `.avarra` prototype.
+/// JSON codec for the provisional single-document `.avarra` container.
 ///
-/// The durable world/schema model is versioned independently of this
-/// provisional container representation.
+/// World format v1 remains readable. Version 2 adds authored chunk metadata
+/// while keeping the final archive and cooked representation deliberately open.
 final class WorldPackageCodec {
   WorldPackageCodec({ComponentSchemaRegistry? componentSchemas})
     : componentSchemas = componentSchemas ?? ComponentSchemaRegistry.builtIn();
@@ -29,22 +29,14 @@ final class WorldPackageCodec {
     }
 
     final root = _object(decoded, r'$');
-    _onlyFields(root, const {
-      'format',
-      'worldFormatVersion',
-      'contentSchemaVersion',
-      'world',
-      'assets',
-      'entities',
-    }, r'$');
-
     final format = _string(root['format'], r'$.format');
     final worldVersion = _integer(
       root['worldFormatVersion'],
       r'$.worldFormatVersion',
     );
     if (format != avarraWorldFormat ||
-        worldVersion != currentWorldFormatVersion) {
+        worldVersion < minimumWorldFormatVersion ||
+        worldVersion > currentWorldFormatVersion) {
       throw AvarraException(
         code: WorldErrorCodes.unsupportedFormat,
         message: 'The .avarra world format is not supported.',
@@ -52,10 +44,33 @@ final class WorldPackageCodec {
           'format': format,
           'worldFormatVersion': worldVersion,
           'expectedFormat': avarraWorldFormat,
-          'expectedWorldFormatVersion': currentWorldFormatVersion,
+          'minimumWorldFormatVersion': minimumWorldFormatVersion,
+          'maximumWorldFormatVersion': currentWorldFormatVersion,
         },
       );
     }
+    _onlyFields(
+      root,
+      worldVersion >= 2
+          ? const {
+              'format',
+              'worldFormatVersion',
+              'contentSchemaVersion',
+              'world',
+              'assets',
+              'entities',
+              'chunks',
+            }
+          : const {
+              'format',
+              'worldFormatVersion',
+              'contentSchemaVersion',
+              'world',
+              'assets',
+              'entities',
+            },
+      r'$',
+    );
 
     final contentVersion = _integer(
       root['contentSchemaVersion'],
@@ -64,28 +79,60 @@ final class WorldPackageCodec {
     componentSchemas.requireContentSchemaVersion(contentVersion);
 
     final worldData = _object(root['world'], r'$.world');
-    _onlyFields(worldData, const {'id', 'name'}, r'$.world');
+    _onlyFields(
+      worldData,
+      worldVersion >= 2
+          ? const {'id', 'name', 'chunkSize'}
+          : const {'id', 'name'},
+      r'$.world',
+    );
     final worldId = _worldId(worldData['id'], r'$.world.id');
     final worldName = _string(worldData['name'], r'$.world.name').trim();
     if (worldName.isEmpty || worldName.length > 128) {
       _invalid(r'$.world.name', 'World name must contain 1 to 128 characters.');
     }
 
+    final double? chunkSize;
+    if (worldVersion >= 2) {
+      chunkSize = _number(worldData['chunkSize'], r'$.world.chunkSize');
+      if (chunkSize < 1 || chunkSize > 4096) {
+        _invalid(
+          r'$.world.chunkSize',
+          'Prototype chunk size must be from 1 through 4096 world units.',
+        );
+      }
+    } else {
+      chunkSize = null;
+    }
+
     final assets = _decodeAssets(root['assets']);
-    final entities = _decodeEntities(root['entities'], contentVersion);
-    _validateReferences(assets, entities);
+    final entities = _decodeEntities(
+      root['entities'],
+      contentVersion,
+      r'$.entities',
+    );
+    final chunks = worldVersion >= 2
+        ? _decodeChunks(root['chunks'], contentVersion, chunkSize!)
+        : <WorldChunkDefinition>[];
+    _validateEntityIds(entities, chunks);
+    _validateReferences(assets, [
+      ...entities,
+      for (final chunk in chunks) ...chunk.entities,
+    ]);
 
     return WorldDefinition(
       id: worldId,
       name: worldName,
       worldFormatVersion: worldVersion,
       contentSchemaVersion: contentVersion,
+      chunkSize: chunkSize,
       assets: assets,
       entities: entities,
+      chunks: chunks,
     );
   }
 
-  /// Produces compact canonical JSON with stable asset/entity/component order.
+  /// Produces compact canonical JSON with stable collection/component order.
   String encodeCanonical(WorldDefinition definition) {
     return jsonEncode(definition.toJson());
   }
@@ -109,15 +156,66 @@ final class WorldPackageCodec {
     return result;
   }
 
+  List<WorldChunkDefinition> _decodeChunks(
+    Object? encoded,
+    int contentSchemaVersion,
+    double chunkSize,
+  ) {
+    final values = _list(encoded, r'$.chunks');
+    final result = <WorldChunkDefinition>[];
+    final ids = <ChunkId>{};
+    final coordinates = <WorldChunkCoordinate>{};
+    for (var index = 0; index < values.length; index += 1) {
+      final path = '${r'$.chunks'}[$index]';
+      final data = _object(values[index], path);
+      _onlyFields(data, const {'id', 'coordinate', 'entities'}, path);
+      final id = _chunkId(data['id'], '$path.id');
+      if (!ids.add(id)) {
+        _duplicate(id.value, '$path.id');
+      }
+      final encodedCoordinate = _list(data['coordinate'], '$path.coordinate');
+      if (encodedCoordinate.length != 2 ||
+          encodedCoordinate.any((value) => value is! int)) {
+        _invalid(
+          '$path.coordinate',
+          'Chunk coordinates must contain exactly two integers.',
+        );
+      }
+      final coordinate = WorldChunkCoordinate.fromJson(encodedCoordinate);
+      if (!coordinates.add(coordinate)) {
+        _invalid(
+          '$path.coordinate',
+          'Chunk coordinates must be unique within a world.',
+          context: {'coordinate': coordinate.toString()},
+        );
+      }
+      final entities = _decodeEntities(
+        data['entities'],
+        contentSchemaVersion,
+        '$path.entities',
+      );
+      _validateChunkLocalPositions(entities, chunkSize, path);
+      result.add(
+        WorldChunkDefinition(
+          id: id,
+          coordinate: coordinate,
+          entities: entities,
+        ),
+      );
+    }
+    return result;
+  }
+
   List<WorldEntityDefinition> _decodeEntities(
     Object? encoded,
     int contentSchemaVersion,
+    String collectionPath,
   ) {
-    final values = _list(encoded, r'$.entities');
+    final values = _list(encoded, collectionPath);
     final result = <WorldEntityDefinition>[];
     final ids = <EntityId>{};
     for (var index = 0; index < values.length; index += 1) {
-      final path = '${r'$.entities'}[$index]';
+      final path = '$collectionPath[$index]';
       final data = _object(values[index], path);
       _onlyFields(data, const {'id', 'components'}, path);
       final id = _entityId(data['id'], '$path.id');
@@ -139,6 +237,49 @@ final class WorldPackageCodec {
       result.add(WorldEntityDefinition(id: id, components: components));
     }
     return result;
+  }
+
+  void _validateChunkLocalPositions(
+    List<WorldEntityDefinition> entities,
+    double chunkSize,
+    String path,
+  ) {
+    for (final entity in entities) {
+      final transform = entity.component<TransformDefinition>();
+      if (transform == null) {
+        continue;
+      }
+      final position = transform.position;
+      if (position.x < 0 ||
+          position.x >= chunkSize ||
+          position.z < 0 ||
+          position.z >= chunkSize) {
+        _invalid(
+          '$path.entities',
+          'Chunk entity horizontal positions must be chunk local.',
+          context: {
+            'entityId': entity.id.value,
+            'chunkSize': chunkSize,
+            'position': position.toJson(),
+          },
+        );
+      }
+    }
+  }
+
+  void _validateEntityIds(
+    List<WorldEntityDefinition> entities,
+    List<WorldChunkDefinition> chunks,
+  ) {
+    final ids = <EntityId>{};
+    for (final entity in [
+      ...entities,
+      for (final chunk in chunks) ...chunk.entities,
+    ]) {
+      if (!ids.add(entity.id)) {
+        _duplicate(entity.id.value, r'$.entities|$.chunks[*].entities');
+      }
+    }
   }
 
   void _validateEntityComponents(
@@ -178,14 +319,13 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
-    if (types.contains(AvarraComponentType.characterController)) {
-      if (collider?.bodyKind != ContentPhysicsBodyKind.character) {
-        _invalid(
-          '$path.components',
-          'A character controller requires a character collider.',
-          context: {'entityId': entityId.value},
-        );
-      }
+    if (types.contains(AvarraComponentType.characterController) &&
+        collider?.bodyKind != ContentPhysicsBodyKind.character) {
+      _invalid(
+        '$path.components',
+        'A character controller requires a character collider.',
+        context: {'entityId': entityId.value},
+      );
     }
     if (types.contains(AvarraComponentType.playerControlled) &&
         !types.contains(AvarraComponentType.characterController)) {
@@ -195,22 +335,21 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
-    if (types.contains(AvarraComponentType.interactable)) {
-      if (!types.contains(AvarraComponentType.transform) ||
-          collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||
-          collider?.isSensor == true) {
-        _invalid(
-          '$path.components',
-          'An interactable requires a transform and non-sensor static collider.',
-          context: {'entityId': entityId.value},
-        );
-      }
+    if (types.contains(AvarraComponentType.interactable) &&
+        (!types.contains(AvarraComponentType.transform) ||
+            collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||
+            collider?.isSensor == true)) {
+      _invalid(
+        '$path.components',
+        'An interactable requires a transform and non-sensor static collider.',
+        context: {'entityId': entityId.value},
+      );
     }
   }
 
   void _validateReferences(
     List<WorldAssetDefinition> assets,
-    List<WorldEntityDefinition> entities,
+    Iterable<WorldEntityDefinition> entities,
   ) {
     final assetIds = assets.map((asset) => asset.id).toSet();
     for (final entity in entities) {
@@ -299,11 +438,27 @@ final class WorldPackageCodec {
     return value;
   }
 
+  double _number(Object? value, String path) {
+    if (value is! num || !value.toDouble().isFinite) {
+      _invalid(path, 'Expected a finite number.');
+    }
+    return value.toDouble();
+  }
+
   WorldId _worldId(Object? value, String path) {
     final text = _string(value, path);
     final id = WorldId.tryParse(text);
     if (id == null) {
       _invalid(path, 'Expected a canonical UUIDv7 world ID.');
+    }
+    return id;
+  }
+
+  ChunkId _chunkId(Object? value, String path) {
+    final text = _string(value, path);
+    final id = ChunkId.tryParse(text);
+    if (id == null) {
+      _invalid(path, 'Expected a canonical UUIDv7 chunk ID.');
     }
     return id;
   }

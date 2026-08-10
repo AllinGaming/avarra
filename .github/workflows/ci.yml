@@ -48,6 +48,10 @@ jobs:
         working-directory: packages/avarra_world
         run: dart test
 
+      - name: Test World Streaming
+        working-directory: packages/avarra_streaming
+        run: dart test
+
       - name: Test Physics Queries
         working-directory: packages/avarra_physics
         run: dart test

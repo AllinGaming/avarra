@@ -1,35 +1,56 @@
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('bundled .avarra world validates and resolves every asset', () {
-    final packageRoot = _findGamePackageRoot();
-    final packageFile = File.fromUri(
-      packageRoot.uri.resolve('assets/worlds/isometric_proof.avarra'),
-    );
-    expect(packageFile.existsSync(), isTrue);
-
-    final codec = WorldPackageCodec();
-    final definition = codec.decode(packageFile.readAsStringSync());
-    final runtime = const RuntimeWorldLoader().load(definition);
-
-    expect(definition.name, 'Isometric Character Proof');
-    expect(runtime.ecs.entityCount, 4);
-    expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
-    expect(runtime.isometricOccluderEntityIds, hasLength(1));
-    for (final entry in runtime.assetPaths.entries) {
-      expect(entry.key, isA<AssetId>());
-      final assetFile = File.fromUri(packageRoot.uri.resolve(entry.value));
-      expect(
-        assetFile.existsSync(),
-        isTrue,
-        reason: '${packageFile.path} references missing asset ${entry.value}',
+  test(
+    'bundled .avarra world validates, streams, and resolves assets',
+    () async {
+      final packageRoot = _findGamePackageRoot();
+      final packageFile = File.fromUri(
+        packageRoot.uri.resolve('assets/worlds/isometric_proof.avarra'),
       );
-    }
-  });
+      expect(packageFile.existsSync(), isTrue);
+
+      final codec = WorldPackageCodec();
+      final definition = codec.decode(packageFile.readAsStringSync());
+      final runtime = const RuntimeWorldLoader().load(definition);
+      final streaming = ChunkStreamingController(
+        world: definition,
+        ecs: runtime.ecs,
+        source: MemoryChunkStreamingSource(definition.chunks),
+      );
+      streaming.reconcile([
+        ChunkStreamingRequest(
+          coordinate: const WorldChunkCoordinate(0, 0),
+          source: ChunkInterestSource.localPlayer,
+        ),
+      ]);
+      await streaming.pumpUntilStable();
+
+      expect(definition.name, 'Isometric Streaming Proof');
+      expect(definition.worldFormatVersion, 2);
+      expect(definition.chunkSize, 4);
+      expect(definition.chunks, hasLength(3));
+      expect(definition.allEntities, hasLength(8));
+      expect(runtime.ecs.entityCount, 4);
+      expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
+      expect(runtime.isometricOccluderEntityIds, isEmpty);
+      expect(streaming.activeOccluderEntityIds, hasLength(1));
+      for (final entry in runtime.assetPaths.entries) {
+        expect(entry.key, isA<AssetId>());
+        final assetFile = File.fromUri(packageRoot.uri.resolve(entry.value));
+        expect(
+          assetFile.existsSync(),
+          isTrue,
+          reason: '${packageFile.path} references missing asset ${entry.value}',
+        );
+      }
+    },
+  );
 }
 
 Directory _findGamePackageRoot() {

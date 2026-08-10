@@ -72,6 +72,106 @@ void main() {
     expect(() => codec.decode(jsonEncode(json)), returnsNormally);
   });
 
+  test('continues to decode and canonically encode world-format v1', () {
+    final json = _validWorldJson()..['worldFormatVersion'] = 1;
+    (json['world']! as Map<String, dynamic>).remove('chunkSize');
+    json.remove('chunks');
+
+    final definition = codec.decode(jsonEncode(json));
+    final encoded = jsonDecode(codec.encodeCanonical(definition));
+
+    expect(definition.chunkSize, isNull);
+    expect(definition.chunks, isEmpty);
+    expect((encoded as Map<String, dynamic>).containsKey('chunks'), isFalse);
+  });
+
+  test('decodes sorted chunk-local entities without loading them globally', () {
+    final json = _validWorldJson();
+    json['chunks'] = [
+      {
+        'id': _secondChunkId,
+        'coordinate': [1, 0],
+        'entities': [
+          _chunkEntityJson(_secondChunkEntityId, [1, 0.5, 1]),
+        ],
+      },
+      {
+        'id': _firstChunkId,
+        'coordinate': [0, 0],
+        'entities': [
+          _chunkEntityJson(_firstChunkEntityId, [2, 0.5, 2]),
+        ],
+      },
+    ];
+
+    final definition = codec.decode(jsonEncode(json));
+    final runtime = const RuntimeWorldLoader().load(definition);
+
+    expect(
+      definition.chunks.map((chunk) => chunk.coordinate),
+      orderedEquals(const [
+        WorldChunkCoordinate(0, 0),
+        WorldChunkCoordinate(1, 0),
+      ]),
+    );
+    expect(definition.allEntities.length, 4);
+    expect(runtime.ecs.entityCount, 2);
+    expect(runtime.ecs.handleFor(EntityId.parse(_firstChunkEntityId)), isNull);
+  });
+
+  test('rejects duplicate chunk addresses and cross-chunk entity IDs', () {
+    final duplicateCoordinate = _validWorldJson();
+    duplicateCoordinate['chunks'] = [
+      {
+        'id': _firstChunkId,
+        'coordinate': [0, 0],
+        'entities': <dynamic>[],
+      },
+      {
+        'id': _secondChunkId,
+        'coordinate': [0, 0],
+        'entities': <dynamic>[],
+      },
+    ];
+    expect(
+      () => codec.decode(jsonEncode(duplicateCoordinate)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+
+    final duplicateEntity = _validWorldJson();
+    duplicateEntity['chunks'] = [
+      {
+        'id': _firstChunkId,
+        'coordinate': [0, 0],
+        'entities': [
+          _chunkEntityJson(_targetEntityId, [1, 0.5, 1]),
+        ],
+      },
+    ];
+    expect(
+      () => codec.decode(jsonEncode(duplicateEntity)),
+      _throwsCode(WorldErrorCodes.duplicateStableId),
+    );
+  });
+
+  test('rejects chunk-local positions outside authored chunk bounds', () {
+    final json = _validWorldJson();
+    json['chunks'] = [
+      {
+        'id': _firstChunkId,
+        'coordinate': [0, 0],
+        'entities': [
+          _chunkEntityJson(_firstChunkEntityId, [8, 0.5, 1]),
+        ],
+      },
+    ];
+
+    expect(
+      () => codec.decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
+
   test('instantiates Stage 5 components into server-safe runtime state', () {
     final json = _validWorldJson();
     final entities = json['entities']! as List<dynamic>;
@@ -228,6 +328,10 @@ const _worldId = '01890f47-e8b8-7a68-8000-000000000010';
 const _assetId = '01890f47-e8b8-7a68-9000-000000000001';
 const _targetEntityId = '01890f47-e8b8-7a68-8000-000000000001';
 const _occluderEntityId = '01890f47-e8b8-7a68-8000-000000000002';
+const _firstChunkId = '01890f47-e8b8-7a68-8000-000000000101';
+const _secondChunkId = '01890f47-e8b8-7a68-8000-000000000102';
+const _firstChunkEntityId = '01890f47-e8b8-7a68-8000-000000000201';
+const _secondChunkEntityId = '01890f47-e8b8-7a68-8000-000000000202';
 
 String _validWorldSource({bool reverseEntities = false}) {
   final json = _validWorldJson();
@@ -255,7 +359,7 @@ Map<String, dynamic> _validWorldJson() {
     'format': avarraWorldFormat,
     'worldFormatVersion': currentWorldFormatVersion,
     'contentSchemaVersion': currentContentSchemaVersion,
-    'world': {'id': _worldId, 'name': 'Portable Proof'},
+    'world': {'id': _worldId, 'name': 'Portable Proof', 'chunkSize': 8},
     'assets': [
       {'id': _assetId, 'path': 'assets/cube.gltf'},
     ],
@@ -283,6 +387,25 @@ Map<String, dynamic> _validWorldJson() {
         },
       },
     ],
+    'chunks': <dynamic>[],
+  };
+}
+
+Map<String, dynamic> _chunkEntityJson(String id, List<num> position) {
+  return {
+    'id': id,
+    'components': {
+      AvarraComponentType.transform: {
+        'schemaVersion': 1,
+        'position': position,
+        'rotation': [0, 0, 0, 1],
+        'scale': [1, 1, 1],
+      },
+      AvarraComponentType.renderableReference: {
+        'schemaVersion': 1,
+        'assetId': _assetId,
+      },
+    },
   };
 }
 

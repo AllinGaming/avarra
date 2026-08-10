@@ -1,0 +1,19 @@
+name: avarra_streaming
+description: Server-safe AVARRA chunk indexing, budgets, and lifecycle control.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  avarra_core: ^0.1.0
+  avarra_ecs: ^0.1.0
+  avarra_world: ^0.1.0
+  vector_math: ^2.2.0
+
+dev_dependencies:
+  avarra_content: ^0.1.0
+  test: ^1.26.3
