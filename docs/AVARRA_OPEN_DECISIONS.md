@@ -111,6 +111,11 @@ cooked world chunks
 
 Do not assume one format must serve all three.
 
+Stage 7 uses strict canonical JSON for save-format v1 behind a replaceable
+codec/store boundary and sequential migration registry. This is a validated
+prototype representation, not a decision to use JSON permanently or to share
+one format with networking/cooked chunks. See ADR-020.
+
 ---
 
 ## OD-005 — Texture Runtime Format

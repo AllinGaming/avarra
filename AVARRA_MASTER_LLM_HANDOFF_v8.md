@@ -264,10 +264,23 @@ state is persisted. Game drives interest from the player and move destination,
 then rebuilds physics and presentation snapshots after active chunk changes.
 World format v1 remains readable.
 
+Stage 7 adds the server-safe `avarra_persistence` package and content schema
+v3 persistent boolean flags. `WorldSave` and `PlayerSave` are stable-ID runtime
+overlays, not modified world definitions. Dirty generations are acknowledged
+only when unchanged across a serialized, recoverable save transaction; dirty
+chunk entities therefore remain loaded until persistence permits retry. Game
+restores the player before selecting its initial chunk and applies cached entity
+overlays as streamed entities activate. Save format v1 uses strict canonical
+JSON behind a replaceable store and migration registry; OD-004 remains open for
+the permanent save encoding. The Android emulator restored the saved revision
+and chunk after a force-stop and fresh process launch.
+
 The current world-format-v2 single-JSON `.avarra` representation is explicitly
 a prototype,
 not the final archive or cooked serialization decision. See
-`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`,
+`AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`, ADR-019, ADR-020, OD-004, and
+OD-019.
 
 ## Stable IDs
 
@@ -3134,8 +3147,8 @@ signal, not production frame-time evidence.
   byte, asset, physics-cook, or renderer-upload cost.
 - The Game proof has one player. Server reconciliation across multiple players
   is supported by explicit requests but belongs to the multiplayer slice.
-- The unload guard contract is present; durable dirty-state storage begins in
-  Stage 7.
+- Stage 7 now supplies durable dirty-state storage and the concrete unload
+  guard; production interruption testing remains open.
 
 ## Remaining gates
 
@@ -3144,6 +3157,169 @@ signal, not production frame-time evidence.
 - Profile real creator content before deciding OD-008 or production budgets.
 
 <!-- END AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md -->
+
+# AVARRA — Stage 7 Persistence Validation
+
+**Status:** Prototype slice validated on Windows and Android emulator
+
+**Date:** 2026-08-10
+
+## Delivered slice
+
+Stage 7 adds a server-safe persistence path from runtime mutations to a fresh
+runtime restore:
+
+```text
+authored `.avarra` definition
+  + stable-ID runtime overlays
+  → generation-aware dirty tracking
+  → serialized revision capture
+  → strict versioned codec and migration registry
+  → flushed pending file + recoverable backup replacement
+  → bootstrap restore before initial chunk activation
+```
+
+The Game proof persists the global player's chunk-local position and an
+`activated` boolean on the ancient console. Player movement and successful
+console interaction schedule autosaves; lifecycle backgrounding also requests
+a flush. The HUD exposes the current revision, save status, and console state.
+
+## Persistence package boundary
+
+`avarra_persistence` is pure Dart and owns:
+
+- `WorldSave` and `PlayerSave` records with strict stable IDs;
+- stable entity flag overlays independent of runtime ECS handles;
+- chunk-coordinate plus local-position player storage;
+- canonical save-format-v1 JSON encoding and strict decoding;
+- sequential migrations that reject future versions and migration gaps;
+- generation-aware entity/player dirty snapshots;
+- serialized session saves with monotonic revisions;
+- `MemorySaveStore` and recoverable same-directory `FileSaveStore` adapters;
+- runtime capture, cached unloaded-entity overlays, and activation-time restore;
+- stable persistence error codes and server-safety coverage.
+
+The package does not import Flutter, Thermion, or renderer APIs. Game alone
+uses `path_provider` to select the application-support directory, then passes a
+Dart `Directory` to `FileSaveStore`.
+
+## Content, world, and streaming integration
+
+Content schema v3 adds `avarra.persistence.flags`, a bounded map of canonical
+boolean keys. Earlier content schemas remain readable and do not expose the new
+component. `RuntimeEntityLoader` instantiates the authored defaults as a
+`PersistentFlagsComponent`.
+
+`ChunkStreamingController` exposes a synchronous activation observer. Game
+uses it to apply cached stable-ID save overlays before refreshed physics and
+presentation state can consume the entity. `DirtyStateChunkUnloadGuard` blocks
+destruction of dirty chunk entities; a successful save acknowledges unchanged
+generations, retries blocked unloads, and refreshes interest.
+
+Player restoration happens before the initial streaming coordinate is chosen,
+so a restarted process activates the saved chunk directly instead of briefly
+loading the authored starting chunk.
+
+## Transaction and recovery behavior
+
+Each save captures the last committed overlays plus current loaded persistent
+components and player position. Session requests are serialized, so explicit
+concurrent saves publish increasing revisions. A dirty snapshot records each
+generation present at capture time; acknowledgment clears only generations
+that still match after storage completes.
+
+`FileSaveStore` serializes reads and writes. It writes and flushes a
+same-directory `.pending` file, renames the previous target to `.backup`, then
+promotes the pending file. Reads repair an interrupted replacement from the
+backup and discard stale pending data before decoding. Automated tests cover
+successful replacement and recovery after an interrupted write.
+
+## Automated validation
+
+The consolidated workspace pass produced:
+
+- formatter: 111 Dart files checked, no changes;
+- analyzer: no issues;
+- 117 passing tests across all Dart and Flutter packages/apps;
+- strict canonical save round trips and malformed/unknown-field rejection;
+- sequential migration, future-version, and migration-gap coverage;
+- fresh-runtime player and persistent-entity restoration;
+- retained overlays for unloaded streamed entities;
+- generation-safe dirty acknowledgment during a pending write;
+- serialized concurrent saves with revisions `1` then `2`;
+- same-directory replacement and backup/pending recovery;
+- dirty chunk unload blocking and retry;
+- content-schema-v2 compatibility and content-schema-v3 flag validation;
+- Game bootstrap restoration during chunk activation;
+- dedicated server-safety coverage for persistence and dependent packages.
+
+Native validation also passed:
+
+- Game Windows release build;
+- Game Android debug APK build;
+- headless Avarra Server AOT executable compile.
+
+Artifacts:
+
+```text
+apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe
+apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk
+apps/avarra_server/build/avarra_server.exe
+```
+
+The client builds retain the known upstream Thermion Kotlin-plugin migration
+and C-linkage warnings. Neither fails the build.
+
+## Pixel emulator restart validation
+
+Validated on connected `sdk_gphone16k_x86_64`, Android 17/API 37, at
+1280×2856:
+
+- the Stage 7 APK installed over the prior proof without clearing application
+  data;
+- the initial HUD reported `Save r0 · No save yet`, `Chunk 0,0 · 1/3 active`,
+  four ECS entities, and an inactive console;
+- seven forward touch-control steps crossed into chunk `0,-1` and committed
+  through revision `7`;
+- the HUD then reported `Save r7 · Saved revision 7`,
+  `Chunk 0,-1 · 1/3 active`, and three ECS entities;
+- after an Android force-stop and fresh process launch, the HUD reported
+  `Save r7 · Restored revision 7` and started directly in chunk `0,-1` with
+  three ECS entities;
+- filtered Flutter and Android crash logs contained no Dart exception or
+  application crash.
+
+This live check proves disk-backed `PlayerSave` restoration and initial chunk
+selection across a process restart. Automated fresh-runtime tests separately
+prove that the stable-ID console overlay survives unload/recreation and restore.
+
+## Provisional limits
+
+- Save-format-v1 JSON is a replaceable prototype representation; OD-004 still
+  owns the permanent serialization decision.
+- The first persistent component is boolean flags, not a general reflection or
+  arbitrary component serializer.
+- Save slots are currently selected by a fixed proof `SaveId`; profile/slot UI
+  belongs to a later product slice.
+- Autosave timing is a Game policy and will need host/player-disconnect events
+  during multiplayer work.
+- File replacement is recoverable within the application protocol; production
+  durability still needs physical-device interruption and storage-failure
+  testing.
+
+## Remaining gates
+
+- Repeat restart, background/kill, low-storage, and interrupted-write tests on
+  a physical Android device.
+- Exercise the console interaction visually on physical input hardware; the
+  stable-ID entity state path is covered automatically in this slice.
+- Resolve OD-004 before committing to a permanent save encoding.
+
+<!-- END AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md -->
 
 ---
 
@@ -3391,7 +3567,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–6 Implementation
+# 14. Current Stage 4–7 Implementation
 
 The initial vertical slice now provides:
 
@@ -3399,8 +3575,9 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 2, with version 1 still readable
+  content schema version 3, with versions 1 and 2 still readable
   collider, character-controller, player-control, and interactable definitions
+  bounded persistent boolean-flag definitions
 
 avarra_world
   immutable WorldDefinition
@@ -3417,17 +3594,25 @@ avarra_streaming
   eight-state asynchronous lifecycle
   bounded active chunks and per-pump entity work
   persistence-guarded unload and retry
+
+avarra_persistence
+  strict versioned WorldSave and PlayerSave overlays
+  canonical codec and sequential migration registry
+  generation-aware dirty tracking and serialized revisions
+  recoverable file replacement plus in-memory testing adapter
+  stable-ID capture/restore for active and unloaded entities
 ```
 
 The Game's isometric proof world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
-and interactable semantics in `isometric_proof.avarra`.
+interactable, and persistent-flag semantics in `isometric_proof.avarra`.
 
 The current `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked
 binary, compression, signing, hashing, or streaming format. See
-`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`,
+`AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`, ADR-019, ADR-020, and OD-019.
 
 <!-- END AVARRA_WORLD_CONTENT_MODEL.md -->
 
@@ -3605,6 +3790,12 @@ manual save where appropriate
 ```
 
 Use transactional/atomic persistence semantics.
+
+Stage 7 provides the current server-safe persistence foundation: stable-ID
+world/player overlays, generation-aware dirty tracking, serialized revisions,
+migrations, and recoverable file replacement. Game currently exercises local
+autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
+save policy arrive with the networking stages. See ADR-020.
 
 ---
 
@@ -6225,6 +6416,8 @@ gate pass. Physical Android performance profiling remains open.
 
 # Stage 7 — Persistence
 
+**Status:** Prototype slice implemented and emulator-validated on 2026-08-10
+
 Build:
 
 ```text
@@ -6238,6 +6431,30 @@ migration skeleton
 Gate:
 
 > Persistent chest/door/state survives restart.
+
+Implementation:
+
+- `avarra_persistence` owns strict versioned world/player save records,
+  canonical encoding, sequential migrations, stable error codes, and
+  server-safe runtime capture/restore.
+- Generation-aware dirty snapshots preserve mutations made during in-flight
+  writes; serialized save requests publish monotonic revisions.
+- The file store flushes a same-directory pending file and uses a recoverable
+  backup replacement protocol for Windows, Android, and server deployments.
+- Content schema v3 adds bounded persistent boolean flags. Stream activation
+  applies cached stable-ID overlays, and dirty chunks remain loaded until a
+  successful save permits retry.
+- Game restores the player before choosing its initial streaming coordinate,
+  autosaves movement/console activation, and flushes on lifecycle transitions.
+- The Android emulator restored revision `7` directly into chunk `0,-1` after
+  a force-stop and fresh process launch. Automated fresh-runtime coverage proves
+  persistent entity state restoration.
+- Save-format-v1 JSON remains provisional pending OD-004.
+
+See `AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md` and ADR-020.
+
+The automated, Windows build, and Android-emulator functional portions of the
+gate pass. Physical Android interruption/storage testing remains open.
 
 ---
 
@@ -6521,6 +6738,11 @@ cooked world chunks
 ```
 
 Do not assume one format must serve all three.
+
+Stage 7 uses strict canonical JSON for save-format v1 behind a replaceable
+codec/store boundary and sequential migration registry. This is a validated
+prototype representation, not a decision to use JSON permanently or to share
+one format with networking/cooked chunks. See ADR-020.
 
 ---
 
@@ -7815,5 +8037,99 @@ when the active chunk set changes.
 - Claiming the single JSON prototype is a production streaming container.
 
 <!-- END adr/ADR-019-stage-6-world-streaming-model.md -->
+
+---
+
+<!-- BEGIN adr/ADR-020-stage-7-persistence-model.md -->
+
+# ADR-020 — Stage 7 Persistence Model
+
+**Status:** Accepted prototype model; permanent binary format deferred
+
+**Date:** 2026-08-10
+
+## Context
+
+Stage 7 must preserve runtime progress without putting mutable save data back
+into creator-authored `.avarra` definitions. It must also close the Stage 6
+unload seam: a dirty streamed entity cannot be destroyed before its state has
+been committed. The same orchestration has to remain usable by Game, a listen
+host, an Android host, and a dedicated server without importing Flutter or a
+renderer.
+
+Stable IDs are already the canonical cross-runtime identity. ECS handles are
+process-local and therefore cannot appear in saves. OD-004 has not selected a
+permanent binary save format, so Stage 7 needs a versioned format boundary and
+migration path without prematurely treating prototype JSON as final.
+
+## Decision
+
+Introduce the pure-Dart, server-safe `avarra_persistence` package. It owns:
+
+- immutable `WorldSave`, `PlayerSave`, `EntitySaveState`, and chunk-local
+  position records;
+- a strict canonical save-format-v1 JSON codec behind a replaceable store;
+- sequential, fail-closed migrations with explicit source and target versions;
+- generation-aware dirty tracking by stable entity ID;
+- serialized save transactions and monotonically increasing revisions;
+- runtime capture/restore overlays for loaded and unloaded persistent entities;
+- an in-memory store for tests and recoverable same-directory file replacement
+  for Windows, Android, and server deployments.
+
+World definitions remain immutable authored input. Saves contain only runtime
+overlays and player progress. Persisted references use `SaveId`, `WorldId`,
+`PlayerId`, and `EntityId`; runtime handles never cross the persistence
+boundary. Player positions are stored as integer chunk coordinates plus local
+coordinates and are converted back to world space at bootstrap.
+
+The initial persistent component is a deliberately narrow, content-schema-v3
+boolean flag map. It proves chest/door/switch-style state while retaining a
+clear path to typed component policies later. Game's proof uses an `activated`
+flag on the ancient console.
+
+Save requests are serialized at both session and file-store boundaries. A file
+write flushes a same-directory `.pending` file, preserves the previous target
+as `.backup`, promotes the pending file, and removes the backup only after the
+new target is in place. Reads recover an interrupted replacement before
+decoding. A dirty generation is acknowledged only if it did not change while
+the write was pending.
+
+`DirtyStateChunkUnloadGuard` bridges the Stage 6 streaming contract to the
+shared dirty tracker. Successful saves explicitly retry blocked unloads.
+Streamed entity activation applies any cached save overlay before presentation
+or physics snapshots are rebuilt.
+
+The Game resolves its platform save directory with Flutter's
+`path_provider`, but that platform dependency stays in the application. The
+persistence package itself uses only Dart APIs and remains server-safe.
+
+## Consequences
+
+- Player and persistent entity state survive a fresh process/runtime.
+- Mutations made during an in-flight write remain dirty and require a later
+  revision instead of being incorrectly acknowledged.
+- Concurrent save requests cannot publish duplicate or regressing revisions.
+- Dirty streamed entities fail closed at unload until a successful save.
+- Unknown fields, malformed data, unsupported future versions, migration gaps,
+  world mismatches, and invalid stable IDs fail with stable error codes.
+- The complete world definition is not copied into each save.
+- The JSON representation is inspectable for the prototype but is not the
+  permanent save serialization decision; OD-004 remains open.
+- Same-directory backup recovery provides transactional old-or-new behavior
+  across an interrupted replacement, but does not claim a stronger filesystem
+  primitive than Dart and each target platform expose.
+
+## Rejected for this stage
+
+- Mutating or repackaging the authored `.avarra` definition as a save.
+- Persisting ECS handles, renderer handles, or session-scoped IDs.
+- Clearing all dirty state after a write regardless of concurrent mutations.
+- Letting streamed chunks discard dirty entities and hoping a later autosave
+  reconstructs them.
+- Selecting one binary format for saves, networking, and cooked chunks before
+  OD-004 is resolved.
+- Importing Flutter storage APIs into the server-safe persistence package.
+
+<!-- END adr/ADR-020-stage-7-persistence-model.md -->
 
 ---

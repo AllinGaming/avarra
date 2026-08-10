@@ -18,6 +18,7 @@ $sourcePaths = @(
     'docs/AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md'
     'docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md'
     'docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md'
+    'docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md'
     'docs/AVARRA_WORLD_CONTENT_MODEL.md'
     'docs/AVARRA_MULTIPLAYER_SERVER.md'
     'docs/AVARRA_FORGE_ARCHITECTURE.md'
@@ -40,6 +41,7 @@ $sourcePaths = @(
     'docs/adr/ADR-017-thermion-windows-runtime-compatibility.md'
     'docs/adr/ADR-018-stage-5-physics-query-backend.md'
     'docs/adr/ADR-019-stage-6-world-streaming-model.md'
+    'docs/adr/ADR-020-stage-7-persistence-model.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

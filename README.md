@@ -35,23 +35,24 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 10. `docs/AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md`
 11. `docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md`
 12. `docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`
-13. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-14. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-15. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-16. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-17. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-18. `docs/AVARRA_OPEN_DECISIONS.md`
-19. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-20. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-21. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-22. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-23. ADRs under `docs/adr/`
+13. `docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`
+14. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+15. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+16. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+17. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+18. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+19. `docs/AVARRA_OPEN_DECISIONS.md`
+20. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+21. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+22. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+23. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+24. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0, 1, 3, 4, 5, and the Stage 6 prototype slice are implemented.
+Stages 0 through 7 have implemented prototype slices.
 Physical Android runtime/performance validation remains open for the
-presentation, character, and streaming gates.
+presentation, character, streaming, and persistence gates.
 
 ```text
 apps/
@@ -69,6 +70,7 @@ packages/
   avarra_physics/  Dart — server-safe ray and kinematic sweep queries
   avarra_gameplay/ Dart — character movement and interaction systems
   avarra_streaming/ Dart — server-safe chunk lifecycle and spatial indexing
+  avarra_persistence/ Dart — versioned saves, dirty state, and recoverable storage
   avarra_scene_bridge/ Dart — renderer adapter contract and handle mapping
   avarra_thermion_bridge/ Flutter — Thermion/Filament scene adapter and viewport
 ```
@@ -113,6 +115,14 @@ while rebuilding physics and presentation state at chunk boundaries. See
 `docs/adr/ADR-019-stage-6-world-streaming-model.md` and
 `docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`.
 
+Stage 7 adds content schema v3 persistent flags, strict versioned world/player
+save overlays, generation-aware dirty state, serialized monotonic revisions,
+recoverable same-directory file replacement, migrations, and streaming-safe
+restore/unload integration. The Android proof restores the saved player chunk
+after a process restart; stable-ID entity restoration is covered in the fresh
+runtime tests. See `docs/adr/ADR-020-stage-7-persistence-model.md` and
+`docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -126,6 +136,7 @@ dart analyze .
 dart test packages/avarra_core
 dart test packages/avarra_ecs
 dart test packages/avarra_content
+dart test packages/avarra_persistence
 dart test packages/avarra_world
 dart test packages/avarra_streaming
 dart test packages/avarra_physics

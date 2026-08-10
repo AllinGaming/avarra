@@ -240,7 +240,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–6 Implementation
+# 14. Current Stage 4–7 Implementation
 
 The initial vertical slice now provides:
 
@@ -248,8 +248,9 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 2, with version 1 still readable
+  content schema version 3, with versions 1 and 2 still readable
   collider, character-controller, player-control, and interactable definitions
+  bounded persistent boolean-flag definitions
 
 avarra_world
   immutable WorldDefinition
@@ -266,14 +267,22 @@ avarra_streaming
   eight-state asynchronous lifecycle
   bounded active chunks and per-pump entity work
   persistence-guarded unload and retry
+
+avarra_persistence
+  strict versioned WorldSave and PlayerSave overlays
+  canonical codec and sequential migration registry
+  generation-aware dirty tracking and serialized revisions
+  recoverable file replacement plus in-memory testing adapter
+  stable-ID capture/restore for active and unloaded entities
 ```
 
 The Game's isometric proof world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
-and interactable semantics in `isometric_proof.avarra`.
+interactable, and persistent-flag semantics in `isometric_proof.avarra`.
 
 The current `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked
 binary, compression, signing, hashing, or streaming format. See
-`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`,
+`AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`, ADR-019, ADR-020, and OD-019.

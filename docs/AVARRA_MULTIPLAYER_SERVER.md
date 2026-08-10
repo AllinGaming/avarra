@@ -169,6 +169,12 @@ manual save where appropriate
 
 Use transactional/atomic persistence semantics.
 
+Stage 7 provides the current server-safe persistence foundation: stable-ID
+world/player overlays, generation-aware dirty tracking, serialized revisions,
+migrations, and recoverable file replacement. Game currently exercises local
+autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
+save policy arrive with the networking stages. See ADR-020.
+
 ---
 
 # 10. Mobile Backgrounding

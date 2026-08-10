@@ -132,8 +132,8 @@ signal, not production frame-time evidence.
   byte, asset, physics-cook, or renderer-upload cost.
 - The Game proof has one player. Server reconciliation across multiple players
   is supported by explicit requests but belongs to the multiplayer slice.
-- The unload guard contract is present; durable dirty-state storage begins in
-  Stage 7.
+- Stage 7 now supplies durable dirty-state storage and the concrete unload
+  guard; production interruption testing remains open.
 
 ## Remaining gates
 

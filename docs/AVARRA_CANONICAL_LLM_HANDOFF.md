@@ -255,10 +255,23 @@ state is persisted. Game drives interest from the player and move destination,
 then rebuilds physics and presentation snapshots after active chunk changes.
 World format v1 remains readable.
 
+Stage 7 adds the server-safe `avarra_persistence` package and content schema
+v3 persistent boolean flags. `WorldSave` and `PlayerSave` are stable-ID runtime
+overlays, not modified world definitions. Dirty generations are acknowledged
+only when unchanged across a serialized, recoverable save transaction; dirty
+chunk entities therefore remain loaded until persistence permits retry. Game
+restores the player before selecting its initial chunk and applies cached entity
+overlays as streamed entities activate. Save format v1 uses strict canonical
+JSON behind a replaceable store and migration registry; OD-004 remains open for
+the permanent save encoding. The Android emulator restored the saved revision
+and chunk after a force-stop and fresh process launch.
+
 The current world-format-v2 single-JSON `.avarra` representation is explicitly
 a prototype,
 not the final archive or cooked serialization decision. See
-`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`,
+`AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`, ADR-019, ADR-020, OD-004, and
+OD-019.
 
 ## Stable IDs
 

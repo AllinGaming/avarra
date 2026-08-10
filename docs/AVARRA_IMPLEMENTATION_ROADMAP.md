@@ -256,6 +256,8 @@ gate pass. Physical Android performance profiling remains open.
 
 # Stage 7 — Persistence
 
+**Status:** Prototype slice implemented and emulator-validated on 2026-08-10
+
 Build:
 
 ```text
@@ -269,6 +271,30 @@ migration skeleton
 Gate:
 
 > Persistent chest/door/state survives restart.
+
+Implementation:
+
+- `avarra_persistence` owns strict versioned world/player save records,
+  canonical encoding, sequential migrations, stable error codes, and
+  server-safe runtime capture/restore.
+- Generation-aware dirty snapshots preserve mutations made during in-flight
+  writes; serialized save requests publish monotonic revisions.
+- The file store flushes a same-directory pending file and uses a recoverable
+  backup replacement protocol for Windows, Android, and server deployments.
+- Content schema v3 adds bounded persistent boolean flags. Stream activation
+  applies cached stable-ID overlays, and dirty chunks remain loaded until a
+  successful save permits retry.
+- Game restores the player before choosing its initial streaming coordinate,
+  autosaves movement/console activation, and flushes on lifecycle transitions.
+- The Android emulator restored revision `7` directly into chunk `0,-1` after
+  a force-stop and fresh process launch. Automated fresh-runtime coverage proves
+  persistent entity state restoration.
+- Save-format-v1 JSON remains provisional pending OD-004.
+
+See `AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md` and ADR-020.
+
+The automated, Windows build, and Android-emulator functional portions of the
+gate pass. Physical Android interruption/storage testing remains open.
 
 ---
 
