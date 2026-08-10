@@ -1,7 +1,7 @@
 # Stage 2 cube model
 
-`cube/Cube.gltf` and `cube/Cube.bin` are the Khronos glTF Sample Assets
-**Cube** model.
+`cube/Cube.gltf`, `cube/Cube.bin`, and `cube/Cube_BaseColor.png` are the
+Khronos glTF Sample Assets **Cube** model.
 
 - Creator: Norbert Nopper / UX3D
 - License: CC0 1.0 Universal

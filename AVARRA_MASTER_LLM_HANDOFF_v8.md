@@ -1973,7 +1973,7 @@ ADR-017.
 
 # AVARRA — Stage 2B Renderer Validation
 
-**Status:** Windows runtime process gate passed; visual/device validation pending  
+**Status:** Windows runtime and package gates passed; corrected visual recheck and device validation pending
 **Date:** 2026-08-10
 
 ## Implemented proof
@@ -2013,18 +2013,21 @@ Android debug APK
 Passed on 2026-08-10:
 
 - dependency resolution;
-- source formatting across 52 Dart files;
+- source formatting across 53 Dart files;
 - whole-workspace analysis with no issues;
-- 45 tests: 40 pure Dart, 3 Thermion bridge, 1 Game widget, 1 Forge widget;
+- 46 tests: 40 pure Dart, 3 Thermion bridge, 2 Game, 1 Forge widget;
 - headless server native compilation and three-tick execution;
 - Game Windows release build;
 - Game Android debug APK build;
 - Windows visible-process stability for more than three minutes;
 - Windows controlled launch/close with process exit within 15 seconds;
-- no Windows Vulkan device-loss, unsupported-update, or asset errors on the
-  pinned pre-release;
+- no Windows Vulkan device-loss or unsupported-update errors on the pinned
+  pre-release;
 - Forge Windows release build;
-- Windows and Android packaging of both `Cube.gltf` and `Cube.bin`;
+- automated closure checking for every external buffer and image URI in the
+  glTF fixture;
+- Windows and Android packaging of `Cube.gltf`, `Cube.bin`, and
+  `Cube_BaseColor.png`;
 - deterministic regeneration of `AVARRA_MASTER_LLM_HANDOFF_v8.md`.
 
 Fixture hashes:
@@ -2032,6 +2035,7 @@ Fixture hashes:
 ```text
 Cube.gltf  9580FF77AD6A1A601FB570AAAD6148F8E4067244D2430337A43EDBB4D627E85D
 Cube.bin   ECE1E675655D75762AAA7E920D93167442D3B9672324694716528ED4E018E4B3
+Cube_BaseColor.png  0750D5A03C1BEBC640571E309F66C6E88EFBFF2EF4C120619466A7014551BB9A
 ```
 
 The fixture is the CC0 Khronos glTF Sample Assets Cube. Attribution and source
@@ -2074,7 +2078,14 @@ flutter run -d windows
 ```
 
 Automated launch, sustained responsiveness, and controlled-close checks pass.
-Human confirmation still must establish:
+The first human visual run exposed an incomplete fixture package: `Cube.gltf`
+referenced `Cube_BaseColor.png`, but only the glTF and binary buffer had been
+copied. Thermion correctly reported the missing asset instead of rendering the
+cube. The exact Khronos texture is now packaged, a regression test checks every
+external glTF URI, and both product bundles contain all three files.
+
+The corrected Windows build has been relaunched and remains responsive. Human
+confirmation still must establish:
 
 1. the cube is visible and lit;
 2. the HUD reports one ECS entity bound to the scene;
@@ -6624,8 +6635,8 @@ caad37835e7d379621247b24b7de9d84071bd474
 ```
 
 On the same machine, it selected `family 0, queue index 1`, remained responsive
-for more than three minutes without device-loss or asset errors, and completed
-a controlled visible launch/close cycle within 15 seconds.
+for more than three minutes without device-loss, and completed a controlled
+visible launch/close cycle within 15 seconds.
 
 ## Decision
 
@@ -6646,9 +6657,15 @@ Passed with the exact commit:
 - Game Windows release build;
 - Game Android debug APK build;
 - visible Windows process startup and sustained responsiveness;
-- no `VK_ERROR_DEVICE_LOST`, unsupported widget update, or asset error;
+- no `VK_ERROR_DEVICE_LOST` or unsupported widget update;
 - controlled Windows close and process exit;
-- Android packaging of both cube asset files.
+- Windows and Android packaging of all three cube asset files.
+
+The first human visual inspection subsequently found an AVARRA fixture defect:
+`Cube.gltf` referenced `Cube_BaseColor.png`, which had not been copied into the
+asset directory. This was independent of the Vulkan compatibility decision.
+AVARRA now packages the exact Khronos texture and tests that every external
+buffer and image URI in the glTF resolves to a non-empty file.
 
 The visual content of the Windows scene still needs human confirmation. A
 physical Android runtime/performance check also remains open. Stage 2 is not

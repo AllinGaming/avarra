@@ -7,7 +7,9 @@ the provisional Thermion/Filament backend.
 
 Windows and Android compile/package gates pass. The exact Thermion
 `v0.5.0-pre.5` commit also passes Windows process stability and controlled-close
-checks after published 0.4.1 failed with `VK_ERROR_DEVICE_LOST`. Windows visual
+checks after published 0.4.1 failed with `VK_ERROR_DEVICE_LOST`. The packaged
+Khronos fixture includes its glTF, binary buffer, and texture; a Game test
+checks that every external glTF resource exists. Corrected Windows visual
 confirmation and physical Android rendering/performance remain manual gates;
 see ADR-016 and ADR-017.
 

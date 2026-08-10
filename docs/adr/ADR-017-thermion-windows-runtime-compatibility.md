@@ -43,8 +43,8 @@ caad37835e7d379621247b24b7de9d84071bd474
 ```
 
 On the same machine, it selected `family 0, queue index 1`, remained responsive
-for more than three minutes without device-loss or asset errors, and completed
-a controlled visible launch/close cycle within 15 seconds.
+for more than three minutes without device-loss, and completed a controlled
+visible launch/close cycle within 15 seconds.
 
 ## Decision
 
@@ -65,9 +65,15 @@ Passed with the exact commit:
 - Game Windows release build;
 - Game Android debug APK build;
 - visible Windows process startup and sustained responsiveness;
-- no `VK_ERROR_DEVICE_LOST`, unsupported widget update, or asset error;
+- no `VK_ERROR_DEVICE_LOST` or unsupported widget update;
 - controlled Windows close and process exit;
-- Android packaging of both cube asset files.
+- Windows and Android packaging of all three cube asset files.
+
+The first human visual inspection subsequently found an AVARRA fixture defect:
+`Cube.gltf` referenced `Cube_BaseColor.png`, which had not been copied into the
+asset directory. This was independent of the Vulkan compatibility decision.
+AVARRA now packages the exact Khronos texture and tests that every external
+buffer and image URI in the glTF resolves to a non-empty file.
 
 The visual content of the Windows scene still needs human confirmation. A
 physical Android runtime/performance check also remains open. Stage 2 is not
@@ -88,4 +94,3 @@ complete until those checks pass.
 - <https://pub.dev/packages/thermion_flutter>
 - <https://github.com/nmfisher/thermion/tree/v0.5.0-pre.5>
 - <https://github.com/nmfisher/thermion/blob/caad37835e7d379621247b24b7de9d84071bd474/thermion_dart/native/src/vulkan/windows/WindowsVulkanContext.cpp>
-
