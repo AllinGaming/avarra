@@ -231,6 +231,17 @@ Android Host → Windows Client
 
 Save state contains runtime mutations/progress.
 
+Stage 4 now implements strict, server-safe world/content definition loading.
+`avarra_content` owns the initial machine-readable component schemas and typed
+authored values. `avarra_world` owns manifest/entity validation, deterministic
+canonical encoding, and stable-ID ECS instantiation. Avarra Game loads the
+isometric proof from the same bundled `.avarra` definition on Windows and
+Android targets.
+
+The current single-JSON `.avarra` representation is explicitly a prototype,
+not the final archive or cooked serialization decision. See
+`AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.
+
 ## Stable IDs
 
 Persisted/network/world references use stable identifiers.

@@ -141,6 +141,8 @@ See `AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`.
 
 # Stage 4 — Content/World Definition
 
+**Status:** Implemented as a complete prototype slice on 2026-08-10
+
 Build:
 
 ```text
@@ -155,6 +157,19 @@ validation
 Gate:
 
 > Same authored package loads on Windows/Android.
+
+Implementation:
+
+- `avarra_content` exposes server-safe, machine-readable schemas and typed
+  authored definitions for the initial component set.
+- `avarra_world` strictly decodes, validates, canonically encodes, and loads a
+  versioned world definition into stable-ID ECS entities.
+- Avarra Game loads its isometric proof from a bundled
+  `isometric_proof.avarra` definition on both platform targets.
+- The single JSON document is a prototype container only; final archive and
+  cooked binary decisions remain open.
+
+See `AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md`.
 
 ---
 

@@ -237,3 +237,32 @@ runtime .avarra package
 ```
 
 Players do not need the creator's source project.
+
+---
+
+# 14. Current Stage 4 Implementation
+
+The initial vertical slice now provides:
+
+```text
+avarra_content
+  machine-readable component schemas
+  typed component definitions
+  content schema version 1
+
+avarra_world
+  immutable WorldDefinition
+  strict .avarra prototype codec
+  world format version 1
+  deterministic canonical encoding
+  stable-ID ECS loading
+```
+
+The Game's isometric proof world is creator-style data rather than hard-coded
+entity construction. It declares asset, entity, transform, renderable, and
+isometric occlusion semantics in `isometric_proof.avarra`.
+
+The Stage 4 `.avarra` file is a single JSON prototype whose asset paths resolve
+inside the Game bundle. It does not finalize the portable archive, cooked
+binary, compression, signing, hashing, or streaming format. See
+`AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.

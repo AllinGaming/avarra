@@ -33,7 +33,7 @@ passes Windows live-process/close and Android package checks, and still needs a
 scoped Android compile-SDK override. The Windows visual and lifecycle gate now
 passes. A Pixel 10 Pro Android emulator also passes repeated cold-start and
 background/resume checks with stable memory. Physical Android validation,
-Stage 3 interaction features, editor embedding, and performance remain open.
+editor embedding and performance remain open.
 See ADR-015 through ADR-017.
 
 Decision criteria:
@@ -284,3 +284,27 @@ Do not couple core Creator API to one generative media provider.
 Runtime AI NPC conversation is explicitly separate from Forge creator AI.
 
 Do not require an LLM/network connection to play ordinary AVARRA worlds.
+
+---
+
+## OD-019 — `.avarra` Container and Cooked World Serialization
+
+Stage 4 uses a strict single-JSON `.avarra` document with package-relative
+asset references to prove the world/content model and cross-target load path.
+That representation is provisional.
+
+Before creator import/export and distribution, decide from measured product
+requirements:
+
+```text
+archive/container layout
+manifest and content hashing
+compression and size limits
+signature/trust metadata
+cooked binary world/chunk representation
+asset inclusion and dependency rules
+streaming access
+migrations
+```
+
+Do not treat the Stage 4 JSON proof as the permanent hot runtime format.
