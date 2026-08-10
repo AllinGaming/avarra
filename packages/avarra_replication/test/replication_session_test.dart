@@ -13,6 +13,7 @@ void main() {
     final server = AuthoritativeReplicationServer(
       ecs: ecs,
       requiredContent: _content,
+      playerEntityResolver: (_, _) => _globalId,
     );
     final pair = MemoryNetworkTransportPair.create();
     final serverResult = server.accept(pair.first);
@@ -51,6 +52,7 @@ void main() {
     final server = AuthoritativeReplicationServer(
       ecs: ecs,
       requiredContent: _content,
+      playerEntityResolver: (_, _) => _globalId,
     );
     server.registerEntity(_globalId, alwaysRelevant: true);
     server.registerEntity(_localId, cell: const ReplicationCell(0, 0));
@@ -96,10 +98,14 @@ void main() {
   test(
     'accepts only the newest pending client input and acknowledges it',
     () async {
+      final ecs = EcsWorld();
+      _create(ecs, _globalId, Vector3.zero());
       final server = AuthoritativeReplicationServer(
-        ecs: EcsWorld(),
+        ecs: ecs,
         requiredContent: _content,
+        playerEntityResolver: (_, _) => _globalId,
       );
+      server.registerEntity(_globalId, alwaysRelevant: true);
       final connected = await _connect(server);
 
       await connected.client.sendMovementIntent(directionX: 1, directionZ: 0);
@@ -123,7 +129,55 @@ void main() {
       await server.disconnect(connected.connectionId);
       expect((await disconnected).connectionId, connected.connectionId);
       expect(connected.client.isJoined, isFalse);
+      expect(connected.client.entities, isEmpty);
       await connected.client.close();
+      await server.close();
+    },
+  );
+
+  test(
+    'assigns independent controlled entities to concurrent players',
+    () async {
+      final ecs = EcsWorld();
+      _create(ecs, _globalId, Vector3.zero());
+      _create(ecs, _localId, Vector3(1, 0, 0));
+      final server = AuthoritativeReplicationServer(
+        ecs: ecs,
+        requiredContent: _content,
+        playerEntityResolver: (playerId, _) =>
+            playerId == _playerId ? _globalId : _localId,
+      );
+      server.registerEntity(
+        _globalId,
+        alwaysRelevant: true,
+        kind: NetworkEntityKind.playerAvatar,
+      );
+      server.registerEntity(
+        _localId,
+        alwaysRelevant: true,
+        kind: NetworkEntityKind.playerAvatar,
+      );
+
+      final first = await _connect(server);
+      final second = await _connect(server, playerId: _secondPlayerId);
+      await server.replicate(TickId.zero);
+      await Future.wait([
+        first.client.waitForControlledEntity(),
+        second.client.waitForControlledEntity(),
+      ]);
+
+      expect(first.client.controlledEntityId, _globalId);
+      expect(second.client.controlledEntityId, _localId);
+      expect(second.client.entities.values, hasLength(2));
+      expect(
+        second.client.entities.values.every(
+          (entity) => entity.kind == NetworkEntityKind.playerAvatar,
+        ),
+        isTrue,
+      );
+
+      await first.client.close();
+      await second.client.close();
       await server.close();
     },
   );
@@ -135,12 +189,15 @@ EntityHandle _create(EcsWorld ecs, EntityId id, Vector3 position) {
   return handle;
 }
 
-Future<_Connected> _connect(AuthoritativeReplicationServer server) async {
+Future<_Connected> _connect(
+  AuthoritativeReplicationServer server, {
+  PlayerId? playerId,
+}) async {
   final pair = MemoryNetworkTransportPair.create();
   final serverResult = server.accept(pair.first);
   final clientResult = ReplicationClient.connectAndJoin(
     connection: pair.second,
-    playerId: _playerId,
+    playerId: playerId ?? _playerId,
     content: _content,
   );
   final result = await serverResult;
@@ -166,6 +223,7 @@ final class _Connected {
 
 final _worldId = WorldId.parse('01890f47-e8b8-7a68-8000-000000000010');
 final _playerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
+final _secondPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000403');
 final _globalId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
 final _localId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000002');
 final _remoteId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000003');

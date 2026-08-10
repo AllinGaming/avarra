@@ -2,7 +2,11 @@ import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_game/main.dart';
+import 'package:avarra_game/src/host_device_metrics.dart';
+import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
+import 'package:avarra_replication/avarra_replication.dart';
+import 'package:avarra_server/avarra_server.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,7 +21,7 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 8 · Multiplayer Baseline'), findsOneWidget);
+    expect(find.text('Stage 9 · Android Listen Host'), findsOneWidget);
     expect(find.text('Isometric Persistence Proof'), findsOneWidget);
     expect(find.text('4 ECS entities bound to the scene'), findsOneWidget);
     expect(
@@ -90,6 +94,85 @@ void main() {
     expect(find.byKey(const Key('world_load_error')), findsOneWidget);
     expect(find.textContaining('WORLD_PACKAGE_MALFORMED'), findsOneWidget);
   });
+
+  testWidgets('runs a local client inside a listen-host session', (
+    tester,
+  ) async {
+    final source = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    final primaryPlayerId = PlayerId.parse(
+      '01890f47-e8b8-7a68-8000-000000000402',
+    );
+    final host = (await tester.runAsync(
+      () => MultiplayerProofHost.start(
+        worldPackageSource: source!,
+        primaryPlayerId: primaryPlayerId,
+        bindAddress: InternetAddress.loopbackIPv4,
+        port: 0,
+      ),
+    ))!;
+    final client = (await tester.runAsync(() async {
+      final connection = await TcpNetworkTransportConnection.connect(
+        host: InternetAddress.loopbackIPv4.address,
+        port: host.port,
+      );
+      final value = await ReplicationClient.connectAndJoin(
+        connection: connection,
+        playerId: primaryPlayerId,
+        content: host.content,
+      );
+      await value.waitForControlledEntity();
+      return value;
+    }))!;
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => source!,
+        multiplayerHostStarter: (_, _) async => host,
+        multiplayerClientConnector: (_, _) async => client,
+        hostDeviceMetricsSampler: const _FakeHostDeviceMetricsSampler(),
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+
+    expect(find.textContaining('Network: Joined connection 1'), findsOneWidget);
+    expect(find.textContaining('Host: Listening '), findsOneWidget);
+    expect(find.byKey(const Key('host_performance')), findsOneWidget);
+    expect(
+      find.textContaining('Device: 64.0 MiB · thermal none'),
+      findsOneWidget,
+    );
+    expect(host.metrics.activeClients, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 75)),
+    );
+    expect(host.isClosed, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+  });
+}
+
+final class _FakeHostDeviceMetricsSampler implements HostDeviceMetricsSampler {
+  const _FakeHostDeviceMetricsSampler();
+
+  @override
+  Future<HostDeviceMetrics> sample() async {
+    return const HostDeviceMetrics(
+      memoryBytes: 64 * 1024 * 1024,
+      thermalStatus: 'none',
+      platformBytesSent: 2048,
+      platformBytesReceived: 4096,
+    );
+  }
 }
 
 Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
@@ -104,5 +187,5 @@ Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
       fail('Game bootstrap failed: $errorText');
     }
   }
-  fail('Game bootstrap did not expose Stage 8 status.');
+  fail('Game bootstrap did not expose Stage 9 status.');
 }

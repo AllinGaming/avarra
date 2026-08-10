@@ -108,9 +108,21 @@ final class TcpNetworkTransportConnection
   late final StreamSubscription<Uint8List> _subscription;
   Future<void> _sendQueue = Future.value();
   bool _closed = false;
+  int _bytesSent = 0;
+  int _bytesReceived = 0;
+  int _framesSent = 0;
+  int _framesReceived = 0;
 
   @override
   Stream<Uint8List> get frames => _controller.stream;
+
+  @override
+  NetworkTransportStatistics get statistics => NetworkTransportStatistics(
+    bytesSent: _bytesSent,
+    bytesReceived: _bytesReceived,
+    framesSent: _framesSent,
+    framesReceived: _framesReceived,
+  );
 
   @override
   Future<void> send(Uint8List frame) {
@@ -132,6 +144,8 @@ final class TcpNetworkTransportConnection
       _socket.add(header.buffer.asUint8List());
       _socket.add(frame);
       await _socket.flush();
+      _bytesSent += frame.length + 4;
+      _framesSent += 1;
     });
     _sendQueue = operation.then<void>((_) {}, onError: (_, _) {});
     return operation;
@@ -151,6 +165,8 @@ final class TcpNetworkTransportConnection
   void _handleBytes(Uint8List bytes) {
     try {
       for (final frame in _decoder.add(bytes)) {
+        _bytesReceived += frame.length + 4;
+        _framesReceived += 1;
         _controller.add(frame);
       }
     } on Object catch (error, stackTrace) {

@@ -7,22 +7,33 @@ import 'package:avarra_network/avarra_network.dart';
 import 'replication_error_codes.dart';
 import 'replication_values.dart';
 
-final class ServerJoinResult {
-  const ServerJoinResult.accepted(this.connectionId) : rejection = null;
+typedef ReplicationPlayerEntityResolver =
+    FutureOr<EntityId> Function(
+      PlayerId playerId,
+      NetworkConnectionId connectionId,
+    );
 
-  const ServerJoinResult.rejected(this.rejection) : connectionId = null;
+final class ServerJoinResult {
+  const ServerJoinResult.accepted(this.connectionId, this.controlledEntityId)
+    : rejection = null;
+
+  const ServerJoinResult.rejected(this.rejection)
+    : connectionId = null,
+      controlledEntityId = null;
 
   final NetworkConnectionId? connectionId;
+  final EntityId? controlledEntityId;
   final JoinRejectedMessage? rejection;
 
   bool get isAccepted => connectionId != null;
 }
 
-/// Host-authoritative session and full-snapshot Stage 8 replication baseline.
+/// Host-authoritative session and full-snapshot replication baseline.
 final class AuthoritativeReplicationServer {
   AuthoritativeReplicationServer({
     required this.ecs,
     required this.requiredContent,
+    required this.playerEntityResolver,
     this.tickRateHz = 30,
     this.maximumClients = 8,
     this.joinTimeout = const Duration(seconds: 5),
@@ -38,6 +49,7 @@ final class AuthoritativeReplicationServer {
 
   final EcsWorld ecs;
   final ContentHandshake requiredContent;
+  final ReplicationPlayerEntityResolver playerEntityResolver;
   final int tickRateHz;
   final int maximumClients;
   final Duration joinTimeout;
@@ -56,6 +68,7 @@ final class AuthoritativeReplicationServer {
     EntityId entityId, {
     ReplicationCell? cell,
     bool alwaysRelevant = false,
+    NetworkEntityKind kind = NetworkEntityKind.world,
   }) {
     if (_entitiesByStableId.containsKey(entityId)) {
       throw AvarraException(
@@ -88,6 +101,7 @@ final class AuthoritativeReplicationServer {
       networkEntityId: networkEntityId,
       cell: cell,
       alwaysRelevant: alwaysRelevant,
+      kind: kind,
     );
     _entitiesByStableId[entityId] = registration;
     _entitiesByNetworkId[networkEntityId] = registration;
@@ -141,6 +155,10 @@ final class AuthoritativeReplicationServer {
 
   PlayerId playerIdFor(NetworkConnectionId connectionId) {
     return _requireClient(connectionId).playerId;
+  }
+
+  EntityId controlledEntityIdFor(NetworkConnectionId connectionId) {
+    return _requireClient(connectionId).controlledEntityId;
   }
 
   void setClientInterest(
@@ -199,6 +217,7 @@ final class AuthoritativeReplicationServer {
           SpawnEntityMessage(
             networkEntityId: registration.networkEntityId,
             entityId: registration.entityId,
+            kind: registration.kind,
             transform: _transformFor(registration),
           ),
         );
@@ -303,10 +322,28 @@ final class AuthoritativeReplicationServer {
     }
 
     final connectionId = NetworkConnectionId(_nextConnectionId++);
+    late final EntityId controlledEntityId;
+    try {
+      controlledEntityId = await playerEntityResolver(
+        hello.playerId,
+        connectionId,
+      );
+      if (!_entitiesByStableId.containsKey(controlledEntityId)) {
+        throw StateError('Resolved player entity is not replicated.');
+      }
+    } on Object {
+      await _reject(
+        pending,
+        JoinRejectionReason.hostUnavailable,
+        'The host could not allocate a player entity.',
+      );
+      return;
+    }
     final client = _ServerClient(
       pending: pending,
       connectionId: connectionId,
       playerId: hello.playerId,
+      controlledEntityId: controlledEntityId,
       channel: pending.channel,
     );
     pending
@@ -314,10 +351,16 @@ final class AuthoritativeReplicationServer {
       ..client = client;
     _clients[connectionId] = client;
     await pending.channel.send(
-      JoinAcceptedMessage(connectionId: connectionId, tickRateHz: tickRateHz),
+      JoinAcceptedMessage(
+        connectionId: connectionId,
+        tickRateHz: tickRateHz,
+        controlledEntityId: controlledEntityId,
+      ),
     );
     if (!pending.joinResult.isCompleted) {
-      pending.joinResult.complete(ServerJoinResult.accepted(connectionId));
+      pending.joinResult.complete(
+        ServerJoinResult.accepted(connectionId, controlledEntityId),
+      );
     }
   }
 
@@ -446,12 +489,14 @@ final class _ServerClient {
     required this.pending,
     required this.connectionId,
     required this.playerId,
+    required this.controlledEntityId,
     required this.channel,
   });
 
   final _PendingClient pending;
   final NetworkConnectionId connectionId;
   final PlayerId playerId;
+  final EntityId controlledEntityId;
   final NetworkProtocolChannel channel;
   Set<ReplicationCell> interest = const {};
   final Set<NetworkEntityId> knownEntities = {};
@@ -466,12 +511,14 @@ final class _RegisteredEntity {
     required this.networkEntityId,
     required this.cell,
     required this.alwaysRelevant,
+    required this.kind,
   });
 
   final EntityId entityId;
   final NetworkEntityId networkEntityId;
   final ReplicationCell? cell;
   final bool alwaysRelevant;
+  final NetworkEntityKind kind;
 }
 
 Never _invalidConfiguration(String message) {

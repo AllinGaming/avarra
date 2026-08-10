@@ -25,6 +25,7 @@ final class NetworkProtocolChannel {
   bool _closed = false;
 
   Stream<NetworkMessage> get messages => _controller.stream;
+  NetworkTransportStatistics get statistics => connection.statistics;
 
   Future<void> send(NetworkMessage message) {
     return connection.send(codec.encode(message));

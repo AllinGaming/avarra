@@ -9,17 +9,20 @@ final class ReplicatedEntityState {
   const ReplicatedEntityState({
     required this.networkEntityId,
     required this.entityId,
+    required this.kind,
     required this.transform,
   });
 
   final NetworkEntityId networkEntityId;
   final EntityId entityId;
+  final NetworkEntityKind kind;
   final NetworkTransform transform;
 
   ReplicatedEntityState copyWith({NetworkTransform? transform}) {
     return ReplicatedEntityState(
       networkEntityId: networkEntityId,
       entityId: entityId,
+      kind: kind,
       transform: transform ?? this.transform,
     );
   }
@@ -45,8 +48,8 @@ final class ReplicationEntitySpawned extends ReplicationClientEvent {
 }
 
 final class ReplicationEntityDespawned extends ReplicationClientEvent {
-  const ReplicationEntityDespawned(this.networkEntityId);
-  final NetworkEntityId networkEntityId;
+  const ReplicationEntityDespawned(this.entity);
+  final ReplicatedEntityState entity;
 }
 
 final class ReplicationSnapshotApplied extends ReplicationClientEvent {
@@ -109,18 +112,45 @@ final class ReplicationClient {
   final Map<NetworkEntityId, ReplicatedEntityState> _entities = {};
   late final StreamSubscription<NetworkMessage> _subscription;
   NetworkConnectionId? _connectionId;
+  EntityId? _controlledEntityId;
   TickId? _latestTickId;
   int? _acknowledgedInputSequence;
   int _nextInputSequence = 0;
   bool _closed = false;
 
   NetworkConnectionId? get connectionId => _connectionId;
+  EntityId? get controlledEntityId => _controlledEntityId;
   bool get isJoined => _connectionId != null;
   TickId? get latestTickId => _latestTickId;
   int? get acknowledgedInputSequence => _acknowledgedInputSequence;
   Stream<ReplicationClientEvent> get events => _events.stream;
   Map<NetworkEntityId, ReplicatedEntityState> get entities =>
       Map.unmodifiable(_entities);
+  NetworkTransportStatistics get transportStatistics => _channel.statistics;
+
+  Future<ReplicatedEntityState> waitForControlledEntity({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final entityId = _controlledEntityId;
+    if (entityId == null) {
+      throw AvarraException(
+        code: ReplicationErrorCodes.protocolViolation,
+        message: 'Controlled entity is unavailable before joining.',
+      );
+    }
+    final existing = _entities.values
+        .where((entity) => entity.entityId == entityId)
+        .firstOrNull;
+    if (existing != null) {
+      return existing;
+    }
+    return events
+        .where((event) => event is ReplicationEntitySpawned)
+        .cast<ReplicationEntitySpawned>()
+        .map((event) => event.entity)
+        .firstWhere((entity) => entity.entityId == entityId)
+        .timeout(timeout);
+  }
 
   Future<int> sendMovementIntent({
     required double directionX,
@@ -150,6 +180,7 @@ final class ReplicationClient {
     _closed = true;
     await _subscription.cancel();
     await _channel.close();
+    _clearEntities();
     if (!_events.isClosed) {
       await _events.close();
     }
@@ -160,6 +191,7 @@ final class ReplicationClient {
       switch (message) {
         case JoinAcceptedMessage():
           _connectionId = message.connectionId;
+          _controlledEntityId = message.controlledEntityId;
           if (!_joined.isCompleted) {
             _joined.complete(message.connectionId);
           }
@@ -188,13 +220,16 @@ final class ReplicationClient {
         final entity = ReplicatedEntityState(
           networkEntityId: message.networkEntityId,
           entityId: message.entityId,
+          kind: message.kind,
           transform: message.transform,
         );
         _entities[message.networkEntityId] = entity;
         _events.add(ReplicationEntitySpawned(entity));
       case DespawnEntityMessage():
-        _entities.remove(message.networkEntityId);
-        _events.add(ReplicationEntityDespawned(message.networkEntityId));
+        final entity = _entities.remove(message.networkEntityId);
+        if (entity != null) {
+          _events.add(ReplicationEntityDespawned(entity));
+        }
       case TransformSnapshotMessage():
         final previous = _latestTickId;
         if (previous != null && message.tickId.compareTo(previous) <= 0) {
@@ -243,8 +278,22 @@ final class ReplicationClient {
     }
     final connectionId = _connectionId;
     _connectionId = null;
+    _clearEntities();
     if (connectionId != null && !_events.isClosed) {
       _events.add(ReplicationClientDisconnected(connectionId));
+    }
+  }
+
+  void _clearEntities() {
+    final entities = _entities.values.toList()
+      ..sort(
+        (left, right) => left.networkEntityId.compareTo(right.networkEntityId),
+      );
+    _entities.clear();
+    if (!_events.isClosed) {
+      for (final entity in entities) {
+        _events.add(ReplicationEntityDespawned(entity));
+      }
     }
   }
 

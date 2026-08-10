@@ -5,7 +5,7 @@ import 'network_values.dart';
 
 const String avarraNetworkWireFormat = 'avarra.net';
 const int currentNetworkWireVersion = 1;
-const int currentNetworkProtocolVersion = 1;
+const int currentNetworkProtocolVersion = 2;
 
 abstract final class NetworkMessageType {
   static const clientHello = 1;
@@ -38,7 +38,11 @@ final class ClientHelloMessage extends NetworkMessage {
 }
 
 final class JoinAcceptedMessage extends NetworkMessage {
-  JoinAcceptedMessage({required this.connectionId, required this.tickRateHz}) {
+  JoinAcceptedMessage({
+    required this.connectionId,
+    required this.tickRateHz,
+    required this.controlledEntityId,
+  }) {
     if (tickRateHz <= 0 || tickRateHz > 240) {
       _invalid('Tick rate must be in [1, 240].');
     }
@@ -46,10 +50,14 @@ final class JoinAcceptedMessage extends NetworkMessage {
 
   final NetworkConnectionId connectionId;
   final int tickRateHz;
+  final EntityId controlledEntityId;
 
   @override
   int get messageType => NetworkMessageType.joinAccepted;
 }
+
+/// Stable replicated archetype metadata needed for runtime-owned entities.
+enum NetworkEntityKind { world, playerAvatar }
 
 enum JoinRejectionReason {
   protocolMismatch,
@@ -59,6 +67,7 @@ enum JoinRejectionReason {
   packageHashMismatch,
   sessionFull,
   playerAlreadyConnected,
+  hostUnavailable,
   malformedHello,
 }
 
@@ -136,11 +145,13 @@ final class SpawnEntityMessage extends NetworkMessage {
   const SpawnEntityMessage({
     required this.networkEntityId,
     required this.entityId,
+    required this.kind,
     required this.transform,
   });
 
   final NetworkEntityId networkEntityId;
   final EntityId entityId;
+  final NetworkEntityKind kind;
   final NetworkTransform transform;
 
   @override

@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_server/avarra_server.dart';
+
+final _proofPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
 
 Future<void> main(List<String> arguments) async {
   if (arguments.contains('--multiplayer')) {
@@ -37,6 +40,7 @@ Future<void> _runMultiplayer(List<String> arguments) async {
   final source = await File(worldPath).readAsString();
   final host = await MultiplayerProofHost.start(
     worldPackageSource: source,
+    primaryPlayerId: _proofPlayerId,
     port: port,
   );
   final subscription = host.events.listen(

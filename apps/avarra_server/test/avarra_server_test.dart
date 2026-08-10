@@ -59,6 +59,7 @@ void main() {
     final worldFile = _findProofWorld();
     final host = await MultiplayerProofHost.start(
       worldPackageSource: worldFile.readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
       port: 0,
     );
     final hostEvents = host.events.listen((_) {});
@@ -68,7 +69,7 @@ void main() {
     );
     final client = await ReplicationClient.connectAndJoin(
       connection: connection,
-      playerId: PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402'),
+      playerId: _primaryPlayerId,
       content: host.content,
     );
 
@@ -89,11 +90,78 @@ void main() {
     );
 
     expect(client.connectionId, NetworkConnectionId(1));
+    expect(client.controlledEntityId, _playerEntityId);
     expect(client.latestTickId, isNotNull);
     await client.close();
     await hostEvents.cancel();
     await host.close();
   });
+
+  test('listen host gives two clients independent player avatars', () async {
+    final host = await MultiplayerProofHost.start(
+      worldPackageSource: _findProofWorld().readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+    );
+    final hostEvents = host.events.listen((_) {});
+    final first = await _connect(host, _primaryPlayerId);
+    final second = await _connect(host, _secondPlayerId);
+    final secondEntityId = EntityId.parse(_secondPlayerId.value);
+    await Future.wait([
+      first.waitForControlledEntity(),
+      second.waitForControlledEntity(),
+    ]);
+
+    final firstBefore = first.entities.values
+        .singleWhere((entity) => entity.entityId == _playerEntityId)
+        .transform
+        .position[2];
+    final secondBefore = second.entities.values
+        .singleWhere((entity) => entity.entityId == secondEntityId)
+        .transform
+        .position[2];
+    await second.sendMovementIntent(directionX: 0, directionZ: -1);
+    await _waitUntil(
+      () =>
+          second.entities.values
+              .singleWhere((entity) => entity.entityId == secondEntityId)
+              .transform
+              .position[2] <
+          secondBefore,
+    );
+
+    expect(first.controlledEntityId, _playerEntityId);
+    expect(second.controlledEntityId, secondEntityId);
+    expect(
+      first.entities.values
+          .singleWhere((entity) => entity.entityId == _playerEntityId)
+          .transform
+          .position[2],
+      firstBefore,
+    );
+    expect(host.metrics.activeClients, 2);
+    expect(host.metrics.bytesSent, greaterThan(0));
+
+    await first.close();
+    await second.close();
+    await hostEvents.cancel();
+    await host.close();
+  });
+}
+
+Future<ReplicationClient> _connect(
+  MultiplayerProofHost host,
+  PlayerId playerIdValue,
+) async {
+  final connection = await TcpNetworkTransportConnection.connect(
+    host: InternetAddress.loopbackIPv4.address,
+    port: host.port,
+  );
+  return ReplicationClient.connectAndJoin(
+    connection: connection,
+    playerId: playerIdValue,
+    content: host.content,
+  );
 }
 
 File _findProofWorld() {
@@ -124,3 +192,7 @@ Future<void> _waitUntil(bool Function() condition) async {
   }
   fail('Network condition did not become true.');
 }
+
+final _primaryPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
+final _secondPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000403');
+final _playerEntityId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');

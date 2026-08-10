@@ -7,14 +7,18 @@ import 'package:test/test.dart';
 void main() {
   const codec = NetworkProtocolCodec();
 
-  test('canonically round-trips every Stage 8 message type', () {
+  test('canonically round-trips every current message type', () {
     final messages = <NetworkMessage>[
       ClientHelloMessage(
         protocolVersion: currentNetworkProtocolVersion,
         playerId: _playerId,
         content: _content,
       ),
-      JoinAcceptedMessage(connectionId: NetworkConnectionId(3), tickRateHz: 30),
+      JoinAcceptedMessage(
+        connectionId: NetworkConnectionId(3),
+        tickRateHz: 30,
+        controlledEntityId: _entityId,
+      ),
       JoinRejectedMessage(
         reason: JoinRejectionReason.packageHashMismatch,
         detail: 'Package mismatch.',
@@ -23,6 +27,7 @@ void main() {
       SpawnEntityMessage(
         networkEntityId: NetworkEntityId(9),
         entityId: _entityId,
+        kind: NetworkEntityKind.playerAvatar,
         transform: _transform,
       ),
       DespawnEntityMessage(networkEntityId: NetworkEntityId(9)),

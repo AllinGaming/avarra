@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_core/avarra_core.dart';
@@ -9,13 +11,17 @@ import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
+import 'package:avarra_server/avarra_server.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
+
+import 'src/host_device_metrics.dart';
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
 const _fixedDeltaSeconds = 1 / 60;
@@ -25,6 +31,14 @@ const _configuredMultiplayerHost = String.fromEnvironment(
 const _configuredMultiplayerPort = int.fromEnvironment(
   'AVARRA_MULTIPLAYER_PORT',
   defaultValue: 45454,
+);
+const _configuredMultiplayerRole = String.fromEnvironment(
+  'AVARRA_MULTIPLAYER_ROLE',
+  defaultValue: 'offline',
+);
+const _configuredPlayerId = String.fromEnvironment(
+  'AVARRA_PLAYER_ID',
+  defaultValue: '01890f47-e8b8-7a68-8000-000000000402',
 );
 final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000401');
 final _proofPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
@@ -39,6 +53,11 @@ typedef MultiplayerClientConnector =
       ContentHandshake content,
       PlayerId playerId,
     );
+typedef MultiplayerHostStarter =
+    Future<MultiplayerProofHost?> Function(
+      String worldPackageSource,
+      PlayerId primaryPlayerId,
+    );
 
 void main() {
   runApp(const AvarraGameApp());
@@ -50,6 +69,8 @@ class AvarraGameApp extends StatelessWidget {
     this.worldPackageSourceLoader,
     this.saveStoreLoader,
     this.multiplayerClientConnector,
+    this.multiplayerHostStarter,
+    this.hostDeviceMetricsSampler = const PlatformHostDeviceMetricsSampler(),
     super.key,
   });
 
@@ -57,6 +78,8 @@ class AvarraGameApp extends StatelessWidget {
   final WorldPackageSourceLoader? worldPackageSourceLoader;
   final SaveStoreLoader? saveStoreLoader;
   final MultiplayerClientConnector? multiplayerClientConnector;
+  final MultiplayerHostStarter? multiplayerHostStarter;
+  final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +99,9 @@ class AvarraGameApp extends StatelessWidget {
         saveStoreLoader: saveStoreLoader ?? _loadDefaultSaveStore,
         multiplayerClientConnector:
             multiplayerClientConnector ?? _connectConfiguredMultiplayer,
+        multiplayerHostStarter:
+            multiplayerHostStarter ?? _startConfiguredMultiplayerHost,
+        hostDeviceMetricsSampler: hostDeviceMetricsSampler,
       ),
     );
   }
@@ -87,12 +113,16 @@ class _WorldBootstrapScreen extends StatefulWidget {
     required this.sourceLoader,
     required this.saveStoreLoader,
     required this.multiplayerClientConnector,
+    required this.multiplayerHostStarter,
+    required this.hostDeviceMetricsSampler,
   });
 
   final bool enableRenderer;
   final WorldPackageSourceLoader sourceLoader;
   final SaveStoreLoader saveStoreLoader;
   final MultiplayerClientConnector multiplayerClientConnector;
+  final MultiplayerHostStarter multiplayerHostStarter;
+  final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
   State<_WorldBootstrapScreen> createState() => _WorldBootstrapScreenState();
@@ -132,7 +162,9 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           persistence: loadedWorld.persistence,
           restoredSave: loadedWorld.restoredSave,
           multiplayerClient: loadedWorld.multiplayerClient,
+          multiplayerHost: loadedWorld.multiplayerHost,
           multiplayerStatus: loadedWorld.multiplayerStatus,
+          hostDeviceMetricsSampler: widget.hostDeviceMetricsSampler,
         );
       },
     );
@@ -140,6 +172,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
 
   Future<_LoadedWorld> _loadWorld() async {
     final source = await widget.sourceLoader();
+    final configuredPlayerId = PlayerId.parse(_configuredPlayerId);
     final definition = WorldPackageCodec().decode(source);
     final runtimeWorld = const RuntimeWorldLoader().load(definition);
     final player = runtimeWorld.ecs.query<PlayerControlledComponent>().single;
@@ -182,8 +215,14 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       ),
     ]);
     await streaming.pumpUntilStable();
+    final multiplayerHost = await widget.multiplayerHostStarter(
+      source,
+      configuredPlayerId,
+    );
     ReplicationClient? multiplayerClient;
-    var multiplayerStatus = 'Offline · local authority';
+    var multiplayerStatus = multiplayerHost == null
+        ? 'Offline · local authority'
+        : 'Hosting on :${multiplayerHost.port}';
     try {
       multiplayerClient = await widget.multiplayerClientConnector(
         ContentHandshake(
@@ -192,9 +231,10 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           contentSchemaVersion: definition.contentSchemaVersion,
           packageHash: networkPackageHashFromText(source),
         ),
-        _proofPlayerId,
+        configuredPlayerId,
       );
       if (multiplayerClient != null) {
+        await multiplayerClient.waitForControlledEntity();
         multiplayerStatus =
             'Joined connection ${multiplayerClient.connectionId!.value}';
       }
@@ -207,6 +247,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       persistence: persistence,
       restoredSave: restoreResult.found,
       multiplayerClient: multiplayerClient,
+      multiplayerHost: multiplayerHost,
       multiplayerStatus: multiplayerStatus,
     );
   }
@@ -219,6 +260,7 @@ final class _LoadedWorld {
     required this.persistence,
     required this.restoredSave,
     required this.multiplayerClient,
+    required this.multiplayerHost,
     required this.multiplayerStatus,
   });
 
@@ -227,6 +269,7 @@ final class _LoadedWorld {
   final WorldSaveSession persistence;
   final bool restoredSave;
   final ReplicationClient? multiplayerClient;
+  final MultiplayerProofHost? multiplayerHost;
   final String multiplayerStatus;
 }
 
@@ -238,7 +281,9 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.persistence,
     required this.restoredSave,
     required this.multiplayerClient,
+    required this.multiplayerHost,
     required this.multiplayerStatus,
+    required this.hostDeviceMetricsSampler,
   });
 
   final bool enableRenderer;
@@ -247,7 +292,9 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final WorldSaveSession persistence;
   final bool restoredSave;
   final ReplicationClient? multiplayerClient;
+  final MultiplayerProofHost? multiplayerHost;
   final String multiplayerStatus;
+  final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
   State<_PresentationBoundaryScreen> createState() {
@@ -271,12 +318,20 @@ class _PresentationBoundaryScreenState
   SetGroundTargetIntent? _groundTarget;
   Timer? _movementTimer;
   Timer? _saveTimer;
+  Timer? _hostMetricsTimer;
   StreamSubscription<ReplicationClientEvent>? _replicationSubscription;
+  final Set<EntityId> _networkAvatarEntityIds = {};
   bool _streamingInFlight = false;
   bool _streamingDirty = false;
   bool _saveInFlight = false;
   late String _saveStatus;
   late String _multiplayerStatus;
+  MultiplayerHostMetrics? _hostMetrics;
+  HostDeviceMetrics? _hostDeviceMetrics;
+  int _frameCount = 0;
+  int _totalFrameMicroseconds = 0;
+  int _maximumFrameMicroseconds = 0;
+  bool _hostEnding = false;
   String _interactionStatus = 'Select the console, then interact';
 
   @override
@@ -287,13 +342,19 @@ class _PresentationBoundaryScreenState
         ? 'Restored revision ${widget.persistence.revision}'
         : 'No save yet';
     _multiplayerStatus = widget.multiplayerStatus;
-    _presentation = const PresentationExtractor().extract(
-      widget.runtimeWorld.ecs,
-    );
-    _playerEntityId = widget.runtimeWorld.ecs
+    final authoredPlayerEntityId = widget.runtimeWorld.ecs
         .query<PlayerControlledComponent>()
         .single
         .entityId;
+    _playerEntityId =
+        widget.multiplayerClient?.controlledEntityId ?? authoredPlayerEntityId;
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      _applyReplicatedEntities(multiplayerClient);
+    }
+    _presentation = const PresentationExtractor().extract(
+      widget.runtimeWorld.ecs,
+    );
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
     );
@@ -310,9 +371,7 @@ class _PresentationBoundaryScreenState
       for (final entry in widget.runtimeWorld.assetPaths.entries)
         entry.key: 'asset://${entry.value}',
     });
-    final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
-      _applyReplicatedEntities(multiplayerClient);
       _replicationSubscription = multiplayerClient.events.listen(
         _handleReplicationEvent,
         onError: (Object error) {
@@ -330,12 +389,24 @@ class _PresentationBoundaryScreenState
         (_) => _tickMovement(),
       );
     }
+    if (widget.multiplayerHost != null) {
+      SchedulerBinding.instance.addTimingsCallback(_recordFrameTimings);
+      _hostMetricsTimer = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => unawaited(_sampleHostMetrics()),
+      );
+      unawaited(_sampleHostMetrics());
+    }
   }
 
   @override
   void dispose() {
     _movementTimer?.cancel();
     _saveTimer?.cancel();
+    _hostMetricsTimer?.cancel();
+    if (widget.multiplayerHost != null) {
+      SchedulerBinding.instance.removeTimingsCallback(_recordFrameTimings);
+    }
     final replicationSubscription = _replicationSubscription;
     if (replicationSubscription != null) {
       unawaited(replicationSubscription.cancel());
@@ -343,6 +414,10 @@ class _PresentationBoundaryScreenState
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
       unawaited(multiplayerClient.close());
+    }
+    final multiplayerHost = widget.multiplayerHost;
+    if (multiplayerHost != null) {
+      unawaited(multiplayerHost.close());
     }
     WidgetsBinding.instance.removeObserver(this);
     if (!_saveInFlight && widget.persistence.dirtyState.hasDirtyState) {
@@ -360,6 +435,7 @@ class _PresentationBoundaryScreenState
         state == AppLifecycleState.detached) {
       _saveTimer?.cancel();
       unawaited(_flushSave());
+      unawaited(_endHostedSession());
     }
   }
 
@@ -372,7 +448,7 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 8 · Multiplayer Baseline'),
+        const Text('Stage 9 · Android Listen Host'),
         Text(widget.runtimeWorld.definition.name),
         Text('${_presentation.length} ECS entities bound to the scene'),
         Text(
@@ -395,6 +471,11 @@ class _PresentationBoundaryScreenState
           '${widget.multiplayerClient?.entities.length ?? 0} entities',
           key: const Key('multiplayer_status'),
         ),
+        if (widget.multiplayerHost != null) ...[
+          Text(_hostStatus, key: const Key('host_status')),
+          Text(_hostPerformanceStatus, key: const Key('host_performance')),
+          Text(_hostDeviceStatus, key: const Key('host_device_status')),
+        ],
         Text(
           'Ancient console: $_consolePersistenceStatus',
           key: const Key('persistent_console_status'),
@@ -576,6 +657,85 @@ class _PresentationBoundaryScreenState
     return 'Tap ground to move · WASD/arrow keys for direct movement';
   }
 
+  String get _hostStatus {
+    final host = widget.multiplayerHost!;
+    final metrics = _hostMetrics ?? host.metrics;
+    final state = host.isClosed
+        ? 'Ended'
+        : 'Listening ${host.joinEndpoints.join(', ')}';
+    return 'Host: $state · ${metrics.activeClients}/'
+        '${host.replication.maximumClients} clients · '
+        '${metrics.entityCount} authoritative entities';
+  }
+
+  String get _hostPerformanceStatus {
+    final metrics = _hostMetrics ?? widget.multiplayerHost!.metrics;
+    final averageFrame = _frameCount == 0
+        ? '-'
+        : (_totalFrameMicroseconds / _frameCount / 1000).toStringAsFixed(2);
+    final maximumFrame = _frameCount == 0
+        ? '-'
+        : (_maximumFrameMicroseconds / 1000).toStringAsFixed(2);
+    return 'Perf: frame $averageFrame/$maximumFrame ms avg/max · '
+        'tick ${metrics.averageTickMilliseconds.toStringAsFixed(2)}/'
+        '${metrics.maximumTickMilliseconds.toStringAsFixed(2)} ms';
+  }
+
+  String get _hostDeviceStatus {
+    final metrics = _hostMetrics ?? widget.multiplayerHost!.metrics;
+    final device = _hostDeviceMetrics;
+    final memory = device == null
+        ? '-'
+        : (device.memoryBytes / (1024 * 1024)).toStringAsFixed(1);
+    return 'Device: $memory MiB · thermal '
+        '${device?.thermalStatus ?? '-'} · net '
+        '↑${_formatBytes(metrics.bytesSent)} '
+        '↓${_formatBytes(metrics.bytesReceived)} · '
+        '${widget.streaming.snapshot.activeChunkCount} chunks';
+  }
+
+  void _recordFrameTimings(List<FrameTiming> timings) {
+    for (final timing in timings) {
+      final microseconds = timing.totalSpan.inMicroseconds;
+      _frameCount += 1;
+      _totalFrameMicroseconds += microseconds;
+      _maximumFrameMicroseconds = math.max(
+        _maximumFrameMicroseconds,
+        microseconds,
+      );
+    }
+  }
+
+  Future<void> _sampleHostMetrics() async {
+    final host = widget.multiplayerHost;
+    if (host == null || host.isClosed) {
+      return;
+    }
+    final device = await widget.hostDeviceMetricsSampler.sample();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _hostMetrics = host.metrics;
+      _hostDeviceMetrics = device;
+    });
+  }
+
+  Future<void> _endHostedSession() async {
+    final host = widget.multiplayerHost;
+    if (host == null || host.isClosed || _hostEnding) {
+      return;
+    }
+    _hostEnding = true;
+    await host.close();
+    if (mounted) {
+      setState(() {
+        _hostMetrics = host.metrics;
+        _multiplayerStatus = 'Hosted session ended on background';
+      });
+    }
+  }
+
   Vector3 get _playerPosition {
     final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId)!;
     return widget.runtimeWorld.ecs
@@ -751,8 +911,14 @@ class _PresentationBoundaryScreenState
     }
     final client = widget.multiplayerClient!;
     final chunkBefore = _currentChunkCoordinate;
+    if (event case ReplicationEntityDespawned(:final entity)) {
+      _removeReplicatedAvatar(entity);
+    }
     setState(() {
       _applyReplicatedEntities(client);
+      if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) != null) {
+        _cameraRig = _cameraRig.copyWith(target: _playerPosition);
+      }
       _multiplayerStatus = switch (event) {
         ReplicationClientJoined(:final connectionId) =>
           'Joined connection ${connectionId.value}',
@@ -775,6 +941,7 @@ class _PresentationBoundaryScreenState
 
   void _applyReplicatedEntities(ReplicationClient client) {
     for (final entity in client.entities.values) {
+      _materializeReplicatedAvatar(entity);
       final handle = widget.runtimeWorld.ecs.handleFor(entity.entityId);
       if (handle == null ||
           !widget.runtimeWorld.ecs.hasComponent<TransformComponent>(handle)) {
@@ -802,7 +969,56 @@ class _PresentationBoundaryScreenState
     _presentation = const PresentationExtractor().extract(
       widget.runtimeWorld.ecs,
     );
-    _cameraRig = _cameraRig.copyWith(target: _playerPosition);
+  }
+
+  void _materializeReplicatedAvatar(ReplicatedEntityState entity) {
+    if (entity.kind != NetworkEntityKind.playerAvatar ||
+        widget.runtimeWorld.ecs.handleFor(entity.entityId) != null) {
+      return;
+    }
+    final template = widget.runtimeWorld.ecs
+        .query<PlayerControlledComponent>()
+        .single
+        .handle;
+    final renderable = widget.runtimeWorld.ecs
+        .component<RenderableReferenceComponent>(template);
+    final value = entity.transform;
+    final handle = widget.runtimeWorld.ecs.createEntity(
+      entityId: entity.entityId,
+    );
+    widget.runtimeWorld.ecs.addComponent(
+      handle,
+      TransformComponent(
+        position: Vector3(
+          value.position[0],
+          value.position[1],
+          value.position[2],
+        ),
+        rotation: Quaternion(
+          value.rotation[0],
+          value.rotation[1],
+          value.rotation[2],
+          value.rotation[3],
+        ),
+        scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
+      ),
+    );
+    widget.runtimeWorld.ecs.addComponent(
+      handle,
+      RenderableReferenceComponent(assetId: renderable.assetId),
+    );
+    _networkAvatarEntityIds.add(entity.entityId);
+  }
+
+  void _removeReplicatedAvatar(ReplicatedEntityState entity) {
+    if (entity.entityId == _playerEntityId ||
+        !_networkAvatarEntityIds.remove(entity.entityId)) {
+      return;
+    }
+    final handle = widget.runtimeWorld.ecs.handleFor(entity.entityId);
+    if (handle != null) {
+      widget.runtimeWorld.ecs.destroyEntity(handle);
+    }
   }
 
   String get _consolePersistenceStatus {
@@ -1012,11 +1228,23 @@ Future<ReplicationClient?> _connectConfiguredMultiplayer(
   ContentHandshake content,
   PlayerId playerId,
 ) async {
-  if (_configuredMultiplayerHost.isEmpty) {
+  final host = switch (_configuredMultiplayerRole) {
+    'offline' => null,
+    'host' => InternetAddress.loopbackIPv4.address,
+    'client' when _configuredMultiplayerHost.isNotEmpty =>
+      _configuredMultiplayerHost,
+    'client' => throw StateError(
+      'AVARRA_MULTIPLAYER_HOST is required for client role.',
+    ),
+    _ => throw StateError(
+      'AVARRA_MULTIPLAYER_ROLE must be offline, host, or client.',
+    ),
+  };
+  if (host == null) {
     return null;
   }
   final connection = await TcpNetworkTransportConnection.connect(
-    host: _configuredMultiplayerHost,
+    host: host,
     port: _configuredMultiplayerPort,
   );
   return ReplicationClient.connectAndJoin(
@@ -1024,4 +1252,29 @@ Future<ReplicationClient?> _connectConfiguredMultiplayer(
     playerId: playerId,
     content: content,
   );
+}
+
+Future<MultiplayerProofHost?> _startConfiguredMultiplayerHost(
+  String worldPackageSource,
+  PlayerId primaryPlayerId,
+) {
+  if (_configuredMultiplayerRole != 'host') {
+    return Future.value();
+  }
+  return MultiplayerProofHost.start(
+    worldPackageSource: worldPackageSource,
+    primaryPlayerId: primaryPlayerId,
+    bindAddress: InternetAddress.anyIPv4,
+    port: _configuredMultiplayerPort,
+  );
+}
+
+String _formatBytes(int value) {
+  if (value < 1024) {
+    return '$value B';
+  }
+  if (value < 1024 * 1024) {
+    return '${(value / 1024).toStringAsFixed(1)} KiB';
+  }
+  return '${(value / (1024 * 1024)).toStringAsFixed(1)} MiB';
 }

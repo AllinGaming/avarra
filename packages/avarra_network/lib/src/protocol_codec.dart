@@ -76,6 +76,7 @@ final class NetworkProtocolCodec {
       JoinAcceptedMessage() => {
         'connectionId': message.connectionId.value,
         'tickRateHz': message.tickRateHz,
+        'controlledEntityId': message.controlledEntityId.value,
       },
       JoinRejectedMessage() => {
         'reason': message.reason.name,
@@ -88,6 +89,7 @@ final class NetworkProtocolCodec {
       SpawnEntityMessage() => {
         'networkEntityId': message.networkEntityId.value,
         'entityId': message.entityId.value,
+        'kind': message.kind.name,
         'transform': _encodeTransform(message.transform),
       },
       DespawnEntityMessage() => {
@@ -129,12 +131,17 @@ final class NetworkProtocolCodec {
         _exactFields(payload, const {
           'connectionId',
           'tickRateHz',
+          'controlledEntityId',
         }, r'$.payload');
         return JoinAcceptedMessage(
           connectionId: NetworkConnectionId(
             _int(payload['connectionId'], r'$.payload.connectionId'),
           ),
           tickRateHz: _int(payload['tickRateHz'], r'$.payload.tickRateHz'),
+          controlledEntityId: _entityId(
+            payload['controlledEntityId'],
+            r'$.payload.controlledEntityId',
+          ),
         );
       case NetworkMessageType.joinRejected:
         _exactFields(payload, const {'reason', 'detail'}, r'$.payload');
@@ -164,13 +171,22 @@ final class NetworkProtocolCodec {
         _exactFields(payload, const {
           'networkEntityId',
           'entityId',
+          'kind',
           'transform',
         }, r'$.payload');
+        final kindText = _string(payload['kind'], r'$.payload.kind');
+        final kind = NetworkEntityKind.values
+            .where((value) => value.name == kindText)
+            .firstOrNull;
+        if (kind == null) {
+          _malformed('Network entity kind is unknown.');
+        }
         return SpawnEntityMessage(
           networkEntityId: NetworkEntityId(
             _int(payload['networkEntityId'], r'$.payload.networkEntityId'),
           ),
           entityId: _entityId(payload['entityId'], r'$.payload.entityId'),
+          kind: kind,
           transform: _decodeTransform(
             _object(payload['transform'], r'$.payload.transform'),
           ),

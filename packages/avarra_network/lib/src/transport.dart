@@ -7,8 +7,23 @@ import 'network_error_codes.dart';
 
 const int maximumNetworkFrameBytes = 1024 * 1024;
 
+final class NetworkTransportStatistics {
+  const NetworkTransportStatistics({
+    required this.bytesSent,
+    required this.bytesReceived,
+    required this.framesSent,
+    required this.framesReceived,
+  });
+
+  final int bytesSent;
+  final int bytesReceived;
+  final int framesSent;
+  final int framesReceived;
+}
+
 abstract interface class NetworkTransportConnection {
   Stream<Uint8List> get frames;
+  NetworkTransportStatistics get statistics;
   Future<void> send(Uint8List frame);
   Future<void> close();
 }
@@ -39,9 +54,21 @@ final class _MemoryNetworkTransportConnection
   final StreamController<Uint8List> _controller = StreamController.broadcast();
   late final _MemoryNetworkTransportConnection _peer;
   bool _closed = false;
+  int _bytesSent = 0;
+  int _bytesReceived = 0;
+  int _framesSent = 0;
+  int _framesReceived = 0;
 
   @override
   Stream<Uint8List> get frames => _controller.stream;
+
+  @override
+  NetworkTransportStatistics get statistics => NetworkTransportStatistics(
+    bytesSent: _bytesSent,
+    bytesReceived: _bytesReceived,
+    framesSent: _framesSent,
+    framesReceived: _framesReceived,
+  );
 
   @override
   Future<void> send(Uint8List frame) async {
@@ -57,6 +84,10 @@ final class _MemoryNetworkTransportConnection
         message: 'Memory network frame size is invalid.',
       );
     }
+    _bytesSent += frame.length;
+    _framesSent += 1;
+    _peer._bytesReceived += frame.length;
+    _peer._framesReceived += 1;
     _peer._controller.add(Uint8List.fromList(frame));
   }
 

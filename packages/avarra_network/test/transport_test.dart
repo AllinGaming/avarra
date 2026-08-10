@@ -20,6 +20,13 @@ void main() {
       final message = await received;
       expect(message, isA<DespawnEntityMessage>());
       expect((message as DespawnEntityMessage).networkEntityId.value, 7);
+      expect(pair.first.statistics.framesSent, 1);
+      expect(pair.first.statistics.bytesSent, greaterThan(0));
+      expect(pair.second.statistics.framesReceived, 1);
+      expect(
+        pair.second.statistics.bytesReceived,
+        pair.first.statistics.bytesSent,
+      );
       await sender.close();
       await receiver.close();
     },
@@ -45,6 +52,10 @@ void main() {
 
     final received = await frames;
     expect(received, [large, small]);
+    expect(client.statistics.framesSent, 2);
+    expect(client.statistics.bytesSent, large.length + small.length + 8);
+    expect(host.statistics.framesReceived, 2);
+    expect(host.statistics.bytesReceived, client.statistics.bytesSent);
     final remoteClosed = host.frames.drain<void>();
     await client.close();
     await remoteClosed.timeout(const Duration(seconds: 2));
