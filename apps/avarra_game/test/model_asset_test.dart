@@ -13,6 +13,13 @@ void main() {
 
     final document =
         jsonDecode(gltfFile.readAsStringSync()) as Map<String, dynamic>;
+    final materials = document['materials'] as List<dynamic>? ?? const [];
+    expect(materials, isNotEmpty);
+    expect(
+      (materials.first as Map<String, dynamic>)['alphaMode'],
+      'BLEND',
+      reason: 'The Stage 3 occluder proof requires alpha-blended materials.',
+    );
     final resourceUris = <String>[];
 
     for (final sectionName in const ['buffers', 'images']) {

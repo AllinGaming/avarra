@@ -11,6 +11,7 @@ resolution: workspace
 dependencies:
   avarra_client: ^0.1.0
   avarra_core: ^0.1.0
+  avarra_isometric: ^0.1.0
   avarra_scene_bridge: ^0.1.0
   flutter:
     sdk: flutter

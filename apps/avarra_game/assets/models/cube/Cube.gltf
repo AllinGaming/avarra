@@ -131,6 +131,7 @@
    ],
    "materials" : [
       {
+         "alphaMode" : "BLEND",
          "name" : "Cube",
          "pbrMetallicRoughness" : {
             "baseColorTexture" : {

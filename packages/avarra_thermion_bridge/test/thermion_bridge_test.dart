@@ -1,6 +1,7 @@
 import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
+import 'package:avarra_thermion_bridge/src/thermion_entity_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -49,6 +50,23 @@ void main() {
     expect(rotation.y, closeTo(0, 0.000001));
     expect(rotation.z, closeTo(0, 0.000001));
     expect(rotation.w, closeTo(1, 0.000001));
+  });
+
+  test('Thermion entity index preserves stable selection identity', () {
+    final firstId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
+    final secondId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000002');
+    final index = ThermionEntityIndex()..bind(firstId, [10, 11, 12]);
+
+    expect(index.lookup(10), firstId);
+    expect(index.lookup(12), firstId);
+    expect(index.lookup(99), isNull);
+    expect(() => index.bind(secondId, [12]), throwsStateError);
+
+    index
+      ..unbind(firstId)
+      ..bind(secondId, [12]);
+    expect(index.lookup(10), isNull);
+    expect(index.lookup(12), secondId);
   });
 }
 

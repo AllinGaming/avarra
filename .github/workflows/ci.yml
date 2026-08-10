@@ -48,6 +48,10 @@ jobs:
         working-directory: packages/avarra_scene_bridge
         run: dart test
 
+      - name: Test Isometric Foundation
+        working-directory: packages/avarra_isometric
+        run: dart test
+
       - name: Test Thermion Bridge
         working-directory: packages/avarra_thermion_bridge
         run: flutter test
