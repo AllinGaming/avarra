@@ -457,6 +457,17 @@ input sequence `2` acknowledgment, and disconnect. TCP/JSON are prototype
 choices; OD-003 and OD-004 remain open. See
 `AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md` and ADR-021.
 
+Stage 9 composes that same pure-Dart host runtime inside Android Game. Host mode
+binds IPv4 interfaces, joins its own local client through loopback, and accepts
+additional players with independent stable controlled entities. Protocol v2
+adds controlled-entity assignment and strict world/player-avatar spawn kinds.
+The Android boundary reports frame/tick, PSS memory, exact transport bytes,
+thermal state, and active chunks, then ends the session on background rather
+than relying on indefinite execution. An Android emulator host accepted the
+Windows release client and displayed two clients; physical direct-LAN and
+sustained device profiling remain open. See
+`AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md` and ADR-022.
+
 ---
 
 # 12. World Direction

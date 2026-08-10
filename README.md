@@ -37,21 +37,22 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 12. `docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`
 13. `docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`
 14. `docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`
-15. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-16. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-17. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-18. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-19. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-20. `docs/AVARRA_OPEN_DECISIONS.md`
-21. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-22. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-23. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-24. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-25. ADRs under `docs/adr/`
+15. `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`
+16. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+17. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+18. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+19. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+20. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+21. `docs/AVARRA_OPEN_DECISIONS.md`
+22. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+23. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+24. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+25. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+26. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0 through 8 have implemented prototype slices.
+Stages 0 through 9 have implemented prototype slices.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -136,6 +137,16 @@ input acknowledgment `2`; direct physical-device LAN validation remains open.
 See `docs/adr/ADR-021-stage-8-multiplayer-baseline.md` and
 `docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`.
 
+Stage 9 embeds the same pure-Dart authority inside Android Game, connects the
+host's local client through loopback, assigns independent controlled avatars to
+additional players, and exposes frame/tick/memory/network/thermal/chunk
+measurements. An Android emulator host accepted the configured Windows release
+client, displayed two clients and five replicated entities, acknowledged host
+input, and ended the session safely on background. Physical direct-LAN and
+sustained device profiling remain open. See
+`docs/adr/ADR-022-stage-9-android-listen-host.md` and
+`docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -174,12 +185,24 @@ Run the finite deterministic server harness with:
 dart run apps/avarra_server/bin/avarra_server.dart
 ```
 
-Run the finite Stage 8 proof host with an explicit world package:
+Run the finite headless proof host with an explicit world package:
 
 ```powershell
 dart run apps/avarra_server/bin/avarra_server.dart --multiplayer `
   --world=apps/avarra_game/assets/worlds/isometric_proof.avarra
 ```
+
+Build Game as an Android listen host:
+
+```powershell
+flutter build apk --release `
+  --dart-define=AVARRA_MULTIPLAYER_ROLE=host `
+  --dart-define=AVARRA_MULTIPLAYER_PORT=45454 `
+  --dart-define=AVARRA_PLAYER_ID=01890f47-e8b8-7a68-8000-000000000402
+```
+
+Build a separate client with `AVARRA_MULTIPLAYER_ROLE=client`, a reachable
+`AVARRA_MULTIPLAYER_HOST`, and a distinct `AVARRA_PLAYER_ID`.
 
 ## Architectural principle
 

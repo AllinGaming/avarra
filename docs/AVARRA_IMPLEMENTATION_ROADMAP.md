@@ -352,6 +352,18 @@ open.
 
 Run local client + authoritative server on Android.
 
+Status:
+
+- Game composes the same pure-Dart `MultiplayerProofHost` used by the headless
+  executable and connects its local client through loopback.
+- Protocol v2 assigns an explicit controlled stable entity and player-avatar
+  kind; host and remote players move independent authoritative avatars.
+- `offline`, `host`, and `client` roles plus player identity are build-time
+  configurable for the proof.
+- Android reports frame/tick time, PSS memory, transport bytes, thermal state,
+  and active chunks in the HUD.
+- Backgrounding ends the hosted session and disconnects clients.
+
 Gate:
 
 ```text
@@ -368,6 +380,21 @@ network
 thermal behavior
 active chunks
 ```
+
+Gate status (2026-08-10):
+
+- functional Android emulator host → Windows release client passes through a
+  temporary ADB forward;
+- Android displayed two clients, five replicated client entities, nine
+  authoritative entities, and host input acknowledgment `75`;
+- all requested measurements were captured and the background/end policy
+  passed without crash signatures;
+- 131 automated tests, Android release, Windows release, and AOT server builds
+  pass;
+- physical Android direct-Wi-Fi, sustained performance/battery/thermal, and
+  degraded-network profiling remain open.
+
+See `AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md` and ADR-022.
 
 ---
 

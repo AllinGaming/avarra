@@ -105,6 +105,14 @@ latency/loss behavior, unreliable sequenced delivery, encryption/authentication,
 and NAT/relay compatibility remain unvalidated. Do not treat TCP as final. See
 ADR-021.
 
+Stage 9 provisional evidence (2026-08-10): the same adapter binds inside the
+Android Game process, carries a loopback host client plus Windows release
+client, and exposes exact framed byte counters. The emulator session reached
+roughly 4.9 MiB transmitted under full JSON snapshots before capture. The route
+used ADB forwarding, so it does not close direct-LAN, degraded-network,
+unreliable-sequenced, encryption/authentication, or NAT/relay criteria. See
+ADR-022.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -127,6 +135,11 @@ one format with networking/cooked chunks. See ADR-020.
 Stage 8 network wire version 1 similarly uses strict JSON behind explicit
 message/codec and byte-frame boundaries. This provides inspectable prototype
 evidence, not a permanent network serialization choice. See ADR-021.
+
+Stage 9 advances the strict network schema to protocol v2 for controlled-entity
+ownership and entity-kind metadata. Its measured full-snapshot traffic is
+additional evidence for evaluating compact encoding/deltas, not a decision to
+adopt JSON permanently. See ADR-022.
 
 ---
 
@@ -161,6 +174,11 @@ Initial candidate:
 ```
 
 Final based on gameplay/network/mobile profiling.
+
+Stage 9 emulator evidence: the candidate 30 Hz Android host averaged 1.29 ms
+per tick with a 72.77 ms launch-to-capture maximum while serving two clients.
+This is useful instrumentation proof, not enough sustained physical-device
+evidence to close the decision.
 
 ---
 
@@ -240,6 +258,13 @@ world complexity
 device tier
 thermal behavior
 ```
+
+Stage 9 starts with a bounded four-client proof configuration and reports all
+listed runtime measurements. One Android-emulator capture with two clients
+showed 64.9 MiB PSS, thermal `none`, one active chunk, and approximately
+101.83/348.35 ms average/maximum total frame time. These are not marketing
+limits or a physical-device budget; OD-013 remains open pending sustained
+profile/release runs on representative Android tiers.
 
 
 ## OD-014 — Built-In AI Provider Strategy

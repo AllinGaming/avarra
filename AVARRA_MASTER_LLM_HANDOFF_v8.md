@@ -466,6 +466,17 @@ input sequence `2` acknowledgment, and disconnect. TCP/JSON are prototype
 choices; OD-003 and OD-004 remain open. See
 `AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md` and ADR-021.
 
+Stage 9 composes that same pure-Dart host runtime inside Android Game. Host mode
+binds IPv4 interfaces, joins its own local client through loopback, and accepts
+additional players with independent stable controlled entities. Protocol v2
+adds controlled-entity assignment and strict world/player-avatar spawn kinds.
+The Android boundary reports frame/tick, PSS memory, exact transport bytes,
+thermal state, and active chunks, then ends the session on background rather
+than relying on indefinite execution. An Android emulator host accepted the
+Windows release client and displayed two clients; physical direct-LAN and
+sustained device profiling remain open. See
+`AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md` and ADR-022.
+
 ---
 
 # 12. World Direction
@@ -1248,6 +1259,13 @@ replaceable framed connections and a provisional Dart TCP adapter.
 session-scoped network IDs, host-controlled cell interest, spawn/despawn, full
 transform snapshots, input acknowledgment, and client mirrors. Both packages
 remain free of Flutter and renderer dependencies.
+
+Stage 9 advances protocol ownership to v2 and composes the pure-Dart Avarra
+Server library inside Game for Android listen hosting. Each connection resolves
+an independent controlled stable entity; dynamic player-avatar spawns carry an
+explicit kind while authored world entities remain under streaming ownership.
+Server tick/network metrics stay in the host runtime. Flutter frame/chunk and
+Android memory/thermal measurements remain application/platform concerns.
 
 Server-safe packages must not import:
 
@@ -3531,6 +3549,156 @@ spawn messages.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md -->
+
+# AVARRA — Stage 9 Android Host Validation
+
+**Status:** Functional gate validated with an Android emulator host and Windows client
+
+**Date:** 2026-08-10
+
+## Delivered slice
+
+Stage 9 composes the local Game client and authoritative server in one Android
+process:
+
+```text
+Android Game
+  ├── Flutter/Thermion local presentation and input
+  ├── loopback ReplicationClient
+  └── pure-Dart MultiplayerProofHost bound to IPv4 LAN interfaces
+          ↓
+     Windows Game client
+```
+
+The same `MultiplayerProofHost` implementation remains available to the
+headless AOT server. Game imports that server-safe library for listen hosting;
+the authoritative runtime still does not depend on Flutter or rendering.
+
+## Session roles and player ownership
+
+Game now accepts these build-time roles:
+
+```text
+AVARRA_MULTIPLAYER_ROLE=offline|host|client
+AVARRA_MULTIPLAYER_HOST=<client destination>
+AVARRA_MULTIPLAYER_PORT=<listen/destination port>
+AVARRA_PLAYER_ID=<canonical UUIDv7 player ID>
+```
+
+`host` starts authority on all IPv4 interfaces and connects the host player's
+local client through loopback. `client` connects to the supplied endpoint.
+`offline` preserves local authority.
+
+Protocol version 2 adds the controlled stable `EntityId` to join acceptance and
+a strict `world`/`playerAvatar` replicated entity kind. The primary host player
+owns the authored proof avatar. Additional players receive independent dynamic
+avatars, and every movement intent is routed only to its connection's entity.
+Unknown player avatars can therefore be materialized into the client ECS while
+unknown authored world entities remain controlled by chunk streaming.
+
+## Android host behavior
+
+- The listen server defaults to four bounded clients.
+- The HUD advertises discovered local IPv4 endpoints and displays local plus
+  remote client count.
+- Host state reports authoritative entity count, average/maximum tick time,
+  exact framed transport bytes, and completed ticks.
+- Flutter frame timings report average/maximum total frame time.
+- An Android platform channel reports process PSS memory, UID network totals,
+  and `PowerManager.currentThermalStatus`.
+- The HUD also reports the active streamed chunk count.
+- Backgrounding flushes pending local save work and ends the hosted session;
+  Android is not treated as an indefinite background server.
+
+## Automated validation
+
+The consolidated CI-equivalent pass produced:
+
+- formatter: 132 Dart files formatted;
+- analyzer: no issues;
+- 131 passing tests across all 17 package/application suites;
+- protocol-v2 canonical round trips and strict unknown-field rejection;
+- exact memory/TCP frame and byte accounting;
+- two concurrent players with independent controlled entities and movement;
+- real loopback listen-host connections and dynamic avatar replication;
+- Game local-client/listen-host composition;
+- Android-style device metric presentation through an injected sampler;
+- hosted-session termination on application backgrounding.
+
+Native builds passed:
+
+```text
+Android release host APK
+Windows release client
+AOT headless server executable
+```
+
+The known upstream Thermion Kotlin-plugin migration and C-linkage warnings
+remain non-fatal.
+
+## Android host → Windows client functional gate
+
+Validated on connected `sdk_gphone16k_x86_64`, Android 17/API 37, at
+1280×2856. The Windows release used a temporary
+`adb forward tcp:45455 tcp:45454` route into the Android listen socket. The
+forward was removed and the exact Windows process was stopped afterward.
+
+Observed evidence:
+
+- Android first joined its own host as player `…402` and displayed `1/4`
+  clients with four replicated entities;
+- the HUD advertised `10.0.2.15:45454` and `10.0.2.16:45454`;
+- the Windows release joined as player `…403` and remained responsive;
+- Android changed to `2/4` clients, five replicated client entities, and nine
+  authoritative entities;
+- the second player avatar became a separate rendered ECS entity;
+- Android host input reached authoritative acknowledgment `75`;
+- one captured two-client sample reported 101.83 ms average / 348.35 ms
+  maximum total frame time, 1.29 ms average / 72.77 ms maximum host tick,
+  64.9 MiB process PSS, thermal `none`, 4.9 MiB sent / 10.9 KiB received, and
+  one active chunk;
+- the final rebuilt APK's background/resume displayed `Host: Ended`, `0/4
+  clients`, `Disconnected from connection 1`, and zero mirrored network
+  entities;
+- filtered Android logs contained no fatal, Dart, unhandled, or socket
+  exception signature.
+
+The timing and traffic values are launch-to-capture aggregates from an Android
+emulator. They are evidence that every requested metric is observable, not a
+physical-device performance acceptance result. Full JSON snapshots dominate
+the current transmitted bytes.
+
+## Provisional limits and remaining gates
+
+- Physical Android direct-LAN hosting is still unvalidated; the functional
+  direction used ADB forwarding.
+- Endpoint advertisement is informational. There is no automatic LAN
+  discovery, session browser, authentication, encryption, NAT traversal, or
+  relay.
+- Roles and player IDs are build-time configuration rather than player-facing
+  host/join menus.
+- Dynamic player avatars clone the proof renderable/controller shape; a general
+  replicated prefab/component construction path is not implemented.
+- Full JSON transform snapshots, TCP-only delivery, and text package hashing
+  remain provisional under OD-003, OD-004, and OD-019.
+- The emulator frame aggregate is too slow to establish a mobile performance
+  budget. Profile/release measurements on physical hardware remain mandatory.
+- The host player's existing local save can be flushed on background, but
+  authoritative multi-player persistence and disconnected remote-player saves
+  are not yet integrated.
+- Prediction, reconciliation, interpolation, degraded-network simulation,
+  host migration, and indefinite Android background hosting remain absent.
+
+Before treating Stage 9 as a physical-device gate pass, repeat Android host →
+Windows client over direct Wi-Fi and record sustained frame/tick percentiles,
+memory growth, bandwidth, latency/jitter/loss behavior, battery, and thermal
+state.
+
+<!-- END AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_WORLD_CONTENT_MODEL.md -->
 
 # AVARRA — World & Content Model
@@ -3867,6 +4035,12 @@ Android Host → Windows Client
 
 Do not build desktop-only server assumptions.
 
+Stage 9 implements the first Android listen-host composition. Game embeds the
+same pure-Dart host runtime as the headless executable, binds IPv4 interfaces,
+connects its own local client over loopback, and advertises reachable local
+addresses. An Android emulator host accepted the Windows release client;
+physical direct-LAN validation remains open. See ADR-022.
+
 ---
 
 # 3. Network Layers
@@ -3888,6 +4062,11 @@ reliable ordered TCP adapter. TCP proves Windows/Android connectivity but does
 not satisfy the future unreliable-sequenced requirement by itself. Transport
 choice remains open; see ADR-021 and OD-003.
 
+Stage 9 adds exact per-connection framed byte counters and proves the reverse
+functional direction through an ADB forward. Full JSON snapshots produced
+measurable bandwidth pressure, strengthening the need for physical/degraded
+profiling before transport selection.
+
 ---
 
 # 4. Client Intent
@@ -3908,6 +4087,10 @@ input sequence. The host retains the newest pending sequence, advances its
 canonical transform, and returns the processed sequence in a snapshot. Network
 interaction/ability/inventory commands remain unimplemented rather than falling
 back to client authority.
+
+Protocol v2 returns the stable controlled entity during join. The host consumes
+movement per connection and never routes two players to the same authored
+avatar.
 
 Client does not send:
 
@@ -3943,6 +4126,10 @@ The implemented `NetworkEntityId` is a positive session-scoped integer paired
 with canonical `EntityId` in spawn messages. Stage 8 sends complete relevant
 transforms each tick. Delta compression, quantization, interpolation,
 prediction, correction, and bandwidth budgets remain future work.
+
+Spawn metadata now distinguishes authored `world` entities from dynamic
+`playerAvatar` entities. Clients may instantiate the proof player-avatar shape
+without treating arbitrary unknown world spawns as players.
 
 ---
 
@@ -4023,6 +4210,10 @@ migrations, and recoverable file replacement. Game currently exercises local
 autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
 save policy arrive with the networking stages. See ADR-020.
 
+Stage 9 flushes the host player's existing local save path before ending an
+Android backgrounded session. Canonical multi-player host saves and remote
+player persistence on disconnect are still not integrated.
+
 ---
 
 # 10. Mobile Backgrounding
@@ -4038,6 +4229,9 @@ pause/end hosted session safely
 ```
 
 Do not rely on indefinite background execution.
+
+This policy is implemented in Stage 9: backgrounding closes authority and all
+connections; resuming reports an ended session instead of silently restarting.
 
 ---
 
@@ -6738,6 +6932,18 @@ open.
 
 Run local client + authoritative server on Android.
 
+Status:
+
+- Game composes the same pure-Dart `MultiplayerProofHost` used by the headless
+  executable and connects its local client through loopback.
+- Protocol v2 assigns an explicit controlled stable entity and player-avatar
+  kind; host and remote players move independent authoritative avatars.
+- `offline`, `host`, and `client` roles plus player identity are build-time
+  configurable for the proof.
+- Android reports frame/tick time, PSS memory, transport bytes, thermal state,
+  and active chunks in the HUD.
+- Backgrounding ends the hosted session and disconnects clients.
+
 Gate:
 
 ```text
@@ -6754,6 +6960,21 @@ network
 thermal behavior
 active chunks
 ```
+
+Gate status (2026-08-10):
+
+- functional Android emulator host → Windows release client passes through a
+  temporary ADB forward;
+- Android displayed two clients, five replicated client entities, nine
+  authoritative entities, and host input acknowledgment `75`;
+- all requested measurements were captured and the background/end policy
+  passed without crash signatures;
+- 131 automated tests, Android release, Windows release, and AOT server builds
+  pass;
+- physical Android direct-Wi-Fi, sustained performance/battery/thermal, and
+  degraded-network profiling remain open.
+
+See `AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md` and ADR-022.
 
 ---
 
@@ -6988,6 +7209,14 @@ latency/loss behavior, unreliable sequenced delivery, encryption/authentication,
 and NAT/relay compatibility remain unvalidated. Do not treat TCP as final. See
 ADR-021.
 
+Stage 9 provisional evidence (2026-08-10): the same adapter binds inside the
+Android Game process, carries a loopback host client plus Windows release
+client, and exposes exact framed byte counters. The emulator session reached
+roughly 4.9 MiB transmitted under full JSON snapshots before capture. The route
+used ADB forwarding, so it does not close direct-LAN, degraded-network,
+unreliable-sequenced, encryption/authentication, or NAT/relay criteria. See
+ADR-022.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -7010,6 +7239,11 @@ one format with networking/cooked chunks. See ADR-020.
 Stage 8 network wire version 1 similarly uses strict JSON behind explicit
 message/codec and byte-frame boundaries. This provides inspectable prototype
 evidence, not a permanent network serialization choice. See ADR-021.
+
+Stage 9 advances the strict network schema to protocol v2 for controlled-entity
+ownership and entity-kind metadata. Its measured full-snapshot traffic is
+additional evidence for evaluating compact encoding/deltas, not a decision to
+adopt JSON permanently. See ADR-022.
 
 ---
 
@@ -7044,6 +7278,11 @@ Initial candidate:
 ```
 
 Final based on gameplay/network/mobile profiling.
+
+Stage 9 emulator evidence: the candidate 30 Hz Android host averaged 1.29 ms
+per tick with a 72.77 ms launch-to-capture maximum while serving two clients.
+This is useful instrumentation proof, not enough sustained physical-device
+evidence to close the decision.
 
 ---
 
@@ -7123,6 +7362,13 @@ world complexity
 device tier
 thermal behavior
 ```
+
+Stage 9 starts with a bounded four-client proof configuration and reports all
+listed runtime measurements. One Android-emulator capture with two clients
+showed 64.9 MiB PSS, thermal `none`, one active chunk, and approximately
+101.83/348.35 ms average/maximum total frame time. These are not marketing
+limits or a physical-device budget; OD-013 remains open pending sustained
+profile/release runs on representative Android tiers.
 
 
 ## OD-014 — Built-In AI Provider Strategy
@@ -8511,5 +8757,94 @@ defined.
 - Importing Flutter, renderer, or platform UI APIs into network/replication.
 
 <!-- END adr/ADR-021-stage-8-multiplayer-baseline.md -->
+
+---
+
+<!-- BEGIN adr/ADR-022-stage-9-android-listen-host.md -->
+
+# ADR-022 — Stage 9 Android Listen Host
+
+**Status:** Accepted prototype composition; mobile limits remain provisional
+
+**Date:** 2026-08-10
+
+## Context
+
+Stage 9 must prove that Android can render and accept local input while running
+the authoritative AVARRA server, and that a Windows Game client can join that
+session. Reimplementing authority inside Flutter would create divergent
+headless and listen-server behavior. Treating Android as an indefinite
+background daemon would also conflict with mobile lifecycle constraints.
+
+Stage 8 assigned every client to one authored player entity. A real listen host
+needs at least two independently owned player entities before a local host and
+remote client can coexist.
+
+## Decision
+
+Expose `MultiplayerProofHost` as the shared pure-Dart headless/listen-server
+runtime from Avarra Server. Avarra Game may embed this library, but Avarra
+Server remains free of Flutter, renderer, and GPU dependencies. The executable
+is a thin composition around the same implementation.
+
+Game has explicit `offline`, `host`, and `client` build-time roles. Host mode
+binds the provisional TCP listener to all IPv4 interfaces, advertises the local
+IPv4 endpoints, and connects the host's local `ReplicationClient` through
+loopback. The initial host limit is four clients.
+
+Advance the network protocol to version 2. `JoinAcceptedMessage` identifies the
+stable entity controlled by that player, and `SpawnEntityMessage` includes a
+strict replicated entity kind. The host maps its primary `PlayerId` to the
+authored player and creates an independent dynamic player-avatar entity for
+each additional `PlayerId`. Movement is consumed per connection and applied
+only to that connection's controlled entity. Dynamic entity IDs use the
+player's canonical UUID text with the `EntityId` type and are rejected on live
+world-ID collision.
+
+Clients instantiate an unknown `playerAvatar` using the proof avatar's
+renderer-neutral asset shape. They do not instantiate unknown `world` entities;
+authored world/chunk lifecycle remains owned by world streaming.
+
+Keep metrics at their ownership boundaries:
+
+- server runtime: tick duration, authoritative entities, clients, framed bytes;
+- Flutter Game: frame timings and active chunks;
+- Android platform channel: PSS memory, UID traffic, and thermal status.
+
+When Android backgrounds, flush pending local save work and terminate the
+hosted session. Resuming does not silently recreate a session. Host migration
+and indefinite background service behavior remain out of scope.
+
+## Consequences
+
+- Android host and local play use the same authority as the AOT server.
+- Local and remote players have independent stable identities and movement.
+- Protocol-v1 Stage 8 peers are intentionally incompatible with protocol v2.
+- Session-scoped network IDs remain separate from stable player/entity IDs.
+- Platform telemetry does not leak into server-safe packages.
+- The host exposes an actionable LAN address without selecting a discovery
+  protocol.
+- The current avatar materialization is a proof archetype, not general prefab
+  replication.
+- Full TCP/JSON snapshots generate measurable bandwidth and do not resolve
+  OD-003 or OD-004.
+- Importing the Avarra Server library from Game is acceptable for this
+  headless/listen composition. Extract it to a dedicated shared host package
+  only if another product consumer proves that boundary useful.
+- Physical Android direct-LAN, sustained performance, battery, and thermal
+  acceptance remain open.
+
+## Rejected for this stage
+
+- A second Flutter-specific authority implementation.
+- Letting both players control the single authored avatar.
+- Treating a `PlayerId` or session `NetworkEntityId` as an interchangeable
+  runtime ECS handle.
+- Materializing every unknown spawn as a player avatar.
+- Keeping Android authority alive indefinitely after backgrounding.
+- Selecting TCP/JSON, discovery, authentication, relay, or mobile host limits
+  as permanent without physical-device and degraded-network evidence.
+
+<!-- END adr/ADR-022-stage-9-android-listen-host.md -->
 
 ---

@@ -37,6 +37,12 @@ Android Host → Windows Client
 
 Do not build desktop-only server assumptions.
 
+Stage 9 implements the first Android listen-host composition. Game embeds the
+same pure-Dart host runtime as the headless executable, binds IPv4 interfaces,
+connects its own local client over loopback, and advertises reachable local
+addresses. An Android emulator host accepted the Windows release client;
+physical direct-LAN validation remains open. See ADR-022.
+
 ---
 
 # 3. Network Layers
@@ -58,6 +64,11 @@ reliable ordered TCP adapter. TCP proves Windows/Android connectivity but does
 not satisfy the future unreliable-sequenced requirement by itself. Transport
 choice remains open; see ADR-021 and OD-003.
 
+Stage 9 adds exact per-connection framed byte counters and proves the reverse
+functional direction through an ADB forward. Full JSON snapshots produced
+measurable bandwidth pressure, strengthening the need for physical/degraded
+profiling before transport selection.
+
 ---
 
 # 4. Client Intent
@@ -78,6 +89,10 @@ input sequence. The host retains the newest pending sequence, advances its
 canonical transform, and returns the processed sequence in a snapshot. Network
 interaction/ability/inventory commands remain unimplemented rather than falling
 back to client authority.
+
+Protocol v2 returns the stable controlled entity during join. The host consumes
+movement per connection and never routes two players to the same authored
+avatar.
 
 Client does not send:
 
@@ -113,6 +128,10 @@ The implemented `NetworkEntityId` is a positive session-scoped integer paired
 with canonical `EntityId` in spawn messages. Stage 8 sends complete relevant
 transforms each tick. Delta compression, quantization, interpolation,
 prediction, correction, and bandwidth budgets remain future work.
+
+Spawn metadata now distinguishes authored `world` entities from dynamic
+`playerAvatar` entities. Clients may instantiate the proof player-avatar shape
+without treating arbitrary unknown world spawns as players.
 
 ---
 
@@ -193,6 +212,10 @@ migrations, and recoverable file replacement. Game currently exercises local
 autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
 save policy arrive with the networking stages. See ADR-020.
 
+Stage 9 flushes the host player's existing local save path before ending an
+Android backgrounded session. Canonical multi-player host saves and remote
+player persistence on disconnect are still not integrated.
+
 ---
 
 # 10. Mobile Backgrounding
@@ -208,6 +231,9 @@ pause/end hosted session safely
 ```
 
 Do not rely on indefinite background execution.
+
+This policy is implemented in Stage 9: backgrounding closes authority and all
+connections; resuming reports an ended session instead of silently restarting.
 
 ---
 

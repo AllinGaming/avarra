@@ -74,6 +74,13 @@ session-scoped network IDs, host-controlled cell interest, spawn/despawn, full
 transform snapshots, input acknowledgment, and client mirrors. Both packages
 remain free of Flutter and renderer dependencies.
 
+Stage 9 advances protocol ownership to v2 and composes the pure-Dart Avarra
+Server library inside Game for Android listen hosting. Each connection resolves
+an independent controlled stable entity; dynamic player-avatar spawns carry an
+explicit kind while authored world entities remain under streaming ownership.
+Server tick/network metrics stay in the host runtime. Flutter frame/chunk and
+Android memory/thermal measurements remain application/platform concerns.
+
 Server-safe packages must not import:
 
 ```text
