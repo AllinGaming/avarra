@@ -131,6 +131,7 @@ Recommended ownership:
 | `avarra_content` | ✓ | ✓ | ✓ | RPG/content schemas/definitions |
 | `avarra_physics` | ✓ | preview/tools | ✓ | collision contracts and authoritative queries |
 | `avarra_gameplay` | ✓ | preview/tools | ✓ | character movement and interaction systems |
+| `avarra_streaming` | ✓ | preview/tools | ✓ | chunk indexing, interest, lifecycle, and budgets |
 | `avarra_persistence` | ✓ subset | project-related | ✓ authority | save contracts/storage abstractions |
 | `avarra_network` | ✓ | optional preview | ✓ | protocol/transport abstractions |
 | `avarra_replication` | ✓ | optional tools | ✓ | replicated state contracts |

@@ -20,6 +20,7 @@ avarra/
 │   ├── avarra_content/
 │   ├── avarra_physics/
 │   ├── avarra_gameplay/
+│   ├── avarra_streaming/
 │   ├── avarra_network/
 │   ├── avarra_replication/
 │   ├── avarra_persistence/
@@ -48,6 +49,8 @@ avarra_core
 avarra_ecs
    ↑
 avarra_world
+   ↑
+avarra_streaming
    ↑
 AVARRA gameplay/domain
 

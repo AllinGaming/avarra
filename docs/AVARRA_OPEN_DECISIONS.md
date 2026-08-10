@@ -149,6 +149,9 @@ Final based on gameplay/network/mobile profiling.
 
 ## OD-008 — Chunk Size
 
+Stage 6 authors a per-world prototype chunk size so indexing and crossing can
+be validated. This is not a permanent default or compatibility promise.
+
 Depends on:
 
 ```text
@@ -302,6 +305,11 @@ Do not require an LLM/network connection to play ordinary AVARRA worlds.
 Stage 4 uses a strict single-JSON `.avarra` document with package-relative
 asset references to prove the world/content model and cross-target load path.
 That representation is provisional.
+
+Stage 6 evolves the prototype to world format v2 by adding chunk metadata and
+chunk-local entity definitions. It still decodes the complete JSON document
+before asynchronous in-memory chunk activation, so it does not decide the
+future random-access container or cooked chunk encoding.
 
 Before creator import/export and distribution, decide from measured product
 requirements:

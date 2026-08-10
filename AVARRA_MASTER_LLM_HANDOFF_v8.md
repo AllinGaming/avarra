@@ -255,9 +255,19 @@ Game converts keyboard, touch-button, and ground-pick input into semantic
 movement/interaction intents and follows the authored player. This narrow
 backend is not a general physics solver; OD-002 remains open for rigid bodies.
 
-The current single-JSON `.avarra` representation is explicitly a prototype,
+Stage 6 adds world format v2 and the server-safe `avarra_streaming` package.
+Root entities are always active; chunk entities use stable chunk IDs, integer
+horizontal coordinates, and chunk-local transforms. Streaming interest is
+explicit and prioritized, lifecycle transitions are asynchronous, entity
+activation/deactivation is budgeted, and unload can be blocked until dirty
+state is persisted. Game drives interest from the player and move destination,
+then rebuilds physics and presentation snapshots after active chunk changes.
+World format v1 remains readable.
+
+The current world-format-v2 single-JSON `.avarra` representation is explicitly
+a prototype,
 not the final archive or cooked serialization decision. See
-`AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
 
 ## Stable IDs
 
@@ -977,6 +987,7 @@ Recommended ownership:
 | `avarra_content` | ✓ | ✓ | ✓ | RPG/content schemas/definitions |
 | `avarra_physics` | ✓ | preview/tools | ✓ | collision contracts and authoritative queries |
 | `avarra_gameplay` | ✓ | preview/tools | ✓ | character movement and interaction systems |
+| `avarra_streaming` | ✓ | preview/tools | ✓ | chunk indexing, interest, lifecycle, and budgets |
 | `avarra_persistence` | ✓ subset | project-related | ✓ authority | save contracts/storage abstractions |
 | `avarra_network` | ✓ | optional preview | ✓ | protocol/transport abstractions |
 | `avarra_replication` | ✓ | optional tools | ✓ | replicated state contracts |
@@ -1159,6 +1170,7 @@ avarra/
 │   ├── avarra_content/
 │   ├── avarra_physics/
 │   ├── avarra_gameplay/
+│   ├── avarra_streaming/
 │   ├── avarra_network/
 │   ├── avarra_replication/
 │   ├── avarra_persistence/
@@ -1187,6 +1199,8 @@ avarra_core
 avarra_ecs
    ↑
 avarra_world
+   ↑
+avarra_streaming
    ↑
 AVARRA gameplay/domain
 
@@ -2984,6 +2998,155 @@ Android 17/API 37:
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md -->
+
+# AVARRA — Stage 6 World Streaming Validation
+
+**Status:** Prototype slice validated on Windows and Android emulator
+
+**Date:** 2026-08-10
+
+## Delivered slice
+
+Stage 6 adds a server-safe streaming path from authored chunk definitions to
+live ECS, physics, and presentation state:
+
+```text
+world-format-v2 `.avarra`
+  → global entities plus stable-ID chunk-local definitions
+  → deterministic coordinate index and prioritized interest
+  → asynchronous eight-state chunk lifecycle
+  → bounded entity activation/deactivation
+  → persistence-guarded unload
+  → Game collision/presentation snapshot rebuild
+```
+
+The Game proof contains one global player and seven static entities across
+three authored chunks. It starts in chunk `0,0`, can cross forward into
+`0,-1`, and can cross right into `1,0`. Only the player's current chunk is
+required; a distinct tap movement destination is preloaded at lower priority.
+
+## World format v2
+
+`avarra_world` now supports world versions 1 and 2. Version 2 adds:
+
+- positive authored `world.chunkSize`;
+- stable chunk IDs and unique integer horizontal coordinates;
+- chunk-local entity arrays and transform coordinates;
+- global uniqueness and reference validation across all entity scopes;
+- deterministic canonical sorting of chunks and entities.
+
+`RuntimeWorldLoader` instantiates only global definitions. The reusable
+`RuntimeEntityLoader` activates one validated definition into an existing ECS
+with an optional world-space offset. World-format-v1 documents continue to
+load every root entity exactly as before.
+
+## Streaming package boundary
+
+`avarra_streaming` is pure Dart and owns:
+
+- position-to-coordinate mapping with correct negative-floor semantics;
+- the canonical unloaded/requested/loading/loaded/activating/active/
+  deactivating/unloading state machine;
+- explicit interest priorities and deterministic tie breaking;
+- asynchronous source load/release operations;
+- maximum active chunk and per-pump entity work budgets;
+- runtime chunk membership and active occluder identity;
+- unload blocking by stable entity ID until persistence permits retry.
+
+It imports no Flutter, Thermion, renderer, or platform APIs. Requests are
+explicit so a future authoritative server can reconcile every player rather
+than accidentally streaming from a host camera.
+
+## Game integration
+
+The bundled proof world is now world format v2 with a prototype chunk size of
+four world units. Game bootstrap loads the global player, activates the initial
+chunk asynchronously, and then constructs physics and presentation state.
+
+Movement refreshes streaming interest. When active chunk membership changes,
+Game replaces the static collision snapshot, movement/interaction query
+systems, presentation snapshot, and streamed occluder set. The HUD reports the
+player coordinate and active/total chunk count. Selection is cleared if its
+stable entity is unloaded.
+
+## Automated validation
+
+The consolidated workspace pass produced:
+
+- analyzer: no issues;
+- 105 passing tests across all Dart and Flutter packages/apps;
+- world-format-v1 compatibility and canonical round-trip coverage;
+- v2 chunk sorting, global ID uniqueness, bounds, and runtime-scope coverage;
+- negative spatial coordinates, asynchronous lifecycle visibility, priority,
+  active caps, incremental budgets, local-to-world offsets, and unload/retry
+  coverage, including reversal from partial deactivation;
+- a dedicated server-safety test for `avarra_streaming`;
+- bundled three-chunk world and Stage 6 HUD widget coverage.
+
+Native validation also passed:
+
+- formatting check: 98 Dart files, no changes;
+- Game Windows release build;
+- Game Android debug APK build;
+- headless Avarra Server AOT executable compile.
+
+Artifacts:
+
+```text
+apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe
+apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk
+build/avarra_server.exe
+```
+
+The builds retain the known upstream Thermion Kotlin-plugin migration warning
+and C-linkage warnings. Neither fails the build.
+
+## Pixel emulator smoke validation
+
+Validated on connected `sdk_gphone16k_x86_64`, Android 17/API 37, at
+1280×2856:
+
+- streamed APK installation and launch succeeded;
+- the initial HUD reported `Chunk 0,0 · 1/3 active` and four ECS entities;
+- seven forward touch-control steps crossed into chunk `0,-1`;
+- the HUD then reported `Chunk 0,-1 · 1/3 active` and three ECS entities,
+  proving that the old three-entity chunk unloaded and the new two-entity
+  chunk activated around the global player;
+- seven back steps reactivated chunk `0,0` and restored four ECS entities;
+- the Android process ID remained unchanged across both crossings;
+- no AVARRA streaming failure, Dart exception, application crash, or Vulkan
+  device-loss message appeared in process-filtered logs.
+
+The warnings observed were the same emulator/framework diagnostics already
+seen in prior stages: x86 CPU variant, missing Android XR feature-flag package,
+virtgpu property access, and HWUI fallback messages. A reset `gfxinfo` window
+contained only two platform-view samples (21 ms and 46 ms), which is too small
+and does not measure Thermion's full render path. It is recorded as a smoke
+signal, not production frame-time evidence.
+
+## Provisional limits
+
+- Four world units is proof content, not the OD-008 production chunk size.
+- The in-memory source decodes the full JSON document first; random-access
+  archives and cooked chunks remain OD-019.
+- Streaming budgets currently count entity creation/destruction, not measured
+  byte, asset, physics-cook, or renderer-upload cost.
+- The Game proof has one player. Server reconciliation across multiple players
+  is supported by explicit requests but belongs to the multiplayer slice.
+- The unload guard contract is present; durable dirty-state storage begins in
+  Stage 7.
+
+## Remaining gates
+
+- Repeat frame-time, memory, lifecycle, thermal, and touch-comfort checks on a
+  physical Android device.
+- Profile real creator content before deciding OD-008 or production budgets.
+
+<!-- END AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_WORLD_CONTENT_MODEL.md -->
 
 # AVARRA — World & Content Model
@@ -3228,7 +3391,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4/5 Implementation
+# 14. Current Stage 4–6 Implementation
 
 The initial vertical slice now provides:
 
@@ -3242,9 +3405,18 @@ avarra_content
 avarra_world
   immutable WorldDefinition
   strict .avarra prototype codec
-  world format version 1
+  world format version 2, with version 1 still readable
+  global entities plus stable-ID chunk definitions
+  authored chunk size, integer coordinates, and local transforms
   deterministic canonical encoding
-  stable-ID ECS loading
+  stable-ID global and per-entity ECS loading
+
+avarra_streaming
+  deterministic horizontal chunk spatial index
+  explicit prioritized interest requests
+  eight-state asynchronous lifecycle
+  bounded active chunks and per-pump entity work
+  persistence-guarded unload and retry
 ```
 
 The Game's isometric proof world is creator-style data rather than hard-coded
@@ -3252,10 +3424,10 @@ entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
 and interactable semantics in `isometric_proof.avarra`.
 
-The Stage 4 `.avarra` file is a single JSON prototype whose asset paths resolve
+The current `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked
 binary, compression, signing, hashing, or streaming format. See
-`AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
 
 <!-- END AVARRA_WORLD_CONTENT_MODEL.md -->
 
@@ -6012,6 +6184,8 @@ Android behavior/performance remains open. See
 
 # Stage 6 — World Streaming
 
+**Status:** Prototype slice implemented on 2026-08-10
+
 Build:
 
 ```text
@@ -6026,6 +6200,26 @@ persistence-safe unload
 Gate:
 
 > Character crosses streamed chunks on Android without unacceptable stalls.
+
+Implementation:
+
+- World format v2 adds authored chunk size, stable chunk IDs, integer
+  coordinates, and chunk-local entities while world format v1 stays readable.
+- `avarra_streaming` provides a server-safe spatial index, the eight-state
+  lifecycle, asynchronous chunk sources, explicit request priorities, active
+  chunk caps, and per-pump entity activation/deactivation budgets.
+- Unload guards retain active entities when persistence reports unsaved state
+  and allow explicit retry after saving.
+- Avarra Game keeps its player global, streams static chunk content around the
+  player and move destination, and rebuilds physics/presentation snapshots when
+  chunk membership changes.
+- Chunk size remains an authored prototype value pending OD-008; the v2 JSON
+  document remains a prototype container pending OD-019.
+
+See `AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md` and ADR-019.
+
+The automated, Windows build, and Android-emulator functional portions of the
+gate pass. Physical Android performance profiling remains open.
 
 ---
 
@@ -6366,6 +6560,9 @@ Final based on gameplay/network/mobile profiling.
 
 ## OD-008 — Chunk Size
 
+Stage 6 authors a per-world prototype chunk size so indexing and crossing can
+be validated. This is not a permanent default or compatibility promise.
+
 Depends on:
 
 ```text
@@ -6519,6 +6716,11 @@ Do not require an LLM/network connection to play ordinary AVARRA worlds.
 Stage 4 uses a strict single-JSON `.avarra` document with package-relative
 asset references to prove the world/content model and cross-target load path.
 That representation is provisional.
+
+Stage 6 evolves the prototype to world format v2 by adding chunk metadata and
+chunk-local entity definitions. It still decodes the complete JSON document
+before asynchronous in-memory chunk activation, so it does not decide the
+future random-access container or cooked chunk encoding.
 
 Before creator import/export and distribution, decide from measured product
 requirements:
@@ -7524,5 +7726,94 @@ candidate satisfies the runtime and toolchain boundary.
 - <https://pub.dev/packages/box3d>
 
 <!-- END adr/ADR-018-stage-5-physics-query-backend.md -->
+
+---
+
+<!-- BEGIN adr/ADR-019-stage-6-world-streaming-model.md -->
+
+# ADR-019 — Stage 6 World Streaming Model
+
+**Status:** Accepted prototype model; final sizing and cooked format deferred
+
+**Date:** 2026-08-10
+
+## Context
+
+Stage 6 needs a character to cross independently loaded world areas without
+making rendering, a host camera, or Flutter part of authoritative simulation.
+It also needs bounded work on mobile and a safe point for Stage 7 persistence
+to prevent unsaved runtime mutations from disappearing during unload.
+
+The Stage 4/5 world format stores all entities in one global list. That remains
+useful for players and world-scoped systems but cannot express independently
+activated static content. The JSON `.avarra` file is still a prototype; OD-019
+has not selected a random-access archive or cooked binary representation, and
+OD-008 has not selected a permanent chunk size.
+
+## Decision
+
+Introduce backward-compatible world format v2:
+
+- root `entities` are always active;
+- `world.chunkSize` is an authored positive prototype value;
+- root `chunks` contain stable `ChunkId` values, integer `[x, z]` coordinates,
+  and chunk-local entity definitions;
+- chunk-local horizontal transform positions must be within the authored
+  chunk bounds;
+- entity IDs remain unique across global and chunk-local definitions;
+- world format v1 remains readable and canonically encodable.
+
+Introduce the pure-Dart, server-safe `avarra_streaming` package. It owns:
+
+```text
+unloaded → requested → loading → loaded
+         → activating → active
+         → deactivating → unloading → unloaded
+```
+
+The controller consumes explicit interest requests rather than reading camera
+or device state. Request sources have stable default priorities for teleport
+targets, the local player, remote players, move destinations, cameras, editor
+viewports, and explicit preloads. A server supplies requests for all relevant
+players; a client may additionally supply camera interest.
+
+Chunk sources are asynchronous. Maximum occupied chunks and per-pump entity
+activation/deactivation counts are separate budgets. Stable coordinate order
+breaks equal-priority ties. Instantiated entities receive runtime-only chunk
+membership and world-space transforms derived from their local transforms.
+
+Before destroying active entities, the controller calls an asynchronous
+`ChunkUnloadGuard`. Any reported stable entity IDs retain the chunk until a
+persistence system saves them and explicitly retries blocked unloads.
+
+The current Game uses an in-memory source backed by the decoded v2 JSON. It
+keeps the player global, requests the player's chunk plus a distinct movement
+destination, and rebuilds deterministic collision and presentation snapshots
+when the active chunk set changes.
+
+## Consequences
+
+- World streaming logic can run in Game, Forge preview, listen hosts, Android
+  hosts, and dedicated servers without renderer or Flutter dependencies.
+- Work is observable and bounded by authored content counts rather than being
+  hidden inside one frame-long whole-chunk activation.
+- Persistence has a fail-closed unload seam before Stage 7 save storage exists.
+- Global player entities do not churn when crossing a chunk boundary.
+- The prototype decodes the complete JSON file before activating chunks, so it
+  proves lifecycle behavior but not random-access I/O or final memory usage.
+- OD-008 remains open for production chunk sizing.
+- OD-019 remains open for the archive, hashing, compression, cooked binary,
+  and random-access streaming representation.
+
+## Rejected for this stage
+
+- Deriving authoritative interest from the host camera.
+- Treating every entity as chunk-local and recreating player identity on
+  crossings.
+- Destroying dirty chunk entities and expecting Stage 7 to recover them later.
+- Selecting a permanent global chunk size without density/mobile profiling.
+- Claiming the single JSON prototype is a production streaming container.
+
+<!-- END adr/ADR-019-stage-6-world-streaming-model.md -->
 
 ---

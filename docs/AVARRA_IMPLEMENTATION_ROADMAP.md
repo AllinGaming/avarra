@@ -215,6 +215,8 @@ Android behavior/performance remains open. See
 
 # Stage 6 — World Streaming
 
+**Status:** Prototype slice implemented on 2026-08-10
+
 Build:
 
 ```text
@@ -229,6 +231,26 @@ persistence-safe unload
 Gate:
 
 > Character crosses streamed chunks on Android without unacceptable stalls.
+
+Implementation:
+
+- World format v2 adds authored chunk size, stable chunk IDs, integer
+  coordinates, and chunk-local entities while world format v1 stays readable.
+- `avarra_streaming` provides a server-safe spatial index, the eight-state
+  lifecycle, asynchronous chunk sources, explicit request priorities, active
+  chunk caps, and per-pump entity activation/deactivation budgets.
+- Unload guards retain active entities when persistence reports unsaved state
+  and allow explicit retry after saving.
+- Avarra Game keeps its player global, streams static chunk content around the
+  player and move destination, and rebuilds physics/presentation snapshots when
+  chunk membership changes.
+- Chunk size remains an authored prototype value pending OD-008; the v2 JSON
+  document remains a prototype container pending OD-019.
+
+See `AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md` and ADR-019.
+
+The automated, Windows build, and Android-emulator functional portions of the
+gate pass. Physical Android performance profiling remains open.
 
 ---
 

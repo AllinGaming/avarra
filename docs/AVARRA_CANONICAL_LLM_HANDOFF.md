@@ -246,9 +246,19 @@ Game converts keyboard, touch-button, and ground-pick input into semantic
 movement/interaction intents and follows the authored player. This narrow
 backend is not a general physics solver; OD-002 remains open for rigid bodies.
 
-The current single-JSON `.avarra` representation is explicitly a prototype,
+Stage 6 adds world format v2 and the server-safe `avarra_streaming` package.
+Root entities are always active; chunk entities use stable chunk IDs, integer
+horizontal coordinates, and chunk-local transforms. Streaming interest is
+explicit and prioritized, lifecycle transitions are asynchronous, entity
+activation/deactivation is budgeted, and unload can be blocked until dirty
+state is persisted. Game drives interest from the player and move destination,
+then rebuilds physics and presentation snapshots after active chunk changes.
+World format v1 remains readable.
+
+The current world-format-v2 single-JSON `.avarra` representation is explicitly
+a prototype,
 not the final archive or cooked serialization decision. See
-`AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md` and OD-019.
+`AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`, ADR-019, and OD-019.
 
 ## Stable IDs
 

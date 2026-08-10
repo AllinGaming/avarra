@@ -34,23 +34,24 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 9. `docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`
 10. `docs/AVARRA_STAGE_4_WORLD_CONTENT_VALIDATION.md`
 11. `docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md`
-12. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-13. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-14. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-15. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-16. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-17. `docs/AVARRA_OPEN_DECISIONS.md`
-18. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-19. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-20. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-21. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-22. ADRs under `docs/adr/`
+12. `docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`
+13. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+14. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+15. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+16. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+17. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+18. `docs/AVARRA_OPEN_DECISIONS.md`
+19. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+20. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+21. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+22. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+23. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0, 1, 3, 4, and the Stage 5 prototype slice are implemented. Physical
-Android runtime/performance validation remains open for the presentation and
-character gates.
+Stages 0, 1, 3, 4, 5, and the Stage 6 prototype slice are implemented.
+Physical Android runtime/performance validation remains open for the
+presentation, character, and streaming gates.
 
 ```text
 apps/
@@ -67,6 +68,7 @@ packages/
   avarra_world/    Dart — portable world decoding and ECS loading
   avarra_physics/  Dart — server-safe ray and kinematic sweep queries
   avarra_gameplay/ Dart — character movement and interaction systems
+  avarra_streaming/ Dart — server-safe chunk lifecycle and spatial indexing
   avarra_scene_bridge/ Dart — renderer adapter contract and handle mapping
   avarra_thermion_bridge/ Flutter — Thermion/Filament scene adapter and viewport
 ```
@@ -103,6 +105,14 @@ interaction. The current query backend is deliberately not a general physics
 solver. See `docs/adr/ADR-018-stage-5-physics-query-backend.md` and
 `docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md`.
 
+Stage 6 adds backward-compatible world format v2 chunk definitions, local
+chunk transforms, deterministic spatial indexing, explicit interest
+priorities, bounded activation/deactivation, asynchronous sources, and
+persistence-guarded unload. The Game proof now crosses three authored chunks
+while rebuilding physics and presentation state at chunk boundaries. See
+`docs/adr/ADR-019-stage-6-world-streaming-model.md` and
+`docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -117,6 +127,7 @@ dart test packages/avarra_core
 dart test packages/avarra_ecs
 dart test packages/avarra_content
 dart test packages/avarra_world
+dart test packages/avarra_streaming
 dart test packages/avarra_physics
 dart test packages/avarra_gameplay
 dart test packages/avarra_client
