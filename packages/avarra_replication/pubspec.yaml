@@ -1,5 +1,5 @@
-name: avarra_server
-description: Headless authoritative server application for AVARRA.
+name: avarra_replication
+description: Authoritative ECS replication and client mirrors for AVARRA.
 version: 0.1.0
 publish_to: none
 
@@ -11,10 +11,7 @@ resolution: workspace
 dependencies:
   avarra_core: ^0.1.0
   avarra_ecs: ^0.1.0
-  avarra_gameplay: ^0.1.0
   avarra_network: ^0.1.0
-  avarra_replication: ^0.1.0
-  avarra_world: ^0.1.0
   vector_math: ^2.2.0
 
 dev_dependencies:

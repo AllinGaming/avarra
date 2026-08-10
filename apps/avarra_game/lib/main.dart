@@ -5,8 +5,10 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
+import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
+import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
 import 'package:avarra_world/avarra_world.dart';
@@ -17,6 +19,13 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
 const _fixedDeltaSeconds = 1 / 60;
+const _configuredMultiplayerHost = String.fromEnvironment(
+  'AVARRA_MULTIPLAYER_HOST',
+);
+const _configuredMultiplayerPort = int.fromEnvironment(
+  'AVARRA_MULTIPLAYER_PORT',
+  defaultValue: 45454,
+);
 final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000401');
 final _proofPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
 final _proofConsoleEntityId = EntityId.parse(
@@ -25,6 +34,11 @@ final _proofConsoleEntityId = EntityId.parse(
 
 typedef WorldPackageSourceLoader = Future<String> Function();
 typedef SaveStoreLoader = Future<SaveStore> Function();
+typedef MultiplayerClientConnector =
+    Future<ReplicationClient?> Function(
+      ContentHandshake content,
+      PlayerId playerId,
+    );
 
 void main() {
   runApp(const AvarraGameApp());
@@ -35,12 +49,14 @@ class AvarraGameApp extends StatelessWidget {
     this.enableRenderer = true,
     this.worldPackageSourceLoader,
     this.saveStoreLoader,
+    this.multiplayerClientConnector,
     super.key,
   });
 
   final bool enableRenderer;
   final WorldPackageSourceLoader? worldPackageSourceLoader;
   final SaveStoreLoader? saveStoreLoader;
+  final MultiplayerClientConnector? multiplayerClientConnector;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +74,8 @@ class AvarraGameApp extends StatelessWidget {
         enableRenderer: enableRenderer,
         sourceLoader: worldPackageSourceLoader ?? _loadBundledProofWorld,
         saveStoreLoader: saveStoreLoader ?? _loadDefaultSaveStore,
+        multiplayerClientConnector:
+            multiplayerClientConnector ?? _connectConfiguredMultiplayer,
       ),
     );
   }
@@ -68,11 +86,13 @@ class _WorldBootstrapScreen extends StatefulWidget {
     required this.enableRenderer,
     required this.sourceLoader,
     required this.saveStoreLoader,
+    required this.multiplayerClientConnector,
   });
 
   final bool enableRenderer;
   final WorldPackageSourceLoader sourceLoader;
   final SaveStoreLoader saveStoreLoader;
+  final MultiplayerClientConnector multiplayerClientConnector;
 
   @override
   State<_WorldBootstrapScreen> createState() => _WorldBootstrapScreenState();
@@ -111,6 +131,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           streaming: loadedWorld.streaming,
           persistence: loadedWorld.persistence,
           restoredSave: loadedWorld.restoredSave,
+          multiplayerClient: loadedWorld.multiplayerClient,
+          multiplayerStatus: loadedWorld.multiplayerStatus,
         );
       },
     );
@@ -160,11 +182,32 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       ),
     ]);
     await streaming.pumpUntilStable();
+    ReplicationClient? multiplayerClient;
+    var multiplayerStatus = 'Offline · local authority';
+    try {
+      multiplayerClient = await widget.multiplayerClientConnector(
+        ContentHandshake(
+          worldId: definition.id,
+          worldFormatVersion: definition.worldFormatVersion,
+          contentSchemaVersion: definition.contentSchemaVersion,
+          packageHash: networkPackageHashFromText(source),
+        ),
+        _proofPlayerId,
+      );
+      if (multiplayerClient != null) {
+        multiplayerStatus =
+            'Joined connection ${multiplayerClient.connectionId!.value}';
+      }
+    } on Object catch (error) {
+      multiplayerStatus = 'Join failed: $error';
+    }
     return _LoadedWorld(
       runtimeWorld: runtimeWorld,
       streaming: streaming,
       persistence: persistence,
       restoredSave: restoreResult.found,
+      multiplayerClient: multiplayerClient,
+      multiplayerStatus: multiplayerStatus,
     );
   }
 }
@@ -175,12 +218,16 @@ final class _LoadedWorld {
     required this.streaming,
     required this.persistence,
     required this.restoredSave,
+    required this.multiplayerClient,
+    required this.multiplayerStatus,
   });
 
   final RuntimeWorld runtimeWorld;
   final ChunkStreamingController streaming;
   final WorldSaveSession persistence;
   final bool restoredSave;
+  final ReplicationClient? multiplayerClient;
+  final String multiplayerStatus;
 }
 
 class _PresentationBoundaryScreen extends StatefulWidget {
@@ -190,6 +237,8 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.streaming,
     required this.persistence,
     required this.restoredSave,
+    required this.multiplayerClient,
+    required this.multiplayerStatus,
   });
 
   final bool enableRenderer;
@@ -197,6 +246,8 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final ChunkStreamingController streaming;
   final WorldSaveSession persistence;
   final bool restoredSave;
+  final ReplicationClient? multiplayerClient;
+  final String multiplayerStatus;
 
   @override
   State<_PresentationBoundaryScreen> createState() {
@@ -220,10 +271,12 @@ class _PresentationBoundaryScreenState
   SetGroundTargetIntent? _groundTarget;
   Timer? _movementTimer;
   Timer? _saveTimer;
+  StreamSubscription<ReplicationClientEvent>? _replicationSubscription;
   bool _streamingInFlight = false;
   bool _streamingDirty = false;
   bool _saveInFlight = false;
   late String _saveStatus;
+  late String _multiplayerStatus;
   String _interactionStatus = 'Select the console, then interact';
 
   @override
@@ -233,6 +286,7 @@ class _PresentationBoundaryScreenState
     _saveStatus = widget.restoredSave
         ? 'Restored revision ${widget.persistence.revision}'
         : 'No save yet';
+    _multiplayerStatus = widget.multiplayerStatus;
     _presentation = const PresentationExtractor().extract(
       widget.runtimeWorld.ecs,
     );
@@ -256,6 +310,20 @@ class _PresentationBoundaryScreenState
       for (final entry in widget.runtimeWorld.assetPaths.entries)
         entry.key: 'asset://${entry.value}',
     });
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      _applyReplicatedEntities(multiplayerClient);
+      _replicationSubscription = multiplayerClient.events.listen(
+        _handleReplicationEvent,
+        onError: (Object error) {
+          if (mounted) {
+            setState(() {
+              _multiplayerStatus = 'Replication failed: $error';
+            });
+          }
+        },
+      );
+    }
     if (widget.enableRenderer) {
       _movementTimer = Timer.periodic(
         const Duration(milliseconds: 16),
@@ -268,6 +336,14 @@ class _PresentationBoundaryScreenState
   void dispose() {
     _movementTimer?.cancel();
     _saveTimer?.cancel();
+    final replicationSubscription = _replicationSubscription;
+    if (replicationSubscription != null) {
+      unawaited(replicationSubscription.cancel());
+    }
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      unawaited(multiplayerClient.close());
+    }
     WidgetsBinding.instance.removeObserver(this);
     if (!_saveInFlight && widget.persistence.dirtyState.hasDirtyState) {
       unawaited(widget.persistence.saveIfDirty());
@@ -296,7 +372,7 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 7 · Persistence'),
+        const Text('Stage 8 · Multiplayer Baseline'),
         Text(widget.runtimeWorld.definition.name),
         Text('${_presentation.length} ECS entities bound to the scene'),
         Text(
@@ -313,6 +389,11 @@ class _PresentationBoundaryScreenState
         Text(
           'Save r${widget.persistence.revision} · $_saveStatus',
           key: const Key('save_status'),
+        ),
+        Text(
+          'Network: $_multiplayerStatus · '
+          '${widget.multiplayerClient?.entities.length ?? 0} entities',
+          key: const Key('multiplayer_status'),
         ),
         Text(
           'Ancient console: $_consolePersistenceStatus',
@@ -522,14 +603,23 @@ class _PresentationBoundaryScreenState
           _interactionStatus = 'Moving to ground target';
         case MoveCharacterIntent(:final direction):
           _groundTarget = null;
-          _applyMovement(
-            _movementSystem.moveDirection(
-              entityId: _playerEntityId,
-              direction: direction,
-              deltaSeconds: 1 / 15,
-            ),
-          );
+          if (widget.multiplayerClient case final client?) {
+            _sendMultiplayerMovement(client, direction);
+          } else {
+            _applyMovement(
+              _movementSystem.moveDirection(
+                entityId: _playerEntityId,
+                direction: direction,
+                deltaSeconds: 1 / 15,
+              ),
+            );
+          }
         case InteractEntityIntent(:final entityId):
+          if (widget.multiplayerClient != null) {
+            _interactionStatus =
+                'Interaction awaits an authoritative host command';
+            return;
+          }
           final result = _interactionSystem.interact(
             actorId: _playerEntityId,
             targetId: entityId,
@@ -575,6 +665,26 @@ class _PresentationBoundaryScreenState
     if (!mounted) {
       return;
     }
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      var direction = _keyboardDirection;
+      final groundTarget = _groundTarget;
+      if (direction.length <= 1e-9 && groundTarget != null) {
+        direction = groundTarget.position - _playerPosition;
+        direction.y = 0;
+        if (direction.length <= 0.05) {
+          setState(() {
+            _groundTarget = null;
+            _interactionStatus = 'Arrived at authoritative ground target';
+          });
+          return;
+        }
+      }
+      if (direction.length > 1e-9) {
+        _sendMultiplayerMovement(multiplayerClient, direction);
+      }
+      return;
+    }
     CharacterMovementResult? result;
     final direction = _keyboardDirection;
     if (direction.length > 1e-9) {
@@ -614,6 +724,85 @@ class _PresentationBoundaryScreenState
     widget.persistence.markPlayerDirty(_proofPlayerId);
     _scheduleSave();
     _scheduleStreamingRefresh();
+  }
+
+  void _sendMultiplayerMovement(ReplicationClient client, Vector3 direction) {
+    final planar = Vector3(direction.x, 0, direction.z);
+    if (planar.length > 1) {
+      planar.normalize();
+    }
+    unawaited(
+      client
+          .sendMovementIntent(directionX: planar.x, directionZ: planar.z)
+          .catchError((Object error) {
+            if (mounted) {
+              setState(() {
+                _multiplayerStatus = 'Input failed: $error';
+              });
+            }
+            return -1;
+          }),
+    );
+  }
+
+  void _handleReplicationEvent(ReplicationClientEvent event) {
+    if (!mounted) {
+      return;
+    }
+    final client = widget.multiplayerClient!;
+    final chunkBefore = _currentChunkCoordinate;
+    setState(() {
+      _applyReplicatedEntities(client);
+      _multiplayerStatus = switch (event) {
+        ReplicationClientJoined(:final connectionId) =>
+          'Joined connection ${connectionId.value}',
+        ReplicationClientDisconnected(:final connectionId) =>
+          'Disconnected from connection ${connectionId.value}',
+        ReplicationEntitySpawned() ||
+        ReplicationEntityDespawned() => 'Joined · interest changed',
+        ReplicationSnapshotApplied(
+          :final tickId,
+          :final acknowledgedInputSequence,
+        ) =>
+          'Joined · tick ${tickId.value} · '
+              'ack ${acknowledgedInputSequence ?? '-'}',
+      };
+    });
+    if (_currentChunkCoordinate != chunkBefore) {
+      _scheduleStreamingRefresh();
+    }
+  }
+
+  void _applyReplicatedEntities(ReplicationClient client) {
+    for (final entity in client.entities.values) {
+      final handle = widget.runtimeWorld.ecs.handleFor(entity.entityId);
+      if (handle == null ||
+          !widget.runtimeWorld.ecs.hasComponent<TransformComponent>(handle)) {
+        continue;
+      }
+      final value = entity.transform;
+      widget.runtimeWorld.ecs.replaceComponent(
+        handle,
+        TransformComponent(
+          position: Vector3(
+            value.position[0],
+            value.position[1],
+            value.position[2],
+          ),
+          rotation: Quaternion(
+            value.rotation[0],
+            value.rotation[1],
+            value.rotation[2],
+            value.rotation[3],
+          ),
+          scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
+        ),
+      );
+    }
+    _presentation = const PresentationExtractor().extract(
+      widget.runtimeWorld.ecs,
+    );
+    _cameraRig = _cameraRig.copyWith(target: _playerPosition);
   }
 
   String get _consolePersistenceStatus {
@@ -817,4 +1006,22 @@ Future<String> _loadBundledProofWorld() {
 
 Future<SaveStore> _loadDefaultSaveStore() async {
   return FileSaveStore(await getApplicationSupportDirectory());
+}
+
+Future<ReplicationClient?> _connectConfiguredMultiplayer(
+  ContentHandshake content,
+  PlayerId playerId,
+) async {
+  if (_configuredMultiplayerHost.isEmpty) {
+    return null;
+  }
+  final connection = await TcpNetworkTransportConnection.connect(
+    host: _configuredMultiplayerHost,
+    port: _configuredMultiplayerPort,
+  );
+  return ReplicationClient.connectAndJoin(
+    connection: connection,
+    playerId: playerId,
+    content: content,
+  );
 }

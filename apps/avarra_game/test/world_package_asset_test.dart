@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_world/avarra_world.dart';
@@ -18,6 +19,10 @@ void main() {
 
       final codec = WorldPackageCodec();
       final definition = codec.decode(packageFile.readAsStringSync());
+      expect(
+        networkPackageHashFromText(packageFile.readAsStringSync()),
+        matches(RegExp(r'^[0-9a-f]{64}$')),
+      );
       final runtime = const RuntimeWorldLoader().load(definition);
       final streaming = ChunkStreamingController(
         world: definition,

@@ -52,6 +52,14 @@ jobs:
         working-directory: packages/avarra_persistence
         run: dart test
 
+      - name: Test Network Protocol and Transport
+        working-directory: packages/avarra_network
+        run: dart test
+
+      - name: Test Replication
+        working-directory: packages/avarra_replication
+        run: dart test
+
       - name: Test World Streaming
         working-directory: packages/avarra_streaming
         run: dart test

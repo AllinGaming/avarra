@@ -17,7 +17,7 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 7 · Persistence'), findsOneWidget);
+    expect(find.text('Stage 8 · Multiplayer Baseline'), findsOneWidget);
     expect(find.text('Isometric Persistence Proof'), findsOneWidget);
     expect(find.text('4 ECS entities bound to the scene'), findsOneWidget);
     expect(
@@ -32,6 +32,11 @@ void main() {
     expect(find.text('Save r0 · No save yet'), findsOneWidget);
     expect(find.text('Ancient console: inactive'), findsOneWidget);
     expect(find.byKey(const Key('save_status')), findsOneWidget);
+    expect(
+      find.text('Network: Offline · local authority · 0 entities'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('multiplayer_status')), findsOneWidget);
     expect(find.byKey(const Key('persistent_console_status')), findsOneWidget);
   });
 
@@ -99,5 +104,5 @@ Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
       fail('Game bootstrap failed: $errorText');
     }
   }
-  fail('Game bootstrap did not expose Stage 7 save status.');
+  fail('Game bootstrap did not expose Stage 8 status.');
 }

@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
 
+export 'src/multiplayer_proof_host.dart';
+
 /// Result of a finite headless simulation run.
 final class ServerRunSummary {
   const ServerRunSummary({
