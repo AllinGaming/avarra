@@ -53,7 +53,10 @@ Replication
 Gameplay commands/events
 ```
 
-Transport choice remains open.
+Stage 8 implements replaceable bounded frame connections and a provisional
+reliable ordered TCP adapter. TCP proves Windows/Android connectivity but does
+not satisfy the future unreliable-sequenced requirement by itself. Transport
+choice remains open; see ADR-021 and OD-003.
 
 ---
 
@@ -69,6 +72,12 @@ inventory command
 ```
 
 Server validates.
+
+Stage 8 movement messages contain only normalized direction and a monotonic
+input sequence. The host retains the newest pending sequence, advances its
+canonical transform, and returns the processed sequence in a snapshot. Network
+interaction/ability/inventory commands remain unimplemented rather than falling
+back to client authority.
 
 Client does not send:
 
@@ -100,6 +109,11 @@ client
 
 Use stable `NetworkEntityId`.
 
+The implemented `NetworkEntityId` is a positive session-scoped integer paired
+with canonical `EntityId` in spawn messages. Stage 8 sends complete relevant
+transforms each tick. Delta compression, quantization, interpolation,
+prediction, correction, and bandwidth budgets remain future work.
+
 ---
 
 # 6. Interest Management
@@ -118,6 +132,10 @@ owned objects
 quest objects
 global events
 ```
+
+Stage 8 implements deterministic host-owned chunk-cell interest plus explicit
+always-relevant entities. It sends ordered spawn/despawn as cell membership
+changes. Party/quest/owned relevance remains later work.
 
 ---
 

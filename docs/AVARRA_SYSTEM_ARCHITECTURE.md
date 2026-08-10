@@ -67,6 +67,13 @@ avarra_thermion_bridge
 Thermion / Filament
 ```
 
+Stage 8 implements `avarra_network` as strict message/protocol values plus
+replaceable framed connections and a provisional Dart TCP adapter.
+`avarra_replication` depends on Core/ECS and Network to own authoritative joins,
+session-scoped network IDs, host-controlled cell interest, spawn/despawn, full
+transform snapshots, input acknowledgment, and client mirrors. Both packages
+remain free of Flutter and renderer dependencies.
+
 Server-safe packages must not import:
 
 ```text

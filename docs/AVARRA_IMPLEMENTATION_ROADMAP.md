@@ -300,6 +300,8 @@ gate pass. Physical Android interruption/storage testing remains open.
 
 # Stage 8 — Multiplayer Baseline
 
+**Status:** Prototype slice implemented and emulator-validated on 2026-08-10
+
 Build:
 
 ```text
@@ -316,6 +318,33 @@ Gate:
 ```text
 Windows Host → Android Client
 ```
+
+Implementation:
+
+- `avarra_network` provides strict versioned messages, exact world/content/hash
+  joins, stable numeric message IDs, bounded frames, in-memory tests, and a
+  provisional reliable ordered TCP adapter.
+- `avarra_replication` provides session-scoped network entity IDs,
+  authoritative joins/input queues, host-owned chunk-cell interest,
+  spawn/despawn, full transform snapshots, input acknowledgment, client mirrors,
+  and disconnect events.
+- The AOT server loads the same proof `.avarra`, instantiates it headlessly,
+  runs a bounded candidate-30-Hz host, and accepts one proof client.
+- Game is offline by default; build-time host/port values enable a client whose
+  movement is sent as intent and whose matching stable IDs follow host
+  transforms.
+- A compiled Windows host accepted the Android emulator through a temporary ADB
+  TCP tunnel. Android displayed four relevant network entities, host tick
+  `2524`, and acknowledgment `2`; the host logged canonical movement through
+  `z=0.750` and exited without retaining its socket/executable.
+- TCP, JSON, full snapshots, and prototype JSON-text hashing are not permanent
+  choices. OD-003, OD-004, OD-007, and OD-019 remain open.
+
+See `AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md` and ADR-021.
+
+The automated, Windows build, and Android-emulator functional portions of the
+gate pass. Physical Android direct-LAN and degraded-network validation remain
+open.
 
 ---
 

@@ -445,6 +445,18 @@ Do not serialize arbitrary Dart classes as the network protocol.
 
 Use stable message IDs/schemas.
 
+Stage 8 implements the server-safe `avarra_network` and `avarra_replication`
+packages. Wire/protocol v1 uses explicit sealed messages with stable numeric
+type IDs, exact content handshakes, bounded frames, and a provisional
+length-framed TCP adapter. The authoritative host owns positive session-scoped
+`NetworkEntityId` values, client interest cells, spawn/despawn, transform
+snapshots, and newest-sequence movement input acknowledgment. Game remains
+offline by default and turns connected movement into host commands. A compiled
+Windows host and Android emulator client completed join, four-entity relevance,
+input sequence `2` acknowledgment, and disconnect. TCP/JSON are prototype
+choices; OD-003 and OD-004 remain open. See
+`AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md` and ADR-021.
+
 ---
 
 # 12. World Direction

@@ -454,6 +454,18 @@ Do not serialize arbitrary Dart classes as the network protocol.
 
 Use stable message IDs/schemas.
 
+Stage 8 implements the server-safe `avarra_network` and `avarra_replication`
+packages. Wire/protocol v1 uses explicit sealed messages with stable numeric
+type IDs, exact content handshakes, bounded frames, and a provisional
+length-framed TCP adapter. The authoritative host owns positive session-scoped
+`NetworkEntityId` values, client interest cells, spawn/despawn, transform
+snapshots, and newest-sequence movement input acknowledgment. Game remains
+offline by default and turns connected movement into host commands. A compiled
+Windows host and Android emulator client completed join, four-entity relevance,
+input sequence `2` acknowledgment, and disconnect. TCP/JSON are prototype
+choices; OD-003 and OD-004 remain open. See
+`AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md` and ADR-021.
+
 ---
 
 # 12. World Direction
@@ -1229,6 +1241,13 @@ avarra_thermion_bridge
    ↑
 Thermion / Filament
 ```
+
+Stage 8 implements `avarra_network` as strict message/protocol values plus
+replaceable framed connections and a provisional Dart TCP adapter.
+`avarra_replication` depends on Core/ECS and Network to own authoritative joins,
+session-scoped network IDs, host-controlled cell interest, spawn/despawn, full
+transform snapshots, input acknowledgment, and client mirrors. Both packages
+remain free of Flutter and renderer dependencies.
 
 Server-safe packages must not import:
 
@@ -3323,6 +3342,195 @@ prove that the stable-ID console overlay survives unload/recreation and restore.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md -->
+
+# AVARRA — Stage 8 Multiplayer Baseline Validation
+
+**Status:** Prototype slice validated with a Windows host and Android emulator
+
+**Date:** 2026-08-10
+
+## Delivered slice
+
+Stage 8 adds the first cross-process authoritative multiplayer path:
+
+```text
+Windows AOT proof host
+  → bounded length-framed TCP connection
+  → strict protocol/content join handshake
+  → stable NetworkEntityId spawn/despawn
+  → host-owned chunk-cell interest
+  → full authoritative transform snapshots
+  → Android client mirror and stable-ID transform application
+```
+
+The client sends movement direction and input sequence only. The Windows host
+owns the canonical transform, consumes the newest pending sequence, advances
+its fixed-rate proof simulation, and acknowledges the processed sequence in
+the next snapshot.
+
+## Network protocol and transport
+
+`avarra_network` owns:
+
+- wire format/protocol version 1 and stable numeric message type IDs;
+- explicit client hello, join accepted/rejected, movement intent,
+  spawn/despawn, and transform snapshot schemas;
+- exact field validation, bounded strings/arrays/numbers, and stable errors;
+- world/content/hash handshake values;
+- 256 KiB message and 1 MiB frame limits;
+- in-memory framed connections for deterministic tests;
+- provisional reliable ordered TCP with a four-byte big-endian length prefix;
+- serialized sends, TCP no-delay, fragmentation/coalescing, and EOF cleanup.
+
+The adapter uses Dart `dart:io` sockets and remains free of Flutter and renderer
+dependencies. TCP is the Stage 8 proof transport only; OD-003 still requires
+evaluation of unreliable sequenced delivery, LAN/direct-host behavior, and
+future NAT/relay compatibility.
+
+Wire JSON is likewise provisional. The codec boundary is replaceable and
+OD-004 remains open for the permanent network encoding.
+
+## Authoritative replication
+
+`avarra_replication` owns:
+
+- positive session-scoped `NetworkConnectionId` and `NetworkEntityId` values;
+- strict join state and precise mismatch rejection;
+- duplicate-player and bounded-session protection;
+- newest-sequence movement intent queues and acknowledgment;
+- deterministic always-relevant/chunk-cell interest;
+- ordered spawn/despawn plus complete relevant transform snapshots;
+- monotonically increasing authoritative tick validation;
+- client mirrors that reject entity-ID reuse, references before spawn, and
+  out-of-order snapshots;
+- explicit joined, interest, snapshot, failure, and disconnected events.
+
+The current baseline intentionally sends full transforms. Quantization, deltas,
+bandwidth budgets, interpolation, prediction, correction, and replay of
+unacknowledged inputs are deferred.
+
+## Server and Game integration
+
+The server proof mode loads the same `isometric_proof.avarra` source used by
+Game, computes its SHA-256 text hash, instantiates the global player and all
+three proof chunks headlessly, and registers transforms with global or
+chunk-cell relevance. It listens at a configurable address/port and runs the
+candidate 30 Hz fixed-rate session for a bounded duration.
+
+Game is offline/local unless built with:
+
+```text
+--dart-define=AVARRA_MULTIPLAYER_HOST=<host>
+--dart-define=AVARRA_MULTIPLAYER_PORT=<port>
+```
+
+When joined, movement buttons/keyboard/tap targeting send host commands instead
+of locally mutating the player. Incoming snapshots update matching stable IDs,
+camera following, presentation extraction, and streaming interest. The HUD
+reports connection state, host tick, acknowledged input, and mirror entity
+count. Host disconnect is surfaced instead of leaving a stale joined status.
+
+## Automated validation
+
+The consolidated workspace pass produced:
+
+- formatter: 131 Dart files checked, no changes after formatting;
+- analyzer: no issues;
+- 128 passing tests across all Dart and Flutter packages/apps;
+- canonical round trips for every Stage 8 message type;
+- malformed, unknown-field, and unsupported-wire rejection;
+- deterministic SHA-256 package hashing;
+- in-memory protocol transport and real loopback TCP framing;
+- TCP coalescing/order and remote-EOF handle release;
+- exact package-hash join rejection;
+- interest-driven spawn, transform update, and despawn;
+- newest-input selection and authoritative acknowledgment;
+- explicit client disconnect signaling;
+- real loopback TCP proof-host join and movement;
+- dedicated server-safety tests for both new packages;
+- Game offline bootstrap and multiplayer HUD coverage.
+
+Native validation also passed:
+
+- configured Game Android debug APK;
+- Game Windows release build;
+- headless Avarra Server AOT executable compile.
+
+Artifacts:
+
+```text
+apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk
+apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe
+apps/avarra_server/build/avarra_server.exe
+```
+
+The client builds retain the known upstream Thermion Kotlin-plugin migration
+and C-linkage warnings. Neither fails the build.
+
+## Windows host → Android emulator validation
+
+Validated with the compiled Windows server and connected
+`sdk_gphone16k_x86_64`, Android 17/API 37, at 1280×2856. The emulator used a
+temporary `adb reverse tcp:45454 tcp:45454` tunnel to the loopback-only proof
+host; the tunnel was removed after validation.
+
+Observed evidence:
+
+- the AOT server reported readiness on TCP `45454` with world ID
+  `01890f47-e8b8-7a68-8000-000000000010` and package hash
+  `39d68f556b4da454675a024dd1003db69a1a08e8422536252404f734d73f29bf`;
+- Android completed the strict join and displayed four relevant network
+  entities with continuously advancing authoritative ticks;
+- three Android forward commands were received as input sequences `0`, `1`,
+  and `2`;
+- the Windows host moved its canonical player from `z=1.000` to `0.917`,
+  `0.833`, then `0.750`;
+- Android displayed `tick 2524 · ack 2 · 4 entities`, proving the processed
+  sequence returned in an authoritative snapshot;
+- after the timed host ended, Android displayed
+  `Disconnected from connection 2`;
+- the Windows process exited, released TCP `45454`, and no longer held the AOT
+  executable;
+- filtered Flutter and Android crash logs contained no Dart exception or
+  application crash.
+
+The network mirror proved four relevant spawned entities. The captured local
+presentation HUD reported three ECS presentation entities because this slice
+updates only matching stable IDs already present in the client's independently
+streamed ECS; it does not yet instantiate complete gameplay/component state from
+spawn messages.
+
+## Provisional limits
+
+- The emulator path used ADB TCP forwarding, not a physical-device LAN route.
+- The proof transport is reliable ordered TCP only; unreliable sequenced
+  semantics are not implemented.
+- There is no encryption, authentication, discovery, NAT traversal, relay,
+  reconnect, or host migration.
+- The proof host accepts one remote player and directly advances validated
+  movement without the Stage 5 collision query; full authoritative gameplay
+  command integration remains next work.
+- Network interaction, abilities, inventory, persistence ownership on
+  disconnect, prediction, reconciliation, and remote interpolation are absent.
+- Full snapshots are not bandwidth optimized and no degraded-network harness
+  is implemented yet.
+- Package hashes cover prototype JSON text rather than a finalized `.avarra`
+  archive/container.
+
+## Remaining gates
+
+- Run Windows host → physical Android client over direct LAN and measure
+  latency, jitter, loss behavior, bandwidth, memory, and thermal impact.
+- Integrate authoritative collision/interaction and create complete client ECS
+  spawn/despawn state from replicated definitions/components.
+- Add degraded-network tests before choosing transport and snapshot policies.
+- Resolve OD-003 and OD-004 only after those measurements.
+
+<!-- END AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_WORLD_CONTENT_MODEL.md -->
 
 # AVARRA — World & Content Model
@@ -3675,7 +3883,10 @@ Replication
 Gameplay commands/events
 ```
 
-Transport choice remains open.
+Stage 8 implements replaceable bounded frame connections and a provisional
+reliable ordered TCP adapter. TCP proves Windows/Android connectivity but does
+not satisfy the future unreliable-sequenced requirement by itself. Transport
+choice remains open; see ADR-021 and OD-003.
 
 ---
 
@@ -3691,6 +3902,12 @@ inventory command
 ```
 
 Server validates.
+
+Stage 8 movement messages contain only normalized direction and a monotonic
+input sequence. The host retains the newest pending sequence, advances its
+canonical transform, and returns the processed sequence in a snapshot. Network
+interaction/ability/inventory commands remain unimplemented rather than falling
+back to client authority.
 
 Client does not send:
 
@@ -3722,6 +3939,11 @@ client
 
 Use stable `NetworkEntityId`.
 
+The implemented `NetworkEntityId` is a positive session-scoped integer paired
+with canonical `EntityId` in spawn messages. Stage 8 sends complete relevant
+transforms each tick. Delta compression, quantization, interpolation,
+prediction, correction, and bandwidth budgets remain future work.
+
 ---
 
 # 6. Interest Management
@@ -3740,6 +3962,10 @@ owned objects
 quest objects
 global events
 ```
+
+Stage 8 implements deterministic host-owned chunk-cell interest plus explicit
+always-relevant entities. It sends ordered spawn/despawn as cell membership
+changes. Party/quest/owned relevance remains later work.
 
 ---
 
@@ -6460,6 +6686,8 @@ gate pass. Physical Android interruption/storage testing remains open.
 
 # Stage 8 — Multiplayer Baseline
 
+**Status:** Prototype slice implemented and emulator-validated on 2026-08-10
+
 Build:
 
 ```text
@@ -6476,6 +6704,33 @@ Gate:
 ```text
 Windows Host → Android Client
 ```
+
+Implementation:
+
+- `avarra_network` provides strict versioned messages, exact world/content/hash
+  joins, stable numeric message IDs, bounded frames, in-memory tests, and a
+  provisional reliable ordered TCP adapter.
+- `avarra_replication` provides session-scoped network entity IDs,
+  authoritative joins/input queues, host-owned chunk-cell interest,
+  spawn/despawn, full transform snapshots, input acknowledgment, client mirrors,
+  and disconnect events.
+- The AOT server loads the same proof `.avarra`, instantiates it headlessly,
+  runs a bounded candidate-30-Hz host, and accepts one proof client.
+- Game is offline by default; build-time host/port values enable a client whose
+  movement is sent as intent and whose matching stable IDs follow host
+  transforms.
+- A compiled Windows host accepted the Android emulator through a temporary ADB
+  TCP tunnel. Android displayed four relevant network entities, host tick
+  `2524`, and acknowledgment `2`; the host logged canonical movement through
+  `z=0.750` and exited without retaining its socket/executable.
+- TCP, JSON, full snapshots, and prototype JSON-text hashing are not permanent
+  choices. OD-003, OD-004, OD-007, and OD-019 remain open.
+
+See `AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md` and ADR-021.
+
+The automated, Windows build, and Android-emulator functional portions of the
+gate pass. Physical Android direct-LAN and degraded-network validation remain
+open.
 
 ---
 
@@ -6725,6 +6980,14 @@ Windows
 future NAT/relay compatibility
 ```
 
+Stage 8 provisional evidence (2026-08-10): bounded four-byte length-framed Dart
+TCP carries strict messages between the compiled Windows host and Android
+emulator client, preserves order across coalesced frames, and releases sockets
+on remote EOF. It proves reliable ordered semantics only. Direct physical LAN,
+latency/loss behavior, unreliable sequenced delivery, encryption/authentication,
+and NAT/relay compatibility remain unvalidated. Do not treat TCP as final. See
+ADR-021.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -6743,6 +7006,10 @@ Stage 7 uses strict canonical JSON for save-format v1 behind a replaceable
 codec/store boundary and sequential migration registry. This is a validated
 prototype representation, not a decision to use JSON permanently or to share
 one format with networking/cooked chunks. See ADR-020.
+
+Stage 8 network wire version 1 similarly uses strict JSON behind explicit
+message/codec and byte-frame boundaries. This provides inspectable prototype
+evidence, not a permanent network serialization choice. See ADR-021.
 
 ---
 
@@ -8131,5 +8398,118 @@ persistence package itself uses only Dart APIs and remains server-safe.
 - Importing Flutter storage APIs into the server-safe persistence package.
 
 <!-- END adr/ADR-020-stage-7-persistence-model.md -->
+
+---
+
+<!-- BEGIN adr/ADR-021-stage-8-multiplayer-baseline.md -->
+
+# ADR-021 — Stage 8 Multiplayer Baseline
+
+**Status:** Accepted prototype model; permanent transport and encoding deferred
+
+**Date:** 2026-08-10
+
+## Context
+
+Stage 8 must prove the first server-authoritative AVARRA path from a Windows
+host to an Android client. The slice requires a content handshake, gameplay
+intent, entity spawn/despawn, transform replication, and spatial interest while
+keeping Flutter and rendering out of the host/runtime packages.
+
+OD-003 has not selected a permanent transport and requires both reliable
+ordered and unreliable sequenced semantics eventually. OD-004 has not selected
+a permanent network encoding. This stage therefore needs replaceable transport
+and protocol seams without silently treating its proof choices as final.
+
+## Decision
+
+Introduce two pure-Dart, server-safe packages:
+
+```text
+avarra_network
+  strict versioned message schemas
+  content handshake and stable message type IDs
+  bounded transport frames and protocol channels
+  in-memory test transport
+  provisional length-framed TCP adapter
+
+avarra_replication
+  session-scoped NetworkEntityId values
+  authoritative join/client state
+  validated sequenced movement intents
+  host-owned chunk-cell interest
+  spawn/despawn and full transform snapshots
+  client mirror and disconnect events
+```
+
+Network messages are explicit sealed value types rather than arbitrary Dart
+object serialization. Wire format v1 uses strict canonical JSON with stable
+numeric message type IDs. Messages are limited to 256 KiB; transport frames are
+length-prefixed in network byte order and limited to 1 MiB. Unknown fields,
+unknown message types, malformed values, and unsupported wire versions fail
+closed with stable error codes.
+
+The join hello supplies protocol version, `PlayerId`, `WorldId`, world format
+version, content schema version, and lowercase SHA-256 package hash. The host
+returns a precise rejection reason for every mismatch. `EntityId` remains the
+canonical world identity; positive integer `NetworkEntityId` values exist only
+for one hosted session and are never persisted.
+
+Clients send normalized movement intent plus a monotonically increasing input
+sequence. The host retains the newest pending sequence and chooses how much
+simulation to advance. Transform snapshots carry authoritative `TickId` and the
+last processed input sequence. The Stage 8 baseline sends complete relevant
+transform snapshots; delta compression, quantization, interpolation,
+prediction, and reconciliation remain later work.
+
+Interest is host-owned. Always-relevant entities and entities in the client's
+current replication cell are spawned in deterministic network-ID order.
+Leaving relevance sends despawn before subsequent snapshots.
+
+`Avarra Server` adds a finite real-time proof-host mode. It loads the same
+`.avarra` source as Game, instantiates the small proof world headlessly,
+registers global/chunk entities, listens on the provisional TCP adapter, applies
+validated player movement at the candidate 30 Hz tick rate, and emits full
+snapshots. The proof host accepts one remote player; the reusable replication
+server has a configurable bounded client count.
+
+Game remains offline/local by default. A host and port may be supplied through
+`AVARRA_MULTIPLAYER_HOST` and `AVARRA_MULTIPLAYER_PORT` Dart defines. When
+connected, movement becomes client intent and Game applies authoritative host
+transforms to matching stable IDs already present in its streamed ECS. Local
+interaction mutation is disabled until an authoritative interaction message is
+defined.
+
+## Consequences
+
+- Windows and Android share one strict protocol and server-safe replication
+  implementation.
+- Content mismatch fails before gameplay state is accepted.
+- Client movement cannot directly mutate the authoritative host ECS.
+- Spawn/despawn relevance is deterministic and based on host-owned cells.
+- TCP framing handles fragmentation/coalescing and releases socket handles on
+  local close or remote EOF.
+- The client exposes join, snapshot acknowledgment, interest changes, failures,
+  and disconnect in its HUD.
+- The reliable ordered TCP proof does not satisfy the future unreliable
+  sequenced requirement by itself; OD-003 remains open.
+- JSON is a replaceable protocol-v1 proof and not the permanent binary decision;
+  OD-004 remains open.
+- Package hashing currently covers the prototype world JSON text. Final
+  container/hash semantics remain OD-019.
+
+## Rejected for this stage
+
+- Allowing clients to submit authoritative transforms or outcomes.
+- Serializing arbitrary Dart objects over a socket.
+- Persisting session-scoped network IDs.
+- Deriving server interest from the Android/Windows camera.
+- Selecting TCP as the permanent gameplay transport before latency/loss/LAN
+  profiling and unreliable-sequenced evaluation.
+- Building prediction, reconciliation, NAT traversal, relay, encryption,
+  authentication, discovery, or host migration before the baseline proof.
+- Importing Flutter, renderer, or platform UI APIs into network/replication.
+
+<!-- END adr/ADR-021-stage-8-multiplayer-baseline.md -->
 
 ---

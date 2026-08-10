@@ -36,23 +36,25 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 11. `docs/AVARRA_STAGE_5_CHARACTER_PHYSICS_VALIDATION.md`
 12. `docs/AVARRA_STAGE_6_WORLD_STREAMING_VALIDATION.md`
 13. `docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`
-14. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-15. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-16. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-17. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-18. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-19. `docs/AVARRA_OPEN_DECISIONS.md`
-20. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-21. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-22. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-23. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-24. ADRs under `docs/adr/`
+14. `docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`
+15. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+16. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+17. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+18. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+19. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+20. `docs/AVARRA_OPEN_DECISIONS.md`
+21. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+22. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+23. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+24. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+25. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0 through 7 have implemented prototype slices.
+Stages 0 through 8 have implemented prototype slices.
 Physical Android runtime/performance validation remains open for the
-presentation, character, streaming, and persistence gates.
+presentation, character, streaming, persistence, and direct-LAN multiplayer
+gates.
 
 ```text
 apps/
@@ -71,6 +73,8 @@ packages/
   avarra_gameplay/ Dart — character movement and interaction systems
   avarra_streaming/ Dart — server-safe chunk lifecycle and spatial indexing
   avarra_persistence/ Dart — versioned saves, dirty state, and recoverable storage
+  avarra_network/ Dart — strict messages and provisional framed TCP transport
+  avarra_replication/ Dart — authoritative sessions, interest, and client mirrors
   avarra_scene_bridge/ Dart — renderer adapter contract and handle mapping
   avarra_thermion_bridge/ Flutter — Thermion/Filament scene adapter and viewport
 ```
@@ -123,6 +127,15 @@ after a process restart; stable-ID entity restoration is covered in the fresh
 runtime tests. See `docs/adr/ADR-020-stage-7-persistence-model.md` and
 `docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`.
 
+Stage 8 adds strict content handshakes, stable protocol message IDs, bounded
+framed connections, a provisional TCP adapter, session-scoped network entity
+IDs, authoritative movement sequences, interest-driven spawn/despawn, full
+transform snapshots, client disconnect signaling, and a headless AOT proof
+host. A compiled Windows host accepted the Android emulator client and returned
+input acknowledgment `2`; direct physical-device LAN validation remains open.
+See `docs/adr/ADR-021-stage-8-multiplayer-baseline.md` and
+`docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -137,6 +150,8 @@ dart test packages/avarra_core
 dart test packages/avarra_ecs
 dart test packages/avarra_content
 dart test packages/avarra_persistence
+dart test packages/avarra_network
+dart test packages/avarra_replication
 dart test packages/avarra_world
 dart test packages/avarra_streaming
 dart test packages/avarra_physics
@@ -157,6 +172,13 @@ Run the finite deterministic server harness with:
 
 ```powershell
 dart run apps/avarra_server/bin/avarra_server.dart
+```
+
+Run the finite Stage 8 proof host with an explicit world package:
+
+```powershell
+dart run apps/avarra_server/bin/avarra_server.dart --multiplayer `
+  --world=apps/avarra_game/assets/worlds/isometric_proof.avarra
 ```
 
 ## Architectural principle

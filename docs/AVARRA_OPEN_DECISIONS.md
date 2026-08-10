@@ -97,6 +97,14 @@ Windows
 future NAT/relay compatibility
 ```
 
+Stage 8 provisional evidence (2026-08-10): bounded four-byte length-framed Dart
+TCP carries strict messages between the compiled Windows host and Android
+emulator client, preserves order across coalesced frames, and releases sockets
+on remote EOF. It proves reliable ordered semantics only. Direct physical LAN,
+latency/loss behavior, unreliable sequenced delivery, encryption/authentication,
+and NAT/relay compatibility remain unvalidated. Do not treat TCP as final. See
+ADR-021.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -115,6 +123,10 @@ Stage 7 uses strict canonical JSON for save-format v1 behind a replaceable
 codec/store boundary and sequential migration registry. This is a validated
 prototype representation, not a decision to use JSON permanently or to share
 one format with networking/cooked chunks. See ADR-020.
+
+Stage 8 network wire version 1 similarly uses strict JSON behind explicit
+message/codec and byte-frame boundaries. This provides inspectable prototype
+evidence, not a permanent network serialization choice. See ADR-021.
 
 ---
 
