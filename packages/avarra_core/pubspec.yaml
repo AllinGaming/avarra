@@ -1,0 +1,15 @@
+name: avarra_core
+description: Server-safe shared foundation for AVARRA applications and tools.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  uuid: ^4.6.0
+
+dev_dependencies:
+  test: ^1.26.3

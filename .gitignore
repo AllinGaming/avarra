@@ -1,0 +1,32 @@
+# Dart and Flutter
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+coverage/
+**/doc/api/
+
+# Editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.swp
+
+# Android build outputs
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# Flutter symbol and obfuscation outputs
+app.*.symbols
+app.*.map.json

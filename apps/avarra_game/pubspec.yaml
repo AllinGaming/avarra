@@ -1,0 +1,26 @@
+name: avarra_game
+description: Player-facing AVARRA application shell.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  avarra_client: ^0.1.0
+  avarra_core: ^0.1.0
+  avarra_ecs: ^0.1.0
+  avarra_thermion_bridge: ^0.1.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/cube/

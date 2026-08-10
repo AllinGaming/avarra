@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-builds:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      - name: Resolve workspace dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze workspace
+        run: dart analyze .
+
+      - name: Test Core
+        working-directory: packages/avarra_core
+        run: dart test
+
+      - name: Test ECS
+        working-directory: packages/avarra_ecs
+        run: dart test
+
+      - name: Test Client Presentation
+        working-directory: packages/avarra_client
+        run: dart test
+
+      - name: Test Scene Bridge
+        working-directory: packages/avarra_scene_bridge
+        run: dart test
+
+      - name: Test Thermion Bridge
+        working-directory: packages/avarra_thermion_bridge
+        run: flutter test
+
+      - name: Test Server
+        working-directory: apps/avarra_server
+        run: dart test
+
+      - name: Test Game
+        working-directory: apps/avarra_game
+        run: flutter test
+
+      - name: Test Forge
+        working-directory: apps/avarra_forge
+        run: flutter test
+
+      - name: Prepare build output
+        shell: powershell
+        run: New-Item -ItemType Directory -Force build | Out-Null
+
+      - name: Compile Server
+        run: dart compile exe apps/avarra_server/bin/avarra_server.dart -o build/avarra_server.exe
+
+      - name: Build Game for Windows
+        working-directory: apps/avarra_game
+        run: flutter build windows
+
+      - name: Build Game for Android
+        working-directory: apps/avarra_game
+        run: flutter build apk --debug
+
+      - name: Build Forge for Windows
+        working-directory: apps/avarra_forge
+        run: flutter build windows
+
+      - name: Regenerate consolidated handoff
+        shell: powershell
+        run: ./tool/build_master_handoff.ps1
+
+      - name: Verify consolidated handoff is current
+        run: git diff --exit-code -- AVARRA_MASTER_LLM_HANDOFF_v8.md

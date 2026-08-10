@@ -1,0 +1,22 @@
+name: avarra_thermion_bridge
+description: Thermion and Filament presentation adapter for AVARRA.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  avarra_client: ^0.1.0
+  avarra_core: ^0.1.0
+  avarra_scene_bridge: ^0.1.0
+  flutter:
+    sdk: flutter
+  thermion_flutter: 0.4.1
+  vector_math: ^2.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

@@ -1,0 +1,29 @@
+{
+  "architecture_version": "v8-reviewed",
+  "date": "2026-08-10",
+  "current_direction": "Build AVARRA directly with AI-friendly Forge/Creator API; no standalone custom engine requirement.",
+  "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
+  "secondary_instructions": "AGENTS.md",
+  "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
+  "stage_2b_validation": "docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md",
+  "adrs": [
+    "ADR-008-build-avarra-not-an-engine.md",
+    "ADR-009-scene-bridge-boundary.md",
+    "ADR-010-isometric-first-product-profile.md",
+    "ADR-011-ai-friendly-creator-api.md",
+    "ADR-012-native-pub-workspace.md",
+    "ADR-013-uuid-v7-stable-identifiers.md",
+    "ADR-014-initial-ecs-storage-model.md",
+    "ADR-015-flutter-scene-stable-sdk-compatibility.md",
+    "ADR-016-initial-thermion-renderer.md"
+  ],
+  "ai_creator_docs": [
+    "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",
+    "docs/AVARRA_AI_CREATOR_TOOL_API.md",
+    "docs/AVARRA_AI_AGENT_QUICKSTART.md",
+    "docs/adr/ADR-011-ai-friendly-creator-api.md"
+  ],
+  "review_status": "Consistency-reviewed; Game/Forge/Server boundaries explicit.",
+  "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
+  "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
+}

@@ -1,0 +1,17 @@
+name: avarra_client
+description: Renderer-neutral presentation extraction for AVARRA clients.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  avarra_core: ^0.1.0
+  avarra_ecs: ^0.1.0
+
+dev_dependencies:
+  test: ^1.26.3
+  vector_math: ^2.2.0

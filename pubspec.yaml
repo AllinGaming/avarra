@@ -1,0 +1,14 @@
+name: avarra_workspace
+description: AVARRA application and runtime workspace.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.12.2
+
+workspace:
+  - apps/*
+  - packages/*
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
