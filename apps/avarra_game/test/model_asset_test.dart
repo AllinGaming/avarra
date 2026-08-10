@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('cube glTF packages every external resource', () {
-    final gltfFile = File('assets/models/cube/Cube.gltf');
+    final packageRoot = _findGamePackageRoot();
+    final gltfFile = File.fromUri(
+      packageRoot.uri.resolve('assets/models/cube/Cube.gltf'),
+    );
     expect(gltfFile.existsSync(), isTrue);
 
     final document =
@@ -37,4 +40,30 @@ void main() {
       );
     }
   });
+}
+
+Directory _findGamePackageRoot() {
+  var directory = Directory.current.absolute;
+
+  while (true) {
+    final candidates = [
+      directory,
+      Directory.fromUri(directory.uri.resolve('apps/avarra_game/')),
+    ];
+    for (final candidate in candidates) {
+      final pubspec = File.fromUri(candidate.uri.resolve('pubspec.yaml'));
+      if (pubspec.existsSync() &&
+          pubspec.readAsLinesSync().contains('name: avarra_game')) {
+        return candidate;
+      }
+    }
+
+    final parent = directory.parent;
+    if (parent.path == directory.path) {
+      break;
+    }
+    directory = parent;
+  }
+
+  throw StateError('Unable to locate the avarra_game package root.');
 }
