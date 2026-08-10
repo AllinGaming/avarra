@@ -1,0 +1,53 @@
+{
+  "format": "avarra.world",
+  "worldFormatVersion": 1,
+  "contentSchemaVersion": 1,
+  "world": {
+    "id": "01890f47-e8b8-7a68-8000-000000000010",
+    "name": "Isometric Interaction Proof"
+  },
+  "assets": [
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000001",
+      "path": "assets/models/cube/Cube.gltf"
+    }
+  ],
+  "entities": [
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000001",
+      "components": {
+        "avarra.transform": {
+          "schemaVersion": 1,
+          "position": [0, 0.6, 0],
+          "rotation": [0, 0, 0, 1],
+          "scale": [0.6, 0.6, 0.6]
+        },
+        "avarra.renderable_reference": {
+          "schemaVersion": 1,
+          "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+        },
+        "avarra.isometric.occlusion_target": {
+          "schemaVersion": 1
+        }
+      }
+    },
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000002",
+      "components": {
+        "avarra.transform": {
+          "schemaVersion": 1,
+          "position": [2, 1.5, 2],
+          "rotation": [0, 0, 0, 1],
+          "scale": [0.45, 1.5, 1.5]
+        },
+        "avarra.renderable_reference": {
+          "schemaVersion": 1,
+          "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+        },
+        "avarra.isometric.occluder": {
+          "schemaVersion": 1
+        }
+      }
+    }
+  ]
+}

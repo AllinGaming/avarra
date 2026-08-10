@@ -1,27 +1,28 @@
 import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_core/avarra_core.dart';
-import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
+import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector3;
+import 'package:flutter/services.dart';
 
-const _proofAssetIdValue = '01890f47-e8b8-7a68-9000-000000000001';
-final _proofTargetEntityId = EntityId.parse(
-  '01890f47-e8b8-7a68-8000-000000000001',
-);
-final _proofOccluderEntityId = EntityId.parse(
-  '01890f47-e8b8-7a68-8000-000000000002',
-);
+const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
+
+typedef WorldPackageSourceLoader = Future<String> Function();
 
 void main() {
   runApp(const AvarraGameApp());
 }
 
 class AvarraGameApp extends StatelessWidget {
-  const AvarraGameApp({this.enableRenderer = true, super.key});
+  const AvarraGameApp({
+    this.enableRenderer = true,
+    this.worldPackageSourceLoader,
+    super.key,
+  });
 
   final bool enableRenderer;
+  final WorldPackageSourceLoader? worldPackageSourceLoader;
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +36,77 @@ class AvarraGameApp extends StatelessWidget {
           seedColor: const Color(0xFF70B7A5),
         ),
       ),
-      home: _PresentationBoundaryScreen(enableRenderer: enableRenderer),
+      home: _WorldBootstrapScreen(
+        enableRenderer: enableRenderer,
+        sourceLoader: worldPackageSourceLoader ?? _loadBundledProofWorld,
+      ),
     );
   }
 }
 
-class _PresentationBoundaryScreen extends StatefulWidget {
-  const _PresentationBoundaryScreen({required this.enableRenderer});
+class _WorldBootstrapScreen extends StatefulWidget {
+  const _WorldBootstrapScreen({
+    required this.enableRenderer,
+    required this.sourceLoader,
+  });
 
   final bool enableRenderer;
+  final WorldPackageSourceLoader sourceLoader;
+
+  @override
+  State<_WorldBootstrapScreen> createState() => _WorldBootstrapScreenState();
+}
+
+class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
+  late final Future<RuntimeWorld> _runtimeWorld = _loadWorld();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<RuntimeWorld>(
+      future: _runtimeWorld,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text(
+                'World load failed\n${snapshot.error}',
+                key: const Key('world_load_error'),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+        final runtimeWorld = snapshot.data;
+        if (runtimeWorld == null) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(key: Key('world_loading')),
+            ),
+          );
+        }
+        return _PresentationBoundaryScreen(
+          enableRenderer: widget.enableRenderer,
+          runtimeWorld: runtimeWorld,
+        );
+      },
+    );
+  }
+
+  Future<RuntimeWorld> _loadWorld() async {
+    final source = await widget.sourceLoader();
+    final definition = WorldPackageCodec().decode(source);
+    return const RuntimeWorldLoader().load(definition);
+  }
+}
+
+class _PresentationBoundaryScreen extends StatefulWidget {
+  const _PresentationBoundaryScreen({
+    required this.enableRenderer,
+    required this.runtimeWorld,
+  });
+
+  final bool enableRenderer;
+  final RuntimeWorld runtimeWorld;
 
   @override
   State<_PresentationBoundaryScreen> createState() {
@@ -62,10 +125,13 @@ class _PresentationBoundaryScreenState
   @override
   void initState() {
     super.initState();
-    _presentation = _createPresentationProof();
+    _presentation = const PresentationExtractor().extract(
+      widget.runtimeWorld.ecs,
+    );
     _cameraRig = IsometricCameraRig();
     _assetUriResolver = MapThermionAssetUriResolver({
-      AssetId.parse(_proofAssetIdValue): 'asset://assets/models/cube/Cube.gltf',
+      for (final entry in widget.runtimeWorld.assetPaths.entries)
+        entry.key: 'asset://${entry.value}',
     });
   }
 
@@ -79,8 +145,14 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 3A · Isometric Interaction'),
+        const Text('Stage 4 · Portable World Loading'),
+        Text(widget.runtimeWorld.definition.name),
         Text('${_presentation.length} ECS entities bound to the scene'),
+        Text(
+          'World v${widget.runtimeWorld.definition.worldFormatVersion} · '
+          'content v${widget.runtimeWorld.definition.contentSchemaVersion}',
+          key: const Key('world_version_status'),
+        ),
         Text(
           'Camera ${_cameraRig.quarterTurns + 1}/4 · '
           'span ${_cameraRig.verticalSpan.toStringAsFixed(1)}',
@@ -102,8 +174,8 @@ class _PresentationBoundaryScreenState
             snapshot: _presentation,
             assetUriResolver: _assetUriResolver,
             cameraRig: _cameraRig,
-            occlusionTargetEntityId: _proofTargetEntityId,
-            occluderEntityIds: {_proofOccluderEntityId},
+            occlusionTargetEntityId: _occlusionTargetEntityId,
+            occluderEntityIds: widget.runtimeWorld.isometricOccluderEntityIds,
             onPick: _handlePick,
             onZoom: (factor) => _dispatchIntent(ZoomCameraIntent(factor)),
           ),
@@ -180,6 +252,11 @@ class _PresentationBoundaryScreenState
     return 'Click or tap the cube to select';
   }
 
+  EntityId? get _occlusionTargetEntityId {
+    final targets = widget.runtimeWorld.isometricOcclusionTargetEntityIds;
+    return targets.isEmpty ? null : targets.first;
+  }
+
   void _handlePick(IsometricPickResult result) {
     final entityId = result.entityId;
     _dispatchIntent(
@@ -206,29 +283,6 @@ class _PresentationBoundaryScreenState
   }
 }
 
-PresentationSnapshot _createPresentationProof() {
-  final world = EcsWorld();
-  final target = world.createEntity(entityId: _proofTargetEntityId);
-  final occluder = world.createEntity(entityId: _proofOccluderEntityId);
-  world
-    ..addComponent(
-      target,
-      TransformComponent(position: Vector3(0, 0.6, 0), scale: Vector3.all(0.6)),
-    )
-    ..addComponent(
-      target,
-      RenderableReferenceComponent(assetId: AssetId.parse(_proofAssetIdValue)),
-    )
-    ..addComponent(
-      occluder,
-      TransformComponent(
-        position: Vector3(2, 1.5, 2),
-        scale: Vector3(0.45, 1.5, 1.5),
-      ),
-    )
-    ..addComponent(
-      occluder,
-      RenderableReferenceComponent(assetId: AssetId.parse(_proofAssetIdValue)),
-    );
-  return const PresentationExtractor().extract(world);
+Future<String> _loadBundledProofWorld() {
+  return rootBundle.loadString(_proofWorldAssetPath);
 }
