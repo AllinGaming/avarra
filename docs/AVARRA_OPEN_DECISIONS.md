@@ -380,3 +380,30 @@ migrations
 ```
 
 Do not treat the Stage 4 JSON proof as the permanent hot runtime format.
+
+---
+
+## OD-020 — Forge Editable Source Project
+
+Stage 10 edits one in-memory `WorldDefinition` and exports runtime-oriented
+prototype JSON. That is not yet a durable editable Forge project.
+
+Decide before exposing creator project save:
+
+```text
+project directory vs project container
+editor-only stable metadata and display names
+source asset ownership and relative paths
+autosave/recovery journal
+atomic save and migration boundary
+project/world multiplicity
+future collaboration/version-control friendliness
+```
+
+Constraints:
+
+- editable source state remains distinct from runtime `.avarra` export;
+- ordinary saves are recoverable and never silently overwrite unrelated files;
+- project text/assets are untrusted creator data;
+- the choice must not force the final OD-019 cooked/archive representation;
+- AI and human edits continue through the same typed command boundary.

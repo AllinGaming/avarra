@@ -1,8 +1,8 @@
 # AVARRA — Documentation Architecture Review
 
-**Review date:** 2026-08-10  
-**Reviewed baseline:** v7 AI Creator handoff  
-**Result:** Coherent after v8 cleanup
+**Review date:** 2026-08-12
+**Reviewed baseline:** Stage 10 Forge foundation (`46e26a0`)
+**Result:** Coherent; the post-foundation repair order is now explicit
 
 ---
 
@@ -63,6 +63,7 @@ replication direction
 Android hosting
 Forge editor architecture
 creator commands + undo/redo
+Forge/Game foundation export-load path
 AI/LLM Creator API
 MCP adapter direction
 AI transactions/diffs/permissions
@@ -93,6 +94,7 @@ audio backend
 built-in AI provider strategy
 MCP transport/auth details
 AI privacy/context policy
+Forge editable source-project format and lifecycle
 ```
 
 These should not be interpreted as documentation gaps.
@@ -120,8 +122,10 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue the in-progress Stage 2 implementation.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1A.
 
-The handoff is **architecture-complete enough to begin implementation**, not feature-spec-complete for every eventual AVARRA system.
+The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The current Forge proof is not yet the complete creator-facing loop: the shared playable-world contract, proof-ID removal, recoverable project lifecycle and runtime import path are the next gates.
+
+The evidence, defects and prioritized repair sequence are recorded in `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 Future detailed specs should be written as each roadmap stage begins, using implementation findings rather than speculative overdesign.

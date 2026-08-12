@@ -2,7 +2,7 @@
 
 **Status:** Repository guide  
 **Architecture generation:** v8 reviewed  
-**Date:** 2026-08-10
+**Date:** 2026-08-12
 
 AVARRA is a cross-platform, isometric-first sandbox RPG platform built primarily with Dart and Flutter.
 
@@ -39,22 +39,24 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 14. `docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`
 15. `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`
 16. `docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`
-17. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-18. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-19. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-20. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-21. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-22. `docs/AVARRA_OPEN_DECISIONS.md`
-23. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-24. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-25. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-26. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-27. ADRs under `docs/adr/`
+17. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+18. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+19. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+20. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+21. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+22. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+23. `docs/AVARRA_OPEN_DECISIONS.md`
+24. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+25. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+26. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+27. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+28. ADRs under `docs/adr/`
 
 ## Implementation status
 
 Stages 0 through 9 and the initial Stage 10 Forge vertical slice have
-implemented prototype slices.
+implemented prototype slices. Stage 10's foundation evidence passes, but its
+creator-facing project/import gate remains open pending Stage 10.1/10.2 repairs.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -165,6 +167,13 @@ invalid candidate worlds atomically, and Game can load a Forge file through
 `docs/adr/ADR-023-stage-10-forge-command-foundation.md` and
 `docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`.
 
+The professional checkpoint classifies that result as a foundation proof. The
+required next work is a shared playable-world contract, removal of proof IDs
+from Game behavior, recoverable Forge project persistence/safe export, runtime
+Game import with asset diagnostics, then generic component editing and the
+shared 3D viewport. AI/MCP and broad RPG work follow those gates. See
+`docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -256,3 +265,4 @@ but does not directly own or rewrite canonical project state.
 
 - `docs/AVARRA_GAME_FORGE_BOUNDARIES.md` — authoritative Game vs Forge ownership and dependencies.
 - `docs/AVARRA_DOCUMENTATION_REVIEW.md` — consistency/completeness review.
+- `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md` — current implementation risks, priorities, and next-work gates.

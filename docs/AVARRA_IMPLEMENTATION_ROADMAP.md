@@ -426,7 +426,7 @@ Gate:
 
 > Forge creates a tiny world that game imports.
 
-Gate status (initial vertical slice, updated 2026-08-12):
+Gate status (foundation proof only, reviewed 2026-08-12):
 
 - a pure-Dart typed command session provides validated create/delete/transform
   edits with stable-ID undo/redo;
@@ -441,13 +441,82 @@ Gate status (initial vertical slice, updated 2026-08-12):
 - richer source projects, a shared 3D Forge viewport, generic component
   editing, asset cooking, and final archive packaging remain open.
 
-See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+The creator-facing gate is **not closed**. The post-implementation review found
+incomplete Forge/Game playable-profile validation, proof-specific Game entity
+and player IDs, a build-time rather than runtime import hook, packaged-asset
+coupling, and no recoverable Forge project lifecycle.
+
+See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`,
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and ADR-023.
+
+---
+
+# Stage 10.1 — Forge/Game Contract and Project Loop
+
+This is the required next stage. Do not begin Stage 10A or broad Stage 11 work
+before its gates pass.
+
+## Stage 10.1A — Playable Contract and De-Proof Game
+
+Build:
+
+```text
+shared playable-world profile validation
+structured creator/Game bootstrap errors
+always-active player entry requirements
+configured player persistence identity
+data-driven interaction effect
+generated-ID interaction/save/restore proof
+```
+
+Gate:
+
+> A world with newly generated player and interactable IDs either completes
+> Game interaction/persistence or is rejected before runtime construction with
+> a structured creator-visible error.
+
+## Stage 10.1B — Recoverable Project and Runtime Import
+
+Build:
+
+```text
+Forge new/open/save/save-as
+recoverable atomic project writes
+dirty-close and overwrite protection
+runtime Game world import
+minimum asset-closure/dependency diagnostics
+CI export → move → import → restart gate
+```
+
+Gate:
+
+> An unchanged Game release imports a Forge export selected at runtime,
+> identifies its authored world, survives restart, and Forge cannot silently
+> overwrite or lose the editable project.
+
+## Stage 10.2 — Editor Completion
+
+Build:
+
+```text
+schema-driven component inspector and typed field commands
+aggregated validation-results panel
+bounded/batched undo history
+shared Thermion-backed Forge viewport
+selection and transform gizmos
+measured creator project fixtures
+```
+
+Gate:
+
+> A creator opens, edits, validates, previews, safely saves, exports, imports,
+> and undoes a world containing transform and non-transform edits.
 
 ---
 
 # Stage 10A — Creator API / AI Foundation
 
-After the Forge command model, stable IDs, component schemas and validation are working, build the AI-friendly automation boundary.
+After the Stage 10.2 gate, build the AI-friendly automation boundary.
 
 Build:
 

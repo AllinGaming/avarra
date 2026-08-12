@@ -1,13 +1,13 @@
 # AVARRA — Stage 10 Forge Foundation Validation
 
-**Status:** Initial vertical slice implemented
+**Status:** Foundation proof passed; creator-facing gate remains open
 
 **Date:** 2026-08-12
 
 ## Scope
 
-This slice proves the first complete creator loop without selecting the final
-project format, renderer, or AI integration:
+This slice proves the first executable creator integration path without
+selecting the final project format, renderer, or AI integration:
 
 ```text
 Forge hierarchy / viewport / inspector
@@ -34,7 +34,7 @@ Forge hierarchy / viewport / inspector
 - Game keeps its bundled proof by default and reads a creator export when built
   with `AVARRA_WORLD_PATH`; imported world IDs derive separate save slots.
 
-## Automated gate
+## Automated foundation evidence
 
 The creator tests cover command execution, atomic validation rejection,
 stable-ID undo/redo, dirty-state recovery, chunk-local transform enforcement,
@@ -56,6 +56,30 @@ The consolidated gate produced:
 - the headless Forge export helper, Forge release, and configured Game release
   all completed; both native processes remained alive through a 12-second
   startup/world-bootstrap smoke window and were then stopped by the harness.
+
+The native smoke establishes startup stability. It does not by itself assert
+which world was displayed; canonical decode/`RuntimeWorldLoader` tests provide
+the semantic world-load evidence.
+
+## Post-implementation gate assessment
+
+A professional review after the initial pass found that the full Stage 10 gate
+must remain open:
+
+- Forge's playable check counts players across root and chunk definitions, but
+  Game queries one always-active player before chunk activation;
+- world-format v1 can pass the current export check while Game requires a
+  non-null chunk size;
+- Game still uses a proof console entity ID/flag and proof player identity in
+  interaction/persistence paths;
+- `AVARRA_WORLD_PATH` is a build-time integration hook, not runtime user import;
+- the export references an asset already packaged by Game;
+- Forge has no recoverable editable-project open/save lifecycle and its raw path
+  writer can replace an existing file without overwrite confirmation.
+
+These are Stage 10.1 gate blockers, not reasons to discard the command
+foundation. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md` for evidence,
+priorities, and acceptance criteria.
 
 ## Honest limits
 

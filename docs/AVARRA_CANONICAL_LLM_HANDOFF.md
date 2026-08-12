@@ -1,7 +1,7 @@
 # AVARRA — Canonical LLM Handoff
 
 **Status:** Current source of truth  
-**Date:** 2026-08-10  
+**Date:** 2026-08-12
 **Audience:** Coding LLMs, engineers, architects
 
 ---
@@ -476,6 +476,15 @@ after the shared world codec and playable-entry gate pass; Game can load that
 desktop export through `AVARRA_WORLD_PATH` without depending on Forge. The
 initial viewport is an isometric editor schematic, not a renderer replacement.
 See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+
+The 2026-08-12 engineering review classifies this as a foundation proof rather
+than a closed creator-facing gate. Stage 10.1 must first establish a shared
+playable-world profile, remove proof entity/player IDs from Game behavior, add
+recoverable Forge project persistence and safe export, and replace the
+build-time import hook with runtime import plus explicit asset dependency
+handling. Stage 10.2 then adds the schema-driven inspector, bounded history, and
+shared 3D editing viewport. Do not start Stage 10A AI/MCP or broad Stage 11 RPG
+work before those gates. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 ---
 

@@ -10,7 +10,7 @@ single-file handoff. Edit the individual source documents, then regenerate it.
 # AVARRA — Canonical LLM Handoff
 
 **Status:** Current source of truth  
-**Date:** 2026-08-10  
+**Date:** 2026-08-12
 **Audience:** Coding LLMs, engineers, architects
 
 ---
@@ -486,6 +486,15 @@ desktop export through `AVARRA_WORLD_PATH` without depending on Forge. The
 initial viewport is an isometric editor schematic, not a renderer replacement.
 See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
 
+The 2026-08-12 engineering review classifies this as a foundation proof rather
+than a closed creator-facing gate. Stage 10.1 must first establish a shared
+playable-world profile, remove proof entity/player IDs from Game behavior, add
+recoverable Forge project persistence and safe export, and replace the
+build-time import hook with runtime import plus explicit asset dependency
+handling. Stage 10.2 then adds the schema-driven inspector, bounded history, and
+shared 3D editing viewport. Do not start Stage 10A AI/MCP or broad Stage 11 RPG
+work before those gates. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+
 ---
 
 # 12. World Direction
@@ -767,9 +776,9 @@ Read `AVARRA_DOCUMENTATION_REVIEW.md` for what is covered, what is deliberately 
 
 # AVARRA — Documentation Architecture Review
 
-**Review date:** 2026-08-10  
-**Reviewed baseline:** v7 AI Creator handoff  
-**Result:** Coherent after v8 cleanup
+**Review date:** 2026-08-12
+**Reviewed baseline:** Stage 10 Forge foundation (`46e26a0`)
+**Result:** Coherent; the post-foundation repair order is now explicit
 
 ---
 
@@ -830,6 +839,7 @@ replication direction
 Android hosting
 Forge editor architecture
 creator commands + undo/redo
+Forge/Game foundation export-load path
 AI/LLM Creator API
 MCP adapter direction
 AI transactions/diffs/permissions
@@ -860,6 +870,7 @@ audio backend
 built-in AI provider strategy
 MCP transport/auth details
 AI privacy/context policy
+Forge editable source-project format and lifecycle
 ```
 
 These should not be interpreted as documentation gaps.
@@ -887,9 +898,11 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue the in-progress Stage 2 implementation.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1A.
 
-The handoff is **architecture-complete enough to begin implementation**, not feature-spec-complete for every eventual AVARRA system.
+The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The current Forge proof is not yet the complete creator-facing loop: the shared playable-world contract, proof-ID removal, recoverable project lifecycle and runtime import path are the next gates.
+
+The evidence, defects and prioritized repair sequence are recorded in `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 Future detailed specs should be written as each roadmap stage begins, using implementation findings rather than speculative overdesign.
 
@@ -4657,6 +4670,27 @@ External agents should integrate through the Creator API, optionally exposed thr
 
 See `AVARRA_AI_CREATOR_ARCHITECTURE.md`.
 
+---
+
+# 13. Current Repair Order
+
+The Stage 10 foundation is not yet a creator-safe project loop. The required
+order is:
+
+1. share one playable-world profile between Forge export and Game bootstrap;
+2. remove proof console/player stable IDs from Game interaction/persistence;
+3. add recoverable Forge new/open/save/save-as and safe export destinations;
+4. add runtime Game import and minimum asset dependency/closure diagnostics;
+5. extend schemas and typed commands for a generic inspector;
+6. bound/batch command history using measured creator fixtures;
+7. integrate the shared Thermion-backed editing viewport and gizmos;
+8. only then add Stage 10A transactions, permissions, semantic diff, and agent
+   adapters.
+
+The source-project representation is tracked by OD-020. The runtime package and
+asset-closure decision remains OD-019. Detailed findings and gates are in
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+
 <!-- END AVARRA_FORGE_ARCHITECTURE.md -->
 
 ---
@@ -7130,7 +7164,7 @@ Gate:
 
 > Forge creates a tiny world that game imports.
 
-Gate status (initial vertical slice, updated 2026-08-12):
+Gate status (foundation proof only, reviewed 2026-08-12):
 
 - a pure-Dart typed command session provides validated create/delete/transform
   edits with stable-ID undo/redo;
@@ -7145,13 +7179,82 @@ Gate status (initial vertical slice, updated 2026-08-12):
 - richer source projects, a shared 3D Forge viewport, generic component
   editing, asset cooking, and final archive packaging remain open.
 
-See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+The creator-facing gate is **not closed**. The post-implementation review found
+incomplete Forge/Game playable-profile validation, proof-specific Game entity
+and player IDs, a build-time rather than runtime import hook, packaged-asset
+coupling, and no recoverable Forge project lifecycle.
+
+See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`,
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and ADR-023.
+
+---
+
+# Stage 10.1 — Forge/Game Contract and Project Loop
+
+This is the required next stage. Do not begin Stage 10A or broad Stage 11 work
+before its gates pass.
+
+## Stage 10.1A — Playable Contract and De-Proof Game
+
+Build:
+
+```text
+shared playable-world profile validation
+structured creator/Game bootstrap errors
+always-active player entry requirements
+configured player persistence identity
+data-driven interaction effect
+generated-ID interaction/save/restore proof
+```
+
+Gate:
+
+> A world with newly generated player and interactable IDs either completes
+> Game interaction/persistence or is rejected before runtime construction with
+> a structured creator-visible error.
+
+## Stage 10.1B — Recoverable Project and Runtime Import
+
+Build:
+
+```text
+Forge new/open/save/save-as
+recoverable atomic project writes
+dirty-close and overwrite protection
+runtime Game world import
+minimum asset-closure/dependency diagnostics
+CI export → move → import → restart gate
+```
+
+Gate:
+
+> An unchanged Game release imports a Forge export selected at runtime,
+> identifies its authored world, survives restart, and Forge cannot silently
+> overwrite or lose the editable project.
+
+## Stage 10.2 — Editor Completion
+
+Build:
+
+```text
+schema-driven component inspector and typed field commands
+aggregated validation-results panel
+bounded/batched undo history
+shared Thermion-backed Forge viewport
+selection and transform gizmos
+measured creator project fixtures
+```
+
+Gate:
+
+> A creator opens, edits, validates, previews, safely saves, exports, imports,
+> and undoes a world containing transform and non-transform edits.
 
 ---
 
 # Stage 10A — Creator API / AI Foundation
 
-After the Forge command model, stable IDs, component schemas and validation are working, build the AI-friendly automation boundary.
+After the Stage 10.2 gate, build the AI-friendly automation boundary.
 
 Build:
 
@@ -7634,6 +7737,33 @@ migrations
 ```
 
 Do not treat the Stage 4 JSON proof as the permanent hot runtime format.
+
+---
+
+## OD-020 — Forge Editable Source Project
+
+Stage 10 edits one in-memory `WorldDefinition` and exports runtime-oriented
+prototype JSON. That is not yet a durable editable Forge project.
+
+Decide before exposing creator project save:
+
+```text
+project directory vs project container
+editor-only stable metadata and display names
+source asset ownership and relative paths
+autosave/recovery journal
+atomic save and migration boundary
+project/world multiplicity
+future collaboration/version-control friendliness
+```
+
+Constraints:
+
+- editable source state remains distinct from runtime `.avarra` export;
+- ordinary saves are recoverable and never silently overwrite unrelated files;
+- project text/assets are untrusted creator data;
+- the choice must not force the final OD-019 cooked/archive representation;
+- AI and human edits continue through the same typed command boundary.
 
 <!-- END AVARRA_OPEN_DECISIONS.md -->
 
