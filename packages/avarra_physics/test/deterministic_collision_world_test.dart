@@ -75,6 +75,56 @@ void main() {
     );
   });
 
+  test('supports lifecycle and per-query collider exclusions', () {
+    final ecs = EcsWorld();
+    final firstId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000023');
+    final secondId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000024');
+    for (final entry in [(firstId, 1.0), (secondId, 2.0)]) {
+      final handle = ecs.createEntity(entityId: entry.$1);
+      ecs
+        ..addComponent(
+          handle,
+          TransformComponent(position: Vector3(entry.$2, 0, 0)),
+        )
+        ..addComponent(
+          handle,
+          PhysicsColliderComponent.box(
+            halfExtents: Vector3.all(0.25),
+            bodyKind: PhysicsBodyKind.staticBody,
+          ),
+        );
+    }
+
+    final lifecycleFiltered = DeterministicPhysicsCollisionWorld.fromEcs(
+      ecs,
+      excludedEntityIds: {firstId},
+    );
+    expect(lifecycleFiltered.staticColliderCount, 1);
+    expect(
+      lifecycleFiltered
+          .raycast(
+            origin: Vector3.zero(),
+            direction: Vector3(3, 0, 0),
+            maxDistance: 3,
+          )
+          ?.entityId,
+      secondId,
+    );
+
+    final complete = DeterministicPhysicsCollisionWorld.fromEcs(ecs);
+    expect(
+      complete
+          .raycast(
+            origin: Vector3.zero(),
+            direction: Vector3(3, 0, 0),
+            maxDistance: 3,
+            ignoredEntityIds: {firstId},
+          )
+          ?.entityId,
+      secondId,
+    );
+  });
+
   test('validates queries and rejects use after disposal', () {
     final world = DeterministicPhysicsCollisionWorld.fromEcs(EcsWorld());
     expect(

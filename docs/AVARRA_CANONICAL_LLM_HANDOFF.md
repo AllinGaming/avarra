@@ -490,12 +490,18 @@ not embed assets or close OD-019. Stage 10.2 is now implemented: shared content
 metadata drives transform and non-transform Inspector fields; typed component
 commands use bounded inverse-command batches; validation aggregates actionable
 locations; and Forge uses the shared Thermion presentation bridge for stable-ID
-selection and translation gizmos. The next product stage is the Relay Zero
-playable RPG slice, before AI/MCP expansion. See
+selection and translation gizmos. Stage 11.1 is now implemented: content schema
+v5 authors health and one basic attack; deterministic gameplay authority owns
+damage, range, line of sight, cooldown, death, and restart; and Game provides a
+stationary retaliating guardian loop with dead-entity presentation/collision
+lifecycle. Connected combat remains disabled until its host-authoritative
+slice. Next is deterministic guardian pursuit/attack AI, before item,
+objective-gate, co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, and ADR-026.
+`AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, ADR-026, and ADR-027.
 
 ---
 

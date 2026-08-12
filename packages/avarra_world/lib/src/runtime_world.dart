@@ -123,6 +123,24 @@ final class RuntimeEntityLoader {
           );
         case PlayerControlledDefinition():
           ecs.addComponent(handle, const PlayerControlledComponent());
+        case HealthDefinition():
+          ecs.addComponent(
+            handle,
+            HealthComponent(maximumHealth: component.maximumHealth),
+          );
+        case BasicAttackDefinition():
+          ecs
+            ..addComponent(
+              handle,
+              BasicAttackComponent(
+                damage: component.damage,
+                range: component.range,
+                cooldown: Duration(
+                  microseconds: (component.cooldownSeconds * 1000000).round(),
+                ),
+              ),
+            )
+            ..addComponent(handle, const BasicAttackStateComponent());
         case InteractableDefinition():
           ecs.addComponent(
             handle,

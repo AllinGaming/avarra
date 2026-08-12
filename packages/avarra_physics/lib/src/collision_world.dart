@@ -26,6 +26,7 @@ abstract interface class PhysicsCollisionWorld {
     required Vector3 origin,
     required Vector3 direction,
     required double maxDistance,
+    Set<EntityId> ignoredEntityIds = const {},
   });
 
   PhysicsQueryHit? sweepBox({

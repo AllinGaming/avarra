@@ -499,12 +499,18 @@ not embed assets or close OD-019. Stage 10.2 is now implemented: shared content
 metadata drives transform and non-transform Inspector fields; typed component
 commands use bounded inverse-command batches; validation aggregates actionable
 locations; and Forge uses the shared Thermion presentation bridge for stable-ID
-selection and translation gizmos. The next product stage is the Relay Zero
-playable RPG slice, before AI/MCP expansion. See
+selection and translation gizmos. Stage 11.1 is now implemented: content schema
+v5 authors health and one basic attack; deterministic gameplay authority owns
+damage, range, line of sight, cooldown, death, and restart; and Game provides a
+stationary retaliating guardian loop with dead-entity presentation/collision
+lifecycle. Connected combat remains disabled until its host-authoritative
+slice. Next is deterministic guardian pursuit/attack AI, before item,
+objective-gate, co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, and ADR-026.
+`AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, ADR-026, and ADR-027.
 
 ---
 
@@ -4236,7 +4242,7 @@ See ADR-026 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Stage 11 next; editor foundation complete
+**Status:** Stage 11 in progress; combat slice implemented
 
 **Date:** 2026-08-12
 
@@ -4299,6 +4305,13 @@ export blockers, bounded inverse-command batches provide undo/redo, and Forge
 previews the authored world through the shared Thermion viewport with stable-ID
 selection and a translation gizmo.
 
+Stage 11.1 adds the first actual fail/recover play loop. Content schema v5
+authors player and guardian health plus one direct attack; a deterministic,
+server-safe combat system owns range, line of sight, cooldown, damage, death,
+and restart. The prototype guardian currently retaliates while stationary.
+Pursuit AI is the next slice, and connected combat remains deliberately
+disabled until attacks are host-authoritative.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
@@ -4308,8 +4321,9 @@ cube assets while the gameplay contract is made reliable.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
-4. Implement the Stage 11 gameplay loop in thin vertical slices:
-   health/combat → guardian AI → item/core → objective gate → co-op authority.
+4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
+   slices. Health/basic attack/death/restart are complete; next is guardian AI,
+   then item/core → objective gate → co-op authority → full save/resume.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.
@@ -4947,7 +4961,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–10.1 Implementation
+# 14. Current Stage 4–11.1 Implementation
 
 The initial vertical slice now provides:
 
@@ -4955,8 +4969,9 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 4, with versions 1 through 3 still readable
+  content schema version 5, with versions 1 through 4 still readable
   typed persistent-flag interaction effect
+  typed health and deterministic basic-attack definitions
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -4987,7 +5002,8 @@ avarra_persistence
 The Game's Relay Zero prototype world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
-interactable, and persistent-flag semantics in `isometric_proof.avarra`.
+health, basic-attack, interactable, and persistent-flag semantics in
+`isometric_proof.avarra`.
 
 The current `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked
@@ -8224,8 +8240,8 @@ After the Stage 10.2 gate, prioritize the first actual playable adventure. See
 Build in thin vertical slices:
 
 ```text
-player/enemy health and damage
-one basic attack and death/restart
+player/enemy health and damage                    COMPLETE (Stage 11.1)
+one basic attack and death/restart                COMPLETE (Stage 11.1)
 one pursuing/attacking guardian
 three persistent relay stabilizer objectives
 one relay-core item and minimal inventory
@@ -8233,6 +8249,18 @@ objective gate and completion state
 authoritative co-op combat/objective commands
 save/resume across the full adventure
 ```
+
+Stage 11.1 status (implemented 2026-08-13):
+
+- content schema v5 authors health and one basic attack;
+- server-safe combat validates simulation-time cooldown, range, line of sight,
+  damage, death, and restart;
+- Game provides Attack/Space, health/target feedback, a retaliating stationary
+  guardian, dead-entity presentation/collision lifecycle, and restart; and
+- network sessions explicitly defer combat until host-authoritative commands.
+
+Next: Stage 11.2 deterministic perception, pursuit, attack scheduling, leash,
+and return behavior. See `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md` and ADR-027.
 
 Gate:
 

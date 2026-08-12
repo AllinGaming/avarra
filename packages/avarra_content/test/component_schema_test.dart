@@ -13,6 +13,8 @@ void main() {
         registry.schemas.map((schema) => schema.type),
         orderedEquals([
           AvarraComponentType.characterController,
+          AvarraComponentType.basicAttack,
+          AvarraComponentType.health,
           AvarraComponentType.interactable,
           AvarraComponentType.setPersistentFlagOnInteract,
           AvarraComponentType.isometricOccluder,
@@ -186,6 +188,40 @@ void main() {
         'flagKey': 'activated',
         'value': true,
       }, contentSchemaVersion: 3),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes authored health and basic attack in content v5', () {
+    final health = registry.decode(AvarraComponentType.health, {
+      'schemaVersion': 1,
+      'maximumHealth': 80,
+    });
+    final attack = registry.decode(AvarraComponentType.basicAttack, {
+      'schemaVersion': 1,
+      'damage': 12,
+      'range': 2.25,
+      'cooldownSeconds': 0.5,
+    });
+
+    expect((health as HealthDefinition).maximumHealth, 80);
+    expect((attack as BasicAttackDefinition).damage, 12);
+    expect(attack.range, 2.25);
+    expect(attack.cooldownSeconds, 0.5);
+    expect(
+      () => registry.decode(AvarraComponentType.health, {
+        'schemaVersion': 1,
+        'maximumHealth': 0,
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.basicAttack, {
+        'schemaVersion': 1,
+        'damage': 12,
+        'range': 2.25,
+        'cooldownSeconds': 0.5,
+      }, contentSchemaVersion: 4),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

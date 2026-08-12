@@ -335,6 +335,15 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
+    if (types.contains(AvarraComponentType.basicAttack) &&
+        (!types.contains(AvarraComponentType.transform) ||
+            !types.contains(AvarraComponentType.health))) {
+      _invalid(
+        '$path.components',
+        'A basic attack requires a transform and health.',
+        context: {'entityId': entityId.value},
+      );
+    }
     if (types.contains(AvarraComponentType.interactable) &&
         (!types.contains(AvarraComponentType.transform) ||
             collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||

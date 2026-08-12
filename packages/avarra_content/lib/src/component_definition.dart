@@ -227,6 +227,52 @@ final class PlayerControlledDefinition extends ContentComponentDefinition {
   Map<String, Object?> toJson() => {'schemaVersion': schemaVersion};
 }
 
+/// Authored maximum health. Runtime worlds start entities at full health.
+final class HealthDefinition extends ContentComponentDefinition {
+  const HealthDefinition({required this.maximumHealth});
+
+  final double maximumHealth;
+
+  @override
+  String get type => AvarraComponentType.health;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'maximumHealth': maximumHealth,
+  };
+}
+
+/// Authored statistics for the first deterministic direct attack.
+final class BasicAttackDefinition extends ContentComponentDefinition {
+  const BasicAttackDefinition({
+    required this.damage,
+    required this.range,
+    required this.cooldownSeconds,
+  });
+
+  final double damage;
+  final double range;
+  final double cooldownSeconds;
+
+  @override
+  String get type => AvarraComponentType.basicAttack;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'damage': damage,
+    'range': range,
+    'cooldownSeconds': cooldownSeconds,
+  };
+}
+
 final class InteractableDefinition extends ContentComponentDefinition {
   const InteractableDefinition({required this.label, required this.range});
 

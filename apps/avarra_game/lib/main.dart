@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:avarra_client/avarra_client.dart';
+import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
@@ -391,8 +392,10 @@ class _PresentationBoundaryScreenState
   late DeterministicPhysicsCollisionWorld _collisionWorld;
   late CharacterMovementSystem _movementSystem;
   late InteractionSystem _interactionSystem;
+  late CombatSystem _combatSystem;
   late AuthoredInteractionEffectExecutor _interactionEffects;
   late final EntityId _playerEntityId;
+  late final TransformComponent _playerSpawnTransform;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
   final Map<int, Vector3> _touchMovementByPointer = {};
@@ -421,6 +424,7 @@ class _PresentationBoundaryScreenState
   int _maximumFrameMicroseconds = 0;
   bool _hostEnding = false;
   bool _inputSubmissionPaused = false;
+  Duration _simulationTime = Duration.zero;
   String _interactionStatus = 'Select a world object, then interact';
 
   @override
@@ -441,17 +445,25 @@ class _PresentationBoundaryScreenState
     if (multiplayerClient != null) {
       _applyReplicatedEntities(multiplayerClient);
     }
-    _presentation = const PresentationExtractor().extract(
-      widget.runtimeWorld.ecs,
-    );
+    _playerSpawnTransform = widget.runtimeWorld.ecs
+        .component<TransformComponent>(
+          widget.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+        )
+        .copyWith();
+    _presentation = _extractPresentation();
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
+      excludedEntityIds: _deadEntityIds,
     );
     _movementSystem = CharacterMovementSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
     _interactionSystem = InteractionSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    _combatSystem = CombatSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
@@ -541,7 +553,7 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 10.1B · Authored World Runtime'),
+        const Text('Stage 11.1 · Relay Zero Combat'),
         Text(widget.runtimeWorld.definition.name),
         Text(
           'World source: ${widget.sourceLabel}',
@@ -592,6 +604,7 @@ class _PresentationBoundaryScreenState
           key: const Key('camera_status'),
         ),
         Text(_selectionStatus, key: const Key('selection_status')),
+        Text(_playerCombatStatus, key: const Key('player_health_status')),
         Text(_interactionStatus, key: const Key('interaction_status')),
       ],
     );
@@ -644,16 +657,7 @@ class _PresentationBoundaryScreenState
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 128),
-                  child: FilledButton.icon(
-                    key: const Key('interact'),
-                    onPressed: _selectedEntityId == null
-                        ? null
-                        : () => _dispatchIntent(
-                            InteractEntityIntent(_selectedEntityId!),
-                          ),
-                    icon: const Icon(Icons.touch_app),
-                    label: const Text('Interact'),
-                  ),
+                  child: _actionControls,
                 ),
               ),
             ),
@@ -666,6 +670,38 @@ class _PresentationBoundaryScreenState
           ],
         ),
       ),
+    );
+  }
+
+  Widget get _actionControls {
+    if (_isPlayerDead) {
+      return FilledButton.icon(
+        key: const Key('restart_combat'),
+        onPressed: _restartPlayer,
+        icon: const Icon(Icons.restart_alt),
+        label: const Text('Restart'),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        FilledButton.icon(
+          key: const Key('basic_attack'),
+          onPressed: _selectedEntityId == null ? null : _attackSelected,
+          icon: const Icon(Icons.flash_on),
+          label: const Text('Attack (Space)'),
+        ),
+        OutlinedButton.icon(
+          key: const Key('interact'),
+          onPressed: _selectedEntityId == null
+              ? null
+              : () => _dispatchIntent(InteractEntityIntent(_selectedEntityId!)),
+          icon: const Icon(Icons.touch_app),
+          label: const Text('Interact'),
+        ),
+      ],
     );
   }
 
@@ -760,6 +796,12 @@ class _PresentationBoundaryScreenState
   String get _selectionStatus {
     final selectedEntityId = _selectedEntityId;
     if (selectedEntityId != null) {
+      final health = _healthFor(selectedEntityId);
+      if (health != null) {
+        return 'Target ${_shortEntityId(selectedEntityId)} · '
+            'Health ${_formatHealth(health.currentHealth)}/'
+            '${_formatHealth(health.maximumHealth)}';
+      }
       return 'Selected ${selectedEntityId.value}';
     }
     final groundTarget = _groundTarget;
@@ -769,6 +811,35 @@ class _PresentationBoundaryScreenState
           '${position.z.toStringAsFixed(2)}';
     }
     return 'Tap ground to move · WASD/arrow keys for direct movement';
+  }
+
+  String get _playerCombatStatus {
+    final health = _healthFor(_playerEntityId);
+    if (health == null) {
+      return widget.multiplayerClient == null
+          ? 'Combat unavailable in this world'
+          : 'Combat awaits authoritative host support';
+    }
+    if (health.isDead) {
+      return 'Health 0/${_formatHealth(health.maximumHealth)} · Defeated';
+    }
+    final activeOpponents = widget.runtimeWorld.ecs
+        .query<HealthComponent>()
+        .where(
+          (entry) =>
+              entry.entityId != _playerEntityId &&
+              _authoredCombatantEntityIds.contains(entry.entityId),
+        )
+        .toList();
+    final objective = activeOpponents.any((entry) => !entry.component.isDead)
+        ? 'Select the guardian and attack'
+        : activeOpponents.any((entry) => entry.component.isDead)
+        ? 'Guardian defeated · relay path secured'
+        : _authoredCombatantEntityIds.isNotEmpty
+        ? 'Guardian outside the active area · return to the relay'
+        : 'No authored guardian in this world';
+    return 'Health ${_formatHealth(health.currentHealth)}/'
+        '${_formatHealth(health.maximumHealth)} · $objective';
   }
 
   String get _hostStatus {
@@ -857,6 +928,162 @@ class _PresentationBoundaryScreenState
         .position;
   }
 
+  HealthComponent? _healthFor(EntityId entityId) {
+    final handle = widget.runtimeWorld.ecs.handleFor(entityId);
+    return handle == null
+        ? null
+        : widget.runtimeWorld.ecs.tryComponent<HealthComponent>(handle);
+  }
+
+  bool get _isPlayerDead => _healthFor(_playerEntityId)?.isDead ?? false;
+
+  Set<EntityId> get _deadEntityIds => {
+    for (final entry in widget.runtimeWorld.ecs.query<HealthComponent>())
+      if (entry.component.isDead) entry.entityId,
+  };
+
+  Set<EntityId> get _authoredCombatantEntityIds => {
+    for (final entity in widget.runtimeWorld.definition.allEntities)
+      if (entity.id != _playerEntityId &&
+          entity.component<HealthDefinition>() != null)
+        entity.id,
+  };
+
+  PresentationSnapshot _extractPresentation() {
+    final deadEntityIds = _deadEntityIds;
+    final extracted = const PresentationExtractor().extract(
+      widget.runtimeWorld.ecs,
+    );
+    return PresentationSnapshot(
+      extracted.entities.where(
+        (entity) => !deadEntityIds.contains(entity.entityId),
+      ),
+    );
+  }
+
+  String _formatHealth(double value) {
+    return value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(1);
+  }
+
+  String _shortEntityId(EntityId entityId) {
+    final value = entityId.value;
+    return value.substring(value.length - 4);
+  }
+
+  void _attackSelected() {
+    final targetId = _selectedEntityId;
+    if (targetId == null) {
+      setState(() {
+        _interactionStatus = 'Select the guardian before attacking';
+      });
+      return;
+    }
+    if (widget.multiplayerClient != null) {
+      setState(() {
+        _interactionStatus = 'Attack awaits an authoritative host command';
+      });
+      return;
+    }
+    if (_isPlayerDead) {
+      return;
+    }
+
+    final result = _combatSystem.attack(
+      attackerId: _playerEntityId,
+      targetId: targetId,
+      simulationTime: _simulationTime,
+    );
+    var status = _combatAttackStatus(result);
+    if (result.accepted) {
+      if (!result.targetKilled) {
+        final target = widget.runtimeWorld.ecs.handleFor(targetId);
+        if (target != null &&
+            widget.runtimeWorld.ecs.hasComponent<BasicAttackComponent>(
+              target,
+            ) &&
+            widget.runtimeWorld.ecs.hasComponent<BasicAttackStateComponent>(
+              target,
+            )) {
+          final retaliation = _combatSystem.attack(
+            attackerId: targetId,
+            targetId: _playerEntityId,
+            simulationTime: _simulationTime,
+          );
+          if (retaliation.accepted) {
+            status +=
+                ' · guardian dealt '
+                '${_formatHealth(retaliation.damageDealt)} back';
+            if (retaliation.targetKilled) {
+              status += ' · you were defeated';
+            }
+          }
+        }
+      }
+      if (_isPlayerDead) {
+        _pressedKeys.clear();
+        _touchMovementByPointer.clear();
+        _groundTarget = null;
+      }
+      if (result.targetKilled) {
+        _selectedEntityId = null;
+      }
+      _rebuildGameplayQueries();
+    }
+
+    setState(() {
+      _presentation = _extractPresentation();
+      _interactionStatus = status;
+    });
+  }
+
+  String _combatAttackStatus(CombatAttackResult result) {
+    if (result.accepted) {
+      final damage = _formatHealth(result.damageDealt);
+      return result.targetKilled
+          ? 'Attack dealt $damage · guardian defeated'
+          : 'Attack dealt $damage · target has '
+                '${_formatHealth(result.remainingHealth!)} health';
+    }
+    if (result.rejection == CombatAttackRejection.cooldown) {
+      final milliseconds = math.max(1, result.remainingCooldown.inMilliseconds);
+      return 'Attack cooling down · ${milliseconds}ms remaining';
+    }
+    return switch (result.rejection!) {
+      CombatAttackRejection.targetMissing => 'That object cannot be attacked',
+      CombatAttackRejection.selfTarget => 'You cannot attack yourself',
+      CombatAttackRejection.outOfRange => 'Target is out of attack range',
+      CombatAttackRejection.blocked => 'Attack line of sight is blocked',
+      CombatAttackRejection.targetDead => 'That target is already defeated',
+      CombatAttackRejection.attackerDead => 'Restart before attacking',
+      CombatAttackRejection.attackerMissing => 'Player combat is unavailable',
+      CombatAttackRejection.cooldown => throw StateError(
+        'Cooldown is handled before the rejection switch.',
+      ),
+    };
+  }
+
+  void _restartPlayer() {
+    if (!_combatSystem.restart(
+      entityId: _playerEntityId,
+      spawnTransform: _playerSpawnTransform,
+    )) {
+      return;
+    }
+    _pressedKeys.clear();
+    _touchMovementByPointer.clear();
+    _groundTarget = null;
+    _rebuildGameplayQueries();
+    setState(() {
+      _presentation = _extractPresentation();
+      _cameraRig = _cameraRig.copyWith(target: _playerPosition);
+      _interactionStatus = 'Restarted at the Relay Zero entry point';
+    });
+    widget.persistence.markPlayerDirty(widget.localPlayerId);
+    _scheduleSave();
+  }
+
   void _handlePick(IsometricPickResult result) {
     final entityId = result.entityId;
     _dispatchIntent(
@@ -868,6 +1095,12 @@ class _PresentationBoundaryScreenState
 
   void _dispatchIntent(IsometricInputIntent intent) {
     if (intent case MoveCharacterIntent(:final direction)) {
+      if (_isPlayerDead) {
+        setState(() {
+          _interactionStatus = 'Restart before moving';
+        });
+        return;
+      }
       final multiplayerClient = widget.multiplayerClient;
       if (multiplayerClient != null) {
         setState(() {
@@ -935,6 +1168,12 @@ class _PresentationBoundaryScreenState
   }
 
   void _handleKeyEvent(KeyEvent event) {
+    if (event.logicalKey == LogicalKeyboardKey.space) {
+      if (event is KeyDownEvent) {
+        _attackSelected();
+      }
+      return;
+    }
     if (!_movementKeys.contains(event.logicalKey)) {
       return;
     }
@@ -947,6 +1186,9 @@ class _PresentationBoundaryScreenState
   }
 
   void _beginTouchMovement(int pointer, Vector3 direction) {
+    if (_isPlayerDead) {
+      return;
+    }
     _touchMovementByPointer[pointer] = direction;
     setState(() {
       _groundTarget = null;
@@ -967,7 +1209,11 @@ class _PresentationBoundaryScreenState
     if (!mounted) {
       return;
     }
+    _simulationTime += const Duration(microseconds: 16667);
     _updateRemotePlayerInterpolation();
+    if (_isPlayerDead) {
+      return;
+    }
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
       var direction = _directMovementDirection;
@@ -1016,9 +1262,7 @@ class _PresentationBoundaryScreenState
   }
 
   void _applyMovement(CharacterMovementResult result) {
-    _presentation = const PresentationExtractor().extract(
-      widget.runtimeWorld.ecs,
-    );
+    _presentation = _extractPresentation();
     _cameraRig = _cameraRig.copyWith(target: result.position);
     if (result.collidedEntityIds.isNotEmpty) {
       _interactionStatus =
@@ -1093,9 +1337,7 @@ class _PresentationBoundaryScreenState
       deltaSeconds: 1 / tickRateHz,
     );
     setState(() {
-      _presentation = const PresentationExtractor().extract(
-        widget.runtimeWorld.ecs,
-      );
+      _presentation = _extractPresentation();
       _cameraRig = _cameraRig.copyWith(target: result.position);
       if (result.collidedEntityIds.isNotEmpty) {
         _interactionStatus =
@@ -1188,9 +1430,7 @@ class _PresentationBoundaryScreenState
         displayed == null ? authoritative : _transformFromNetwork(displayed),
       );
     }
-    _presentation = const PresentationExtractor().extract(
-      widget.runtimeWorld.ecs,
-    );
+    _presentation = _extractPresentation();
   }
 
   void _materializeReplicatedAvatar(ReplicatedEntityState entity) {
@@ -1310,9 +1550,7 @@ class _PresentationBoundaryScreenState
     }
     if (changed) {
       setState(() {
-        _presentation = const PresentationExtractor().extract(
-          widget.runtimeWorld.ecs,
-        );
+        _presentation = _extractPresentation();
       });
     }
   }
@@ -1421,9 +1659,7 @@ class _PresentationBoundaryScreenState
         if (activeSetChanged) {
           _rebuildGameplayQueries();
           setState(() {
-            _presentation = const PresentationExtractor().extract(
-              widget.runtimeWorld.ecs,
-            );
+            _presentation = _extractPresentation();
             final selectedEntityId = _selectedEntityId;
             if (selectedEntityId != null &&
                 widget.runtimeWorld.ecs.handleFor(selectedEntityId) == null) {
@@ -1455,12 +1691,17 @@ class _PresentationBoundaryScreenState
     final previousCollisionWorld = _collisionWorld;
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
+      excludedEntityIds: _deadEntityIds,
     );
     _movementSystem = CharacterMovementSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
     _interactionSystem = InteractionSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    _combatSystem = CombatSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );

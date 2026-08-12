@@ -240,7 +240,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–10.1 Implementation
+# 14. Current Stage 4–11.1 Implementation
 
 The initial vertical slice now provides:
 
@@ -248,8 +248,9 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 4, with versions 1 through 3 still readable
+  content schema version 5, with versions 1 through 4 still readable
   typed persistent-flag interaction effect
+  typed health and deterministic basic-attack definitions
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -280,7 +281,8 @@ avarra_persistence
 The Game's Relay Zero prototype world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
-interactable, and persistent-flag semantics in `isometric_proof.avarra`.
+health, basic-attack, interactable, and persistent-flag semantics in
+`isometric_proof.avarra`.
 
 The current `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked

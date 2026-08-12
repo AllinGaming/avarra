@@ -1,6 +1,6 @@
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Stage 11 next; editor foundation complete
+**Status:** Stage 11 in progress; combat slice implemented
 
 **Date:** 2026-08-12
 
@@ -63,6 +63,13 @@ export blockers, bounded inverse-command batches provide undo/redo, and Forge
 previews the authored world through the shared Thermion viewport with stable-ID
 selection and a translation gizmo.
 
+Stage 11.1 adds the first actual fail/recover play loop. Content schema v5
+authors player and guardian health plus one direct attack; a deterministic,
+server-safe combat system owns range, line of sight, cooldown, damage, death,
+and restart. The prototype guardian currently retaliates while stationary.
+Pursuit AI is the next slice, and connected combat remains deliberately
+disabled until attacks are host-authoritative.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
@@ -72,8 +79,9 @@ cube assets while the gameplay contract is made reliable.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
-4. Implement the Stage 11 gameplay loop in thin vertical slices:
-   health/combat → guardian AI → item/core → objective gate → co-op authority.
+4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
+   slices. Health/basic attack/death/restart are complete; next is guardian AI,
+   then item/core → objective gate → co-op authority → full save/resume.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.

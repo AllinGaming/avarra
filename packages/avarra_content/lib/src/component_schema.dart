@@ -361,6 +361,58 @@ final class ComponentSchemaRegistry {
           fields: const [],
         ),
         ComponentSchema(
+          type: AvarraComponentType.health,
+          version: 1,
+          introducedInContentSchemaVersion: 5,
+          editorLabel: 'Health',
+          editorOrder: 45,
+          help: 'Maximum combat health. Runtime entities begin at full health.',
+          fields: const [
+            ComponentFieldSchema(
+              name: 'maximumHealth',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Maximum health',
+              defaultValue: 100.0,
+              minimum: 0.01,
+            ),
+          ],
+        ),
+        ComponentSchema(
+          type: AvarraComponentType.basicAttack,
+          version: 1,
+          introducedInContentSchemaVersion: 5,
+          editorLabel: 'Basic Attack',
+          editorOrder: 46,
+          help: 'Deterministic direct damage, range, and cooldown.',
+          requiredComponentTypes: const {
+            AvarraComponentType.transform,
+            AvarraComponentType.health,
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'damage',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Damage',
+              defaultValue: 10.0,
+              minimum: 0.01,
+            ),
+            ComponentFieldSchema(
+              name: 'range',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Range',
+              defaultValue: 2.2,
+              minimum: 0.01,
+            ),
+            ComponentFieldSchema(
+              name: 'cooldownSeconds',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Cooldown',
+              defaultValue: 0.65,
+              minimum: 0.01,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.interactable,
           version: 1,
           introducedInContentSchemaVersion: 2,
@@ -533,6 +585,8 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.characterController => _decodeController(data),
       AvarraComponentType.playerControlled =>
         const PlayerControlledDefinition(),
+      AvarraComponentType.health => _decodeHealth(data),
+      AvarraComponentType.basicAttack => _decodeBasicAttack(data),
       AvarraComponentType.interactable => _decodeInteractable(data),
       AvarraComponentType.setPersistentFlagOnInteract =>
         _decodeSetPersistentFlagOnInteract(data),
@@ -572,6 +626,34 @@ final class ComponentSchemaRegistry {
       moveSpeed: moveSpeed,
       skinWidth: skinWidth,
       arrivalTolerance: arrivalTolerance,
+    );
+  }
+
+  HealthDefinition _decodeHealth(Map<String, Object?> data) {
+    final maximumHealth = (data['maximumHealth']! as num).toDouble();
+    if (maximumHealth <= 0) {
+      _invalidComponent(
+        AvarraComponentType.health,
+        'Maximum health must be greater than zero.',
+      );
+    }
+    return HealthDefinition(maximumHealth: maximumHealth);
+  }
+
+  BasicAttackDefinition _decodeBasicAttack(Map<String, Object?> data) {
+    final damage = (data['damage']! as num).toDouble();
+    final range = (data['range']! as num).toDouble();
+    final cooldownSeconds = (data['cooldownSeconds']! as num).toDouble();
+    if (damage <= 0 || range <= 0 || cooldownSeconds <= 0) {
+      _invalidComponent(
+        AvarraComponentType.basicAttack,
+        'Basic-attack values must be greater than zero.',
+      );
+    }
+    return BasicAttackDefinition(
+      damage: damage,
+      range: range,
+      cooldownSeconds: cooldownSeconds,
     );
   }
 

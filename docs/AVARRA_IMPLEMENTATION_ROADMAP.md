@@ -570,8 +570,8 @@ After the Stage 10.2 gate, prioritize the first actual playable adventure. See
 Build in thin vertical slices:
 
 ```text
-player/enemy health and damage
-one basic attack and death/restart
+player/enemy health and damage                    COMPLETE (Stage 11.1)
+one basic attack and death/restart                COMPLETE (Stage 11.1)
 one pursuing/attacking guardian
 three persistent relay stabilizer objectives
 one relay-core item and minimal inventory
@@ -579,6 +579,18 @@ objective gate and completion state
 authoritative co-op combat/objective commands
 save/resume across the full adventure
 ```
+
+Stage 11.1 status (implemented 2026-08-13):
+
+- content schema v5 authors health and one basic attack;
+- server-safe combat validates simulation-time cooldown, range, line of sight,
+  damage, death, and restart;
+- Game provides Attack/Space, health/target feedback, a retaliating stationary
+  guardian, dead-entity presentation/collision lifecycle, and restart; and
+- network sessions explicitly defer combat until host-authoritative commands.
+
+Next: Stage 11.2 deterministic perception, pursuit, attack scheduling, leash,
+and return behavior. See `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md` and ADR-027.
 
 Gate:
 

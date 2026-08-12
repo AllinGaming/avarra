@@ -8,4 +8,5 @@ abstract final class GameplayErrorCodes {
   static const invalidInteraction = AvarraErrorCode(
     'GAMEPLAY_INTERACTION_INVALID',
   );
+  static const invalidCombat = AvarraErrorCode('GAMEPLAY_COMBAT_INVALID');
 }

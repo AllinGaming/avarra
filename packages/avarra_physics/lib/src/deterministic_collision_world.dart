@@ -19,12 +19,16 @@ final class DeterministicPhysicsCollisionWorld
     implements PhysicsCollisionWorld {
   DeterministicPhysicsCollisionWorld._(this._colliders);
 
-  factory DeterministicPhysicsCollisionWorld.fromEcs(EcsWorld ecs) {
+  factory DeterministicPhysicsCollisionWorld.fromEcs(
+    EcsWorld ecs, {
+    Set<EntityId> excludedEntityIds = const {},
+  }) {
     final colliders = <_StaticCollider>[];
     for (final entry
         in ecs.query2<TransformComponent, PhysicsColliderComponent>()) {
       final collider = entry.second;
-      if (collider.bodyKind != PhysicsBodyKind.staticBody ||
+      if (excludedEntityIds.contains(entry.entityId) ||
+          collider.bodyKind != PhysicsBodyKind.staticBody ||
           collider.isSensor) {
         continue;
       }
@@ -52,6 +56,7 @@ final class DeterministicPhysicsCollisionWorld
     required Vector3 origin,
     required Vector3 direction,
     required double maxDistance,
+    Set<EntityId> ignoredEntityIds = const {},
   }) {
     _requireActive();
     _requireFiniteVector(origin, 'origin');
@@ -68,6 +73,7 @@ final class DeterministicPhysicsCollisionWorld
       direction: direction / length,
       maxDistance: maxDistance,
       expansion: Vector3.zero(),
+      ignoredEntityIds: ignoredEntityIds,
     );
   }
 
@@ -93,6 +99,7 @@ final class DeterministicPhysicsCollisionWorld
       direction: displacement / distance,
       maxDistance: distance,
       expansion: halfExtents,
+      ignoredEntityIds: const {},
     );
   }
 
@@ -101,9 +108,13 @@ final class DeterministicPhysicsCollisionWorld
     required Vector3 direction,
     required double maxDistance,
     required Vector3 expansion,
+    required Set<EntityId> ignoredEntityIds,
   }) {
     PhysicsQueryHit? nearest;
     for (final collider in _colliders) {
+      if (ignoredEntityIds.contains(collider.entityId)) {
+        continue;
+      }
       final hit = _intersect(
         collider: collider,
         origin: origin,

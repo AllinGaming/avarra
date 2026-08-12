@@ -10,6 +10,7 @@ resolution: workspace
 
 dependencies:
   avarra_client: ^0.1.0
+  avarra_content: ^0.1.0
   avarra_core: ^0.1.0
   avarra_ecs: ^0.1.0
   avarra_gameplay: ^0.1.0

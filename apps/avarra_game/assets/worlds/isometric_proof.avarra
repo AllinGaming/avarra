@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 4,
+  "contentSchemaVersion": 5,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero Prototype",
@@ -40,6 +40,16 @@
           "arrivalTolerance": 0.08
         },
         "avarra.player_controlled": {"schemaVersion": 1},
+        "avarra.health": {
+          "schemaVersion": 1,
+          "maximumHealth": 100
+        },
+        "avarra.combat.basic_attack": {
+          "schemaVersion": 1,
+          "damage": 10,
+          "range": 2.2,
+          "cooldownSeconds": 0.65
+        },
         "avarra.isometric.occlusion_target": {"schemaVersion": 1}
       }
     }
@@ -124,6 +134,37 @@
             "avarra.persistence.flags": {
               "schemaVersion": 1,
               "flags": {"activated": false}
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000009",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [1, 0.55, 2.8],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.55, 0.55, 0.55]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.55, 0.55, 0.55],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.health": {
+              "schemaVersion": 1,
+              "maximumHealth": 50
+            },
+            "avarra.combat.basic_attack": {
+              "schemaVersion": 1,
+              "damage": 25,
+              "range": 2.2,
+              "cooldownSeconds": 0.65
             }
           }
         }

@@ -47,6 +47,97 @@ void main() {
     );
     expect(rejected.rejection, InteractionRejection.blocked);
   });
+
+  group('combat', () {
+    test('applies deterministic damage, cooldown, death, and restart', () {
+      final fixture = _CombatFixture();
+
+      final first = fixture.system.attack(
+        attackerId: fixture.playerId,
+        targetId: fixture.targetId,
+        simulationTime: Duration.zero,
+      );
+      expect(first.accepted, isTrue);
+      expect(first.damageDealt, 25);
+      expect(first.remainingHealth, 15);
+      expect(first.targetKilled, isFalse);
+
+      final coolingDown = fixture.system.attack(
+        attackerId: fixture.playerId,
+        targetId: fixture.targetId,
+        simulationTime: const Duration(milliseconds: 499),
+      );
+      expect(coolingDown.rejection, CombatAttackRejection.cooldown);
+      expect(coolingDown.remainingCooldown, const Duration(milliseconds: 1));
+
+      final lethal = fixture.system.attack(
+        attackerId: fixture.playerId,
+        targetId: fixture.targetId,
+        simulationTime: const Duration(milliseconds: 500),
+      );
+      expect(lethal.targetKilled, isTrue);
+      expect(lethal.remainingHealth, 0);
+      expect(
+        fixture.system
+            .attack(
+              attackerId: fixture.playerId,
+              targetId: fixture.targetId,
+              simulationTime: const Duration(seconds: 1),
+            )
+            .rejection,
+        CombatAttackRejection.targetDead,
+      );
+
+      final spawn = _transform(Vector3(5, 0.45, 5));
+      expect(
+        fixture.system.restart(
+          entityId: fixture.targetId,
+          spawnTransform: spawn,
+        ),
+        isTrue,
+      );
+      final target = fixture.ecs.handleFor(fixture.targetId)!;
+      expect(fixture.ecs.component<HealthComponent>(target).currentHealth, 40);
+      expect(
+        fixture.ecs.component<TransformComponent>(target).position,
+        Vector3(5, 0.45, 5),
+      );
+    });
+
+    test('rejects out-of-range and obstructed attacks without cooldown', () {
+      final distant = _CombatFixture(targetPosition: Vector3(4, 0, 0));
+      expect(
+        distant.system
+            .attack(
+              attackerId: distant.playerId,
+              targetId: distant.targetId,
+              simulationTime: Duration.zero,
+            )
+            .rejection,
+        CombatAttackRejection.outOfRange,
+      );
+
+      final blocked = _CombatFixture(blocked: true);
+      expect(
+        blocked.system
+            .attack(
+              attackerId: blocked.playerId,
+              targetId: blocked.targetId,
+              simulationTime: Duration.zero,
+            )
+            .rejection,
+        CombatAttackRejection.blocked,
+      );
+      expect(
+        blocked.ecs
+            .component<BasicAttackStateComponent>(
+              blocked.ecs.handleFor(blocked.playerId)!,
+            )
+            .nextReadyAt,
+        Duration.zero,
+      );
+    });
+  });
 }
 
 final class _Fixture {
@@ -130,6 +221,59 @@ final class _InteractionFixture {
   );
   late final DeterministicPhysicsCollisionWorld collisionWorld;
   late final InteractionSystem system;
+}
+
+final class _CombatFixture {
+  _CombatFixture({Vector3? targetPosition, bool blocked = false}) {
+    final player = ecs.createEntity(entityId: playerId);
+    ecs
+      ..addComponent(player, _transform(Vector3.zero()))
+      ..addComponent(player, HealthComponent(maximumHealth: 100))
+      ..addComponent(
+        player,
+        BasicAttackComponent(
+          damage: 25,
+          range: 2,
+          cooldown: const Duration(milliseconds: 500),
+        ),
+      )
+      ..addComponent(player, const BasicAttackStateComponent());
+    final target = ecs.createEntity(entityId: targetId);
+    ecs
+      ..addComponent(target, _transform(targetPosition ?? Vector3(1.5, 0, 0)))
+      ..addComponent(target, HealthComponent(maximumHealth: 40))
+      ..addComponent(
+        target,
+        PhysicsColliderComponent.box(
+          halfExtents: Vector3.all(0.25),
+          bodyKind: PhysicsBodyKind.staticBody,
+        ),
+      );
+    if (blocked) {
+      final blocker = ecs.createEntity();
+      ecs
+        ..addComponent(blocker, _transform(Vector3(0.75, 0, 0)))
+        ..addComponent(
+          blocker,
+          PhysicsColliderComponent.box(
+            halfExtents: Vector3.all(0.1),
+            bodyKind: PhysicsBodyKind.staticBody,
+          ),
+        );
+    }
+    collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(ecs);
+    system = CombatSystem(ecs: ecs, collisionWorld: collisionWorld);
+  }
+
+  final EcsWorld ecs = EcsWorld();
+  final EntityId playerId = EntityId.parse(
+    '01890f47-e8b8-7a68-8000-000000000051',
+  );
+  final EntityId targetId = EntityId.parse(
+    '01890f47-e8b8-7a68-8000-000000000052',
+  );
+  late final DeterministicPhysicsCollisionWorld collisionWorld;
+  late final CombatSystem system;
 }
 
 TransformComponent _transform(Vector3 position) {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
@@ -43,14 +44,32 @@ void main() {
 
       expect(definition.name, 'Relay Zero Prototype');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 4);
+      expect(definition.contentSchemaVersion, 5);
       expect(definition.chunkSize, 4);
       expect(definition.chunks, hasLength(3));
-      expect(definition.allEntities, hasLength(8));
-      expect(runtime.ecs.entityCount, 4);
+      expect(definition.allEntities, hasLength(9));
+      expect(runtime.ecs.entityCount, 5);
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
       expect(streaming.activeOccluderEntityIds, hasLength(1));
+      final playerHandle = runtime.ecs.handleFor(
+        EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
+      )!;
+      expect(
+        runtime.ecs.component<HealthComponent>(playerHandle).currentHealth,
+        100,
+      );
+      expect(
+        runtime.ecs.component<BasicAttackComponent>(playerHandle).cooldown,
+        const Duration(milliseconds: 650),
+      );
+      final guardianHandle = runtime.ecs.handleFor(
+        EntityId.parse('01890f47-e8b8-7a68-8000-000000000009'),
+      )!;
+      expect(
+        runtime.ecs.component<HealthComponent>(guardianHandle).currentHealth,
+        50,
+      );
       final consoleHandle = runtime.ecs.handleFor(
         EntityId.parse('01890f47-e8b8-7a68-8000-000000000004'),
       )!;
