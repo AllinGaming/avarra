@@ -9,6 +9,9 @@ Canonical ECS and server packages do not depend on this package.
 Runtime synchronization is bounded: scene snapshots, camera state, and
 occlusion state retain only the latest pending value. Unchanged transforms,
 opacity, and projection parameters do not generate redundant native calls.
+The latest-value queue has explicit coalescing and error-recovery tests, and
+opacity state is read from each live Thermion object so destroy/recreate does
+not reuse a stale entity-ID cache.
 
 Thermion is pinned to official `v0.5.0-pre.5` commit
 `caad37835e7d379621247b24b7de9d84071bd474` while the integration is

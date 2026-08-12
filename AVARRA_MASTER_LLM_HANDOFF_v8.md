@@ -3621,9 +3621,9 @@ unknown authored world entities remain controlled by chunk streaming.
 
 The consolidated CI-equivalent pass produced:
 
-- formatter: 134 Dart files formatted;
+- formatter: 138 Dart files formatted;
 - analyzer: no issues;
-- 133 passing tests across all 17 package/application suites;
+- 142 passing tests across all 17 package/application suites;
 - protocol-v2 canonical round trips and strict unknown-field rejection;
 - exact memory/TCP frame and byte accounting;
 - two concurrent players with independent controlled entities and movement;
@@ -3713,6 +3713,41 @@ startup; the new 9–11 ms captures demonstrate that stale renderer work was the
 dominant regression. These are emulator observations, not a physical-device
 performance budget or percentile study.
 
+## Multiplayer robustness follow-up
+
+The 2026-08-12 robustness pass closes five issues found after the controls
+work:
+
+- listen-host movement now runs through the same deterministic box-sweep and
+  wall-slide system as offline movement instead of directly translating the
+  authoritative transform;
+- predicted movement and replay also use the client collision world, while the
+  server remains authoritative and corrects any streamed-world mismatch;
+- unacknowledged input history is ordered, capped at 60 entries, and pauses new
+  prediction after two seconds without acknowledgment rather than growing
+  indefinitely;
+- remote player avatars interpolate position, rotation, and scale across one
+  negotiated snapshot interval;
+- scene, camera, and occlusion work now share a tested latest-only async queue.
+  Opacity deduplication remains on the lifecycle-scoped Thermion object, so a
+  destroyed and recreated stable entity cannot inherit a stale viewport cache.
+
+The proof host also copies the authored character collider/controller to
+dynamic avatars and uses collision-safe offsets for its bounded four-player
+proof layout. A real loopback TCP test submits repeated movement into the
+authored wall and confirms the authoritative player stops at `x=1.5`; the
+independent second-player movement test continues to pass.
+
+The rebuilt release-host APK was then reinstalled on the same Pixel 10 Pro
+emulator for a focused robustness smoke check. It joined its embedded host as
+`1/4` clients, and a 0.9-second forward hold advanced the authoritative
+acknowledgment from `-` through `26` and crossed from chunk `0,0` to `0,-1`.
+The post-input HUD reported 7.87 ms average / 87.52 ms launch-maximum frame
+time and 0.32 ms average / 4.77 ms maximum host tick time. Process-local logs
+contained no fatal signal, Flutter error, unhandled exception, or failed
+assertion signature. The Android release APK, configured Windows release
+client, and AOT server executable all rebuilt successfully for this pass.
+
 ## Provisional limits and remaining gates
 
 - Physical Android direct-LAN hosting is still unvalidated; the functional
@@ -3732,10 +3767,11 @@ performance budget or percentile study.
 - The host player's existing local save can be flushed on background, but
   authoritative multi-player persistence and disconnected remote-player saves
   are not yet integrated.
-- Remote-entity interpolation, degraded-network simulation, host migration,
-  and indefinite Android background hosting remain absent. The current local
+- Degraded-network simulation, non-player interpolation, host migration, and
+  indefinite Android background hosting remain absent. The current local
   prediction/reconciliation path is intentionally limited to proof-character
-  movement.
+  movement, and the dynamic spawn layout is a bounded proof policy rather than
+  a general spawn-placement system.
 
 Before treating Stage 9 as a physical-device gate pass, repeat Android host →
 Windows client over direct Wi-Fi and record sustained frame/tick percentiles,
@@ -4220,8 +4256,15 @@ replay unacknowledged inputs
 Remote entities should eventually interpolate between snapshots.
 
 The first five steps are implemented for direct proof-character movement.
-Remote interpolation, collision-aware/general rollback, and degraded-network
-tuning remain future work.
+Remote player avatars now interpolate across one snapshot interval. General
+rollback, non-player interpolation, and degraded-network tuning remain future
+work. Pending prediction is capped at 60 inputs and pauses after a two-second
+acknowledgment stall.
+
+Both authoritative and predicted proof-character movement use the shared
+deterministic box-sweep and wall-slide implementation. Authority owns the final
+result; the client replays through its currently streamed collision world and
+accepts correction when its local world view differs.
 
 ---
 
@@ -6999,6 +7042,9 @@ Status:
 - Held/multitouch directions, host-rate input pacing, controlled-player local
   prediction/reconciliation, and latest-only renderer synchronization are
   implemented in the controls/performance follow-up.
+- The robustness follow-up adds authoritative collision parity, a bounded
+  stall-aware input history, remote-player interpolation, collision-safe proof
+  spawns, and explicit latest-queue/reconciliation tests.
 
 Gate:
 
@@ -7025,7 +7071,7 @@ Gate status (updated 2026-08-12):
   authoritative entities, and host input acknowledgment `75`;
 - all requested measurements were captured and the background/end policy
   passed without crash signatures;
-- 133 automated tests, Android release, Windows release, and AOT server builds
+- 142 automated tests, Android release, Windows release, and AOT server builds
   pass;
 - a 1.2-second Android hold reached acknowledgment `35`, crossed a chunk
   boundary, and a post-fix capture reported 9.01 ms average frame time versus
@@ -7231,6 +7277,13 @@ is coupled to Flutter Scene and Flutter UI rather than the server-safe runtime
 boundary. `box3d` 0.1.0 has the closest API and platform shape, but its
 hooks/native-toolchain v2 dependency cannot resolve with the pinned Thermion
 hooks-v1 toolchain. See ADR-018.
+
+Stage 9 follow-up evidence (2026-08-12): listen-host authority and local
+prediction/reconciliation now both use the same deterministic character
+movement and static-box collision implementation. A real TCP test repeatedly
+drives the authoritative player into the authored wall and confirms it stops
+at `x=1.5`. This strengthens the provisional character-controller choice; it
+does not close the general rigid-body solver decision.
 
 Criteria:
 
@@ -8877,6 +8930,15 @@ compares immutable presentation values before invoking backend updates, while
 opacity and projection calls are also skipped when unchanged. Canonical ECS
 state remains independent of these presentation optimizations.
 
+The follow-up robustness rule is that authoritative and predicted proof-player
+movement both call `CharacterMovementSystem`; neither networking side may
+maintain a second translation-only movement implementation. The host owns a
+collision world containing the authored static colliders and copies the proof
+character controller/collider onto dynamic avatars. Client pending input is
+bounded to 60 entries and pauses after a two-second acknowledgment stall.
+Remote `playerAvatar` transforms interpolate over one negotiated snapshot
+interval; authored world transforms still apply directly.
+
 Keep metrics at their ownership boundaries:
 
 - server runtime: tick duration, authoritative entities, clients, framed bytes;
@@ -8905,6 +8967,11 @@ and indefinite background service behavior remain out of scope.
   separate future decisions.
 - Latest-state renderer coalescing deliberately permits intermediate visual
   snapshots to be skipped when the native renderer is slower than simulation.
+- Bounded prediction favors visible correction and input pause over unbounded
+  memory or runaway client divergence when acknowledgment stalls.
+- Collision-safe dynamic avatar offsets are sufficient for the four-player
+  proof world, but general spawn validation/selection remains future gameplay
+  infrastructure.
 - Importing the Avarra Server library from Game is acceptable for this
   headless/listen composition. Extract it to a dedicated shared host package
   only if another product consumer proves that boundary useful.

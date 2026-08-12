@@ -21,6 +21,11 @@ and simultaneous directions. Multiplayer movement is host-rate paced, locally
 predicted, and reconciled against authoritative acknowledgments. Backgrounding
 ends a hosted session safely.
 
+The robustness follow-up bounds prediction to 60 pending inputs with a
+two-second acknowledgment-stall pause, replays prediction through the same
+collision system used by authority, and interpolates remote player avatars
+across one host snapshot interval.
+
 The current `.avarra` JSON file is a prototype definition container. User
 import/export, cooked archive packaging, hashing, and package resource budgets
 remain later milestones.

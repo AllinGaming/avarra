@@ -148,6 +148,8 @@ held and simultaneous touch directions, 30 Hz input pacing, local authoritative
 reconciliation, and bounded latest-only renderer synchronization. Its release
 emulator capture averaged 9–11 ms per frame and a 1.2-second hold produced 36
 sequenced movement submissions with latest authoritative acknowledgment `35`.
+The subsequent robustness pass routes authority and prediction through shared
+collision queries, bounds stalled prediction, and interpolates remote players.
 See
 `docs/adr/ADR-022-stage-9-android-listen-host.md` and
 `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`.

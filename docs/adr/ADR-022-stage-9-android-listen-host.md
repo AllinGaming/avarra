@@ -54,6 +54,15 @@ compares immutable presentation values before invoking backend updates, while
 opacity and projection calls are also skipped when unchanged. Canonical ECS
 state remains independent of these presentation optimizations.
 
+The follow-up robustness rule is that authoritative and predicted proof-player
+movement both call `CharacterMovementSystem`; neither networking side may
+maintain a second translation-only movement implementation. The host owns a
+collision world containing the authored static colliders and copies the proof
+character controller/collider onto dynamic avatars. Client pending input is
+bounded to 60 entries and pauses after a two-second acknowledgment stall.
+Remote `playerAvatar` transforms interpolate over one negotiated snapshot
+interval; authored world transforms still apply directly.
+
 Keep metrics at their ownership boundaries:
 
 - server runtime: tick duration, authoritative entities, clients, framed bytes;
@@ -82,6 +91,11 @@ and indefinite background service behavior remain out of scope.
   separate future decisions.
 - Latest-state renderer coalescing deliberately permits intermediate visual
   snapshots to be skipped when the native renderer is slower than simulation.
+- Bounded prediction favors visible correction and input pause over unbounded
+  memory or runaway client divergence when acknowledgment stalls.
+- Collision-safe dynamic avatar offsets are sufficient for the four-player
+  proof world, but general spawn validation/selection remains future gameplay
+  infrastructure.
 - Importing the Avarra Server library from Game is acceptable for this
   headless/listen composition. Extract it to a dedicated shared host package
   only if another product consumer proves that boundary useful.

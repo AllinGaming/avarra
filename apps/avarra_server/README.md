@@ -16,6 +16,10 @@ snapshots. Protocol v2 assigns each connection an independent controlled
 avatar; the initial host limit is four clients. The proof mode is not a
 production discovery/authentication/service daemon.
 
+Listen-host player movement uses the shared deterministic kinematic
+box-sweep/wall-slide system. Dynamic proof avatars copy the authored character
+controller and collider rather than bypassing authoritative collision.
+
 ```powershell
 dart run bin/avarra_server.dart --multiplayer `
   --world=../../apps/avarra_game/assets/worlds/isometric_proof.avarra

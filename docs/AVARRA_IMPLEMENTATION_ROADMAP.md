@@ -366,6 +366,9 @@ Status:
 - Held/multitouch directions, host-rate input pacing, controlled-player local
   prediction/reconciliation, and latest-only renderer synchronization are
   implemented in the controls/performance follow-up.
+- The robustness follow-up adds authoritative collision parity, a bounded
+  stall-aware input history, remote-player interpolation, collision-safe proof
+  spawns, and explicit latest-queue/reconciliation tests.
 
 Gate:
 
@@ -392,7 +395,7 @@ Gate status (updated 2026-08-12):
   authoritative entities, and host input acknowledgment `75`;
 - all requested measurements were captured and the background/end policy
   passed without crash signatures;
-- 133 automated tests, Android release, Windows release, and AOT server builds
+- 142 automated tests, Android release, Windows release, and AOT server builds
   pass;
 - a 1.2-second Android hold reached acknowledgment `35`, crossed a chunk
   boundary, and a post-fix capture reported 9.01 ms average frame time versus

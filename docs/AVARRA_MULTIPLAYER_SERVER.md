@@ -175,8 +175,15 @@ replay unacknowledged inputs
 Remote entities should eventually interpolate between snapshots.
 
 The first five steps are implemented for direct proof-character movement.
-Remote interpolation, collision-aware/general rollback, and degraded-network
-tuning remain future work.
+Remote player avatars now interpolate across one snapshot interval. General
+rollback, non-player interpolation, and degraded-network tuning remain future
+work. Pending prediction is capped at 60 inputs and pauses after a two-second
+acknowledgment stall.
+
+Both authoritative and predicted proof-character movement use the shared
+deterministic box-sweep and wall-slide implementation. Authority owns the final
+result; the client replays through its currently streamed collision world and
+accepts correction when its local world view differs.
 
 ---
 

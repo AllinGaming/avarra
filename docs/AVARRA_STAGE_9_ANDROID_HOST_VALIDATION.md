@@ -68,9 +68,9 @@ unknown authored world entities remain controlled by chunk streaming.
 
 The consolidated CI-equivalent pass produced:
 
-- formatter: 134 Dart files formatted;
+- formatter: 138 Dart files formatted;
 - analyzer: no issues;
-- 133 passing tests across all 17 package/application suites;
+- 142 passing tests across all 17 package/application suites;
 - protocol-v2 canonical round trips and strict unknown-field rejection;
 - exact memory/TCP frame and byte accounting;
 - two concurrent players with independent controlled entities and movement;
@@ -160,6 +160,41 @@ startup; the new 9–11 ms captures demonstrate that stale renderer work was the
 dominant regression. These are emulator observations, not a physical-device
 performance budget or percentile study.
 
+## Multiplayer robustness follow-up
+
+The 2026-08-12 robustness pass closes five issues found after the controls
+work:
+
+- listen-host movement now runs through the same deterministic box-sweep and
+  wall-slide system as offline movement instead of directly translating the
+  authoritative transform;
+- predicted movement and replay also use the client collision world, while the
+  server remains authoritative and corrects any streamed-world mismatch;
+- unacknowledged input history is ordered, capped at 60 entries, and pauses new
+  prediction after two seconds without acknowledgment rather than growing
+  indefinitely;
+- remote player avatars interpolate position, rotation, and scale across one
+  negotiated snapshot interval;
+- scene, camera, and occlusion work now share a tested latest-only async queue.
+  Opacity deduplication remains on the lifecycle-scoped Thermion object, so a
+  destroyed and recreated stable entity cannot inherit a stale viewport cache.
+
+The proof host also copies the authored character collider/controller to
+dynamic avatars and uses collision-safe offsets for its bounded four-player
+proof layout. A real loopback TCP test submits repeated movement into the
+authored wall and confirms the authoritative player stops at `x=1.5`; the
+independent second-player movement test continues to pass.
+
+The rebuilt release-host APK was then reinstalled on the same Pixel 10 Pro
+emulator for a focused robustness smoke check. It joined its embedded host as
+`1/4` clients, and a 0.9-second forward hold advanced the authoritative
+acknowledgment from `-` through `26` and crossed from chunk `0,0` to `0,-1`.
+The post-input HUD reported 7.87 ms average / 87.52 ms launch-maximum frame
+time and 0.32 ms average / 4.77 ms maximum host tick time. Process-local logs
+contained no fatal signal, Flutter error, unhandled exception, or failed
+assertion signature. The Android release APK, configured Windows release
+client, and AOT server executable all rebuilt successfully for this pass.
+
 ## Provisional limits and remaining gates
 
 - Physical Android direct-LAN hosting is still unvalidated; the functional
@@ -179,10 +214,11 @@ performance budget or percentile study.
 - The host player's existing local save can be flushed on background, but
   authoritative multi-player persistence and disconnected remote-player saves
   are not yet integrated.
-- Remote-entity interpolation, degraded-network simulation, host migration,
-  and indefinite Android background hosting remain absent. The current local
+- Degraded-network simulation, non-player interpolation, host migration, and
+  indefinite Android background hosting remain absent. The current local
   prediction/reconciliation path is intentionally limited to proof-character
-  movement.
+  movement, and the dynamic spawn layout is a bounded proof policy rather than
+  a general spawn-placement system.
 
 Before treating Stage 9 as a physical-device gate pass, repeat Android host →
 Windows client over direct Wi-Fi and record sustained frame/tick percentiles,

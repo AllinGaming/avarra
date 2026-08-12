@@ -69,6 +69,13 @@ boundary. `box3d` 0.1.0 has the closest API and platform shape, but its
 hooks/native-toolchain v2 dependency cannot resolve with the pinned Thermion
 hooks-v1 toolchain. See ADR-018.
 
+Stage 9 follow-up evidence (2026-08-12): listen-host authority and local
+prediction/reconciliation now both use the same deterministic character
+movement and static-box collision implementation. A real TCP test repeatedly
+drives the authoritative player into the authored wall and confirms it stops
+at `x=1.5`. This strengthens the provisional character-controller choice; it
+does not close the general rigid-body solver decision.
+
 Criteria:
 
 ```text
