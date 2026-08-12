@@ -9,7 +9,10 @@ environment:
 resolution: workspace
 
 dependencies:
+  avarra_content: ^0.1.0
   avarra_core: ^0.1.0
+  avarra_creator_api: ^0.1.0
+  avarra_world: ^0.1.0
   flutter:
     sdk: flutter
 

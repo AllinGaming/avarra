@@ -23,8 +23,10 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
+import 'src/world_package_source_loader.dart';
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
+const _configuredWorldPath = String.fromEnvironment('AVARRA_WORLD_PATH');
 const _fixedDeltaSeconds = 1 / 60;
 const _configuredMultiplayerHost = String.fromEnvironment(
   'AVARRA_MULTIPLAYER_HOST',
@@ -181,7 +183,11 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       ecs: runtimeWorld.ecs,
       repository: SaveRepository(store: await widget.saveStoreLoader()),
       dirtyState: DirtyStateTracker(),
-      saveId: _proofSaveId,
+      saveId: saveIdForWorldPackageSource(
+        configuredFilePath: _configuredWorldPath,
+        worldId: definition.id,
+        bundledSaveId: _proofSaveId,
+      ),
       worldId: definition.id,
       sourceWorldFormatVersion: definition.worldFormatVersion,
       chunkSize: definition.chunkSize!,
@@ -1445,7 +1451,10 @@ final _movementKeys = {
 };
 
 Future<String> _loadBundledProofWorld() {
-  return rootBundle.loadString(_proofWorldAssetPath);
+  return loadWorldPackageSource(
+    configuredFilePath: _configuredWorldPath,
+    bundledAssetPath: _proofWorldAssetPath,
+  );
 }
 
 Future<SaveStore> _loadDefaultSaveStore() async {

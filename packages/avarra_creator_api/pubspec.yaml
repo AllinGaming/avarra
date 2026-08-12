@@ -1,0 +1,17 @@
+name: avarra_creator_api
+description: Typed, validated, undoable world-editing commands for Avarra Forge.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.12.2
+
+resolution: workspace
+
+dependencies:
+  avarra_content: ^0.1.0
+  avarra_core: ^0.1.0
+  avarra_world: ^0.1.0
+
+dev_dependencies:
+  test: ^1.26.3

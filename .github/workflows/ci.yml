@@ -44,6 +44,10 @@ jobs:
         working-directory: packages/avarra_content
         run: dart test
 
+      - name: Test Creator Commands
+        working-directory: packages/avarra_creator_api
+        run: dart test
+
       - name: Test World Loading
         working-directory: packages/avarra_world
         run: dart test
