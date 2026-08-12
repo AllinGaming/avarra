@@ -468,6 +468,15 @@ Windows release client and displayed two clients; physical direct-LAN and
 sustained device profiling remain open. See
 `AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md` and ADR-022.
 
+Stage 10 begins Forge with a pure-Dart typed command boundary and separate
+Flutter desktop shell. Human hierarchy/inspector actions create/delete entities
+and replace transforms through validated immutable world snapshots with
+stable-ID undo/redo. Forge exports canonical prototype `.avarra` source only
+after the shared world codec and playable-entry gate pass; Game can load that
+desktop export through `AVARRA_WORLD_PATH` without depending on Forge. The
+initial viewport is an isometric editor schematic, not a renderer replacement.
+See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+
 ---
 
 # 12. World Direction

@@ -426,6 +426,23 @@ Gate:
 
 > Forge creates a tiny world that game imports.
 
+Gate status (initial vertical slice, updated 2026-08-12):
+
+- a pure-Dart typed command session provides validated create/delete/transform
+  edits with stable-ID undo/redo;
+- the Forge desktop shell provides hierarchy, selectable isometric schematic,
+  transform inspector, validation, and canonical export;
+- the included player/ground/console world exports through the strict package
+  codec and instantiates through Game's `RuntimeWorldLoader` boundary;
+- Game accepts the exported desktop file through `AVARRA_WORLD_PATH` while
+  retaining its bundled default;
+- 150 tests across 18 suites, analysis, Forge/Game Windows release builds, and
+  a 12-second native startup/import smoke pass;
+- richer source projects, a shared 3D Forge viewport, generic component
+  editing, asset cooking, and final archive packaging remain open.
+
+See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+
 ---
 
 # Stage 10A — Creator API / AI Foundation

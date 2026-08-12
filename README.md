@@ -38,21 +38,23 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 13. `docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md`
 14. `docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`
 15. `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`
-16. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-17. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-18. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-19. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-20. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-21. `docs/AVARRA_OPEN_DECISIONS.md`
-22. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-23. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-24. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-25. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-26. ADRs under `docs/adr/`
+16. `docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`
+17. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+18. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+19. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+20. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+21. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+22. `docs/AVARRA_OPEN_DECISIONS.md`
+23. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+24. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+25. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+26. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+27. ADRs under `docs/adr/`
 
 ## Implementation status
 
-Stages 0 through 9 have implemented prototype slices.
+Stages 0 through 9 and the initial Stage 10 Forge vertical slice have
+implemented prototype slices.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -76,6 +78,7 @@ packages/
   avarra_persistence/ Dart — versioned saves, dirty state, and recoverable storage
   avarra_network/ Dart — strict messages and provisional framed TCP transport
   avarra_replication/ Dart — authoritative sessions, interest, and client mirrors
+  avarra_creator_api/ Dart — typed, validated, undoable Forge world commands
   avarra_scene_bridge/ Dart — renderer adapter contract and handle mapping
   avarra_thermion_bridge/ Flutter — Thermion/Filament scene adapter and viewport
 ```
@@ -154,6 +157,14 @@ See
 `docs/adr/ADR-022-stage-9-android-listen-host.md` and
 `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`.
 
+Stage 10 adds the first working Forge editor loop: a hierarchy, selectable
+isometric schematic, typed transform inspector, entity add/delete, undo/redo,
+validation, and canonical export. The pure-Dart creator command session rejects
+invalid candidate worlds atomically, and Game can load a Forge file through
+`AVARRA_WORLD_PATH`. See
+`docs/adr/ADR-023-stage-10-forge-command-foundation.md` and
+`docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`.
+
 The root uses a native Dart Pub workspace. Resolve dependencies with:
 
 ```powershell
@@ -170,6 +181,7 @@ dart test packages/avarra_content
 dart test packages/avarra_persistence
 dart test packages/avarra_network
 dart test packages/avarra_replication
+dart test packages/avarra_creator_api
 dart test packages/avarra_world
 dart test packages/avarra_streaming
 dart test packages/avarra_physics

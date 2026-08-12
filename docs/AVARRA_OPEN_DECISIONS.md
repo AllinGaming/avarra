@@ -360,6 +360,11 @@ chunk-local entity definitions. It still decodes the complete JSON document
 before asynchronous in-memory chunk activation, so it does not decide the
 future random-access container or cooked chunk encoding.
 
+Stage 10 exposes canonical JSON export only as a local Forge-to-Game foundation
+gate. The proof file still references assets packaged by Game and has no archive,
+cooking, trust, or distribution semantics. This evidence exercises the creator
+command/validation boundary without closing the container decision.
+
 Before creator import/export and distribution, decide from measured product
 requirements:
 

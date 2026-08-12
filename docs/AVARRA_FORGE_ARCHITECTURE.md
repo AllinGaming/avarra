@@ -1,5 +1,7 @@
 # AVARRA — Forge Architecture
 
+**Implementation status:** Stage 10 foundation implemented 2026-08-12
+
 ---
 
 # 1. Purpose
@@ -74,6 +76,13 @@ agent/MCP tooling
 testing
 ```
 
+The initial `avarra_creator_api` implementation now supplies typed
+`world.create_entity`, `world.delete_entity`, `world.set_transform`, and
+`world.rename` commands. `CreatorWorldSession` holds immutable validated world
+snapshots and undo/redo history. The human Forge UI uses this boundary directly;
+Stage 10A will add staging transactions, permissions, and semantic diffs around
+the same command model.
+
 ---
 
 # 5. Component Metadata
@@ -108,6 +117,11 @@ validated/cooked world package
 ```
 
 Do not ship the entire editor source project to players.
+
+Stage 10 currently edits a `WorldDefinition` in memory and exports canonical
+prototype `.avarra` JSON. A richer source-project format, editor-only metadata,
+asset cooking, and the final archive container remain open and must not be
+inferred from this proof.
 
 ---
 
@@ -160,6 +174,11 @@ navigation issues
 duplicate IDs
 package size
 ```
+
+The first gate reuses `WorldPackageCodec` for the same schema, stable-ID,
+component, reference, chunk-local transform, and package validation used by
+Game/Server. Export additionally requires exactly one player entry. The broader
+navigation and measured mobile-budget suites above remain future work.
 
 ---
 

@@ -30,6 +30,11 @@ The current `.avarra` JSON file is a prototype definition container. User
 import/export, cooked archive packaging, hashing, and package resource budgets
 remain later milestones.
 
+Desktop builds can load a validated Forge export instead of the bundled proof
+world with `--dart-define=AVARRA_WORLD_PATH=<path>`. The imported definition
+still uses Game-packaged asset paths; the prototype file is not yet a
+self-contained asset archive.
+
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
 The Stage 7 emulator gate also passed disk-backed player/chunk restoration after

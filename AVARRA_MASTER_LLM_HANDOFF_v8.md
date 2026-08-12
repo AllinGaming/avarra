@@ -477,6 +477,15 @@ Windows release client and displayed two clients; physical direct-LAN and
 sustained device profiling remain open. See
 `AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md` and ADR-022.
 
+Stage 10 begins Forge with a pure-Dart typed command boundary and separate
+Flutter desktop shell. Human hierarchy/inspector actions create/delete entities
+and replace transforms through validated immutable world snapshots with
+stable-ID undo/redo. Forge exports canonical prototype `.avarra` source only
+after the shared world codec and playable-entry gate pass; Game can load that
+desktop export through `AVARRA_WORLD_PATH` without depending on Forge. The
+initial viewport is an isometric editor schematic, not a renderer replacement.
+See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+
 ---
 
 # 12. World Direction
@@ -4386,6 +4395,8 @@ Network architecture is not considered robust until tested under degraded condit
 
 # AVARRA — Forge Architecture
 
+**Implementation status:** Stage 10 foundation implemented 2026-08-12
+
 ---
 
 # 1. Purpose
@@ -4460,6 +4471,13 @@ agent/MCP tooling
 testing
 ```
 
+The initial `avarra_creator_api` implementation now supplies typed
+`world.create_entity`, `world.delete_entity`, `world.set_transform`, and
+`world.rename` commands. `CreatorWorldSession` holds immutable validated world
+snapshots and undo/redo history. The human Forge UI uses this boundary directly;
+Stage 10A will add staging transactions, permissions, and semantic diffs around
+the same command model.
+
 ---
 
 # 5. Component Metadata
@@ -4494,6 +4512,11 @@ validated/cooked world package
 ```
 
 Do not ship the entire editor source project to players.
+
+Stage 10 currently edits a `WorldDefinition` in memory and exports canonical
+prototype `.avarra` JSON. A richer source-project format, editor-only metadata,
+asset cooking, and the final archive container remain open and must not be
+inferred from this proof.
 
 ---
 
@@ -4546,6 +4569,11 @@ navigation issues
 duplicate IDs
 package size
 ```
+
+The first gate reuses `WorldPackageCodec` for the same schema, stable-ID,
+component, reference, chunk-local transform, and package validation used by
+Game/Server. Export additionally requires exactly one player entry. The broader
+navigation and measured mobile-budget suites above remain future work.
 
 ---
 
@@ -7102,6 +7130,23 @@ Gate:
 
 > Forge creates a tiny world that game imports.
 
+Gate status (initial vertical slice, updated 2026-08-12):
+
+- a pure-Dart typed command session provides validated create/delete/transform
+  edits with stable-ID undo/redo;
+- the Forge desktop shell provides hierarchy, selectable isometric schematic,
+  transform inspector, validation, and canonical export;
+- the included player/ground/console world exports through the strict package
+  codec and instantiates through Game's `RuntimeWorldLoader` boundary;
+- Game accepts the exported desktop file through `AVARRA_WORLD_PATH` while
+  retaining its bundled default;
+- 150 tests across 18 suites, analysis, Forge/Game Windows release builds, and
+  a 12-second native startup/import smoke pass;
+- richer source projects, a shared 3D Forge viewport, generic component
+  editing, asset cooking, and final archive packaging remain open.
+
+See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
+
 ---
 
 # Stage 10A — Creator API / AI Foundation
@@ -7568,6 +7613,11 @@ Stage 6 evolves the prototype to world format v2 by adding chunk metadata and
 chunk-local entity definitions. It still decodes the complete JSON document
 before asynchronous in-memory chunk activation, so it does not decide the
 future random-access container or cooked chunk encoding.
+
+Stage 10 exposes canonical JSON export only as a local Forge-to-Game foundation
+gate. The proof file still references assets packaged by Game and has no archive,
+cooking, trust, or distribution semantics. This evidence exercises the creator
+command/validation boundary without closing the container decision.
 
 Before creator import/export and distribution, decide from measured product
 requirements:
