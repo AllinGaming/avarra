@@ -13,6 +13,7 @@ dependencies:
   avarra_ecs: ^0.1.0
   avarra_gameplay: ^0.1.0
   avarra_network: ^0.1.0
+  avarra_physics: ^0.1.0
   avarra_replication: ^0.1.0
   avarra_world: ^0.1.0
   vector_math: ^2.2.0

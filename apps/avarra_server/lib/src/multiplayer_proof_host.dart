@@ -6,6 +6,7 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
+import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:vector_math/vector_math_64.dart';
@@ -37,6 +38,8 @@ final class MultiplayerProofHost {
     required this.content,
     required this.transport,
     required this.replication,
+    required this.collisionWorld,
+    required this.movementSystem,
     required this.tickRateHz,
     required this.playerEntityId,
     required this.primaryPlayerId,
@@ -121,11 +124,20 @@ final class MultiplayerProofHost {
     if (listenAddresses.isEmpty) {
       listenAddresses.add(InternetAddress.loopbackIPv4.address);
     }
+    final collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
+      runtimeWorld.ecs,
+    );
+    final movementSystem = CharacterMovementSystem(
+      ecs: runtimeWorld.ecs,
+      collisionWorld: collisionWorld,
+    );
     host = MultiplayerProofHost._(
       runtimeWorld: runtimeWorld,
       content: content,
       transport: transport,
       replication: replication,
+      collisionWorld: collisionWorld,
+      movementSystem: movementSystem,
       tickRateHz: tickRateHz,
       playerEntityId: player.entityId,
       primaryPlayerId: primaryPlayerId,
@@ -147,6 +159,8 @@ final class MultiplayerProofHost {
   final ContentHandshake content;
   final TcpNetworkTransportServer transport;
   final AuthoritativeReplicationServer replication;
+  final DeterministicPhysicsCollisionWorld collisionWorld;
+  final CharacterMovementSystem movementSystem;
   final int tickRateHz;
   final EntityId playerEntityId;
   final PlayerId primaryPlayerId;
@@ -205,6 +219,7 @@ final class MultiplayerProofHost {
     _retireDisconnectedConnections(const {});
     await transport.close();
     await _events.close();
+    collisionWorld.dispose();
   }
 
   Future<void> _accept(NetworkTransportConnection connection) async {
@@ -244,7 +259,7 @@ final class MultiplayerProofHost {
       TransformComponent(
         position:
             templateTransform.position +
-            Vector3(0.65 * connectionId.value, 0, 0.65),
+            Vector3(-0.75 * (connectionId.value - 1), 0, 0),
         rotation: templateTransform.rotation.clone(),
         scale: templateTransform.scale.clone(),
       ),
@@ -266,6 +281,19 @@ final class MultiplayerProofHost {
           moveSpeed: controller.moveSpeed,
           skinWidth: controller.skinWidth,
           arrivalTolerance: controller.arrivalTolerance,
+        ),
+      );
+    }
+    final collider = runtimeWorld.ecs.tryComponent<PhysicsColliderComponent>(
+      template,
+    );
+    if (collider != null) {
+      runtimeWorld.ecs.addComponent(
+        handle,
+        PhysicsColliderComponent.box(
+          halfExtents: collider.halfExtents,
+          bodyKind: collider.bodyKind,
+          isSensor: collider.isSensor,
         ),
       );
     }
@@ -323,28 +351,13 @@ final class MultiplayerProofHost {
   }
 
   Vector3 _applyMovement(EntityId entityId, MovementIntentMessage intent) {
-    final handle = runtimeWorld.ecs.handleFor(entityId)!;
-    final transform = runtimeWorld.ecs.component<TransformComponent>(handle);
-    final controller = runtimeWorld.ecs.component<CharacterControllerComponent>(
-      handle,
-    );
-    final direction = Vector3(intent.directionX, 0, intent.directionZ);
-    if (direction.length2 > 1) {
-      direction.normalize();
-    }
-    final position =
-        transform.position + (direction * (controller.moveSpeed / tickRateHz));
-    final rotation = direction.length2 <= 1e-12
-        ? transform.rotation
-        : Quaternion.axisAngle(
-            Vector3(0, 1, 0),
-            _yawFor(direction.x, direction.z),
-          );
-    runtimeWorld.ecs.replaceComponent(
-      handle,
-      transform.copyWith(position: position, rotation: rotation),
-    );
-    return position;
+    return movementSystem
+        .moveDirection(
+          entityId: entityId,
+          direction: Vector3(intent.directionX, 0, intent.directionZ),
+          deltaSeconds: 1 / tickRateHz,
+        )
+        .position;
   }
 
   void _updateInterest(NetworkConnectionId connectionId) {
@@ -392,8 +405,4 @@ final class MultiplayerProofHost {
       }
     }
   }
-}
-
-double _yawFor(double x, double z) {
-  return x == 0 && z == 0 ? 0 : math.atan2(x, z);
 }

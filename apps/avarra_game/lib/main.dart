@@ -315,7 +315,10 @@ class _PresentationBoundaryScreenState
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
   final Map<int, Vector3> _touchMovementByPointer = {};
-  final Map<int, Vector3> _pendingMovementInputs = {};
+  final PendingMovementInputBuffer _pendingMovementInputs =
+      PendingMovementInputBuffer();
+  final MovementInputPacer _movementInputPacer = MovementInputPacer();
+  final Map<EntityId, NetworkTransformInterpolator> _remoteInterpolators = {};
   final Stopwatch _movementClock = Stopwatch()..start();
   late IsometricCameraRig _cameraRig;
   EntityId? _selectedEntityId;
@@ -336,7 +339,7 @@ class _PresentationBoundaryScreenState
   int _totalFrameMicroseconds = 0;
   int _maximumFrameMicroseconds = 0;
   bool _hostEnding = false;
-  int _nextNetworkInputMicroseconds = 0;
+  bool _inputSubmissionPaused = false;
   String _interactionStatus = 'Select the console, then interact';
 
   @override
@@ -866,6 +869,7 @@ class _PresentationBoundaryScreenState
     if (!mounted) {
       return;
     }
+    _updateRemotePlayerInterpolation();
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
       var direction = _directMovementDirection;
@@ -929,24 +933,45 @@ class _PresentationBoundaryScreenState
 
   void _sendMultiplayerMovement(ReplicationClient client, Vector3 direction) {
     final now = _movementClock.elapsedMicroseconds;
-    final minimumInterval =
-        Duration.microsecondsPerSecond ~/ (client.tickRateHz ?? 30);
-    if (now < _nextNetworkInputMicroseconds) {
+    if (!_pendingMovementInputs.canSubmitAt(now)) {
+      if (!_inputSubmissionPaused && mounted) {
+        _inputSubmissionPaused = true;
+        setState(() {
+          _multiplayerStatus =
+              'Network stalled · awaiting input acknowledgment';
+        });
+      }
       return;
     }
-    final lateness = now - _nextNetworkInputMicroseconds;
-    _nextNetworkInputMicroseconds = lateness > minimumInterval
-        ? now + minimumInterval
-        : _nextNetworkInputMicroseconds + minimumInterval;
+    if (!_movementInputPacer.shouldSubmitAt(
+      now,
+      tickRateHz: client.tickRateHz ?? 30,
+    )) {
+      return;
+    }
     final planar = Vector3(direction.x, 0, direction.z);
     if (planar.length > 1) {
       planar.normalize();
     }
-    final submission = client.submitMovementIntent(
-      directionX: planar.x,
-      directionZ: planar.z,
+    late final MovementIntentSubmission submission;
+    try {
+      submission = client.submitMovementIntent(
+        directionX: planar.x,
+        directionZ: planar.z,
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _multiplayerStatus = 'Input failed: $error';
+        });
+      }
+      return;
+    }
+    _pendingMovementInputs.add(
+      sequence: submission.sequence,
+      direction: planar,
+      submittedAtMicroseconds: now,
     );
-    _pendingMovementInputs[submission.sequence] = planar.clone();
     _applyPredictedMovement(planar, client.tickRateHz ?? 30);
     unawaited(
       submission.sent.catchError((Object error) {
@@ -961,30 +986,23 @@ class _PresentationBoundaryScreenState
   }
 
   void _applyPredictedMovement(Vector3 direction, int tickRateHz) {
-    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId);
-    if (handle == null) {
+    if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) == null) {
       return;
     }
-    final transform = widget.runtimeWorld.ecs.component<TransformComponent>(
-      handle,
-    );
-    final position =
-        transform.position + (direction * (_playerMoveSpeed / tickRateHz));
-    final rotation = direction.length2 <= 1e-12
-        ? transform.rotation
-        : Quaternion.axisAngle(
-            Vector3(0, 1, 0),
-            math.atan2(direction.x, direction.z),
-          );
-    widget.runtimeWorld.ecs.replaceComponent(
-      handle,
-      transform.copyWith(position: position, rotation: rotation),
+    final result = _movementSystem.moveDirection(
+      entityId: _playerEntityId,
+      direction: direction,
+      deltaSeconds: 1 / tickRateHz,
     );
     setState(() {
       _presentation = const PresentationExtractor().extract(
         widget.runtimeWorld.ecs,
       );
-      _cameraRig = _cameraRig.copyWith(target: position);
+      _cameraRig = _cameraRig.copyWith(target: result.position);
+      if (result.collidedEntityIds.isNotEmpty) {
+        _interactionStatus =
+            'Movement blocked by ${result.collidedEntityIds.first.value}';
+      }
     });
     _scheduleStreamingRefresh();
   }
@@ -999,13 +1017,18 @@ class _PresentationBoundaryScreenState
       :final acknowledgedInputSequence,
     )) {
       if (acknowledgedInputSequence != null) {
-        _pendingMovementInputs.removeWhere(
-          (sequence, _) => sequence <= acknowledgedInputSequence,
+        _pendingMovementInputs.acknowledgeThrough(acknowledgedInputSequence);
+        _inputSubmissionPaused = !_pendingMovementInputs.canSubmitAt(
+          _movementClock.elapsedMicroseconds,
         );
       }
+      _recordRemoteTransformTargets(client);
     } else if (event is ReplicationClientDisconnected) {
       _pendingMovementInputs.clear();
+      _remoteInterpolators.clear();
       _touchMovementByPointer.clear();
+      _inputSubmissionPaused = false;
+      _movementInputPacer.reset();
     }
     if (event case ReplicationEntityDespawned(:final entity)) {
       _removeReplicatedAvatar(entity);
@@ -1026,8 +1049,10 @@ class _PresentationBoundaryScreenState
           :final tickId,
           :final acknowledgedInputSequence,
         ) =>
-          'Joined · tick ${tickId.value} · '
-              'ack ${acknowledgedInputSequence ?? '-'}',
+          _inputSubmissionPaused
+              ? 'Network stalled · awaiting input acknowledgment'
+              : 'Joined · tick ${tickId.value} · '
+                    'ack ${acknowledgedInputSequence ?? '-'}',
       };
     });
     if (_currentChunkCoordinate != chunkBefore) {
@@ -1036,6 +1061,7 @@ class _PresentationBoundaryScreenState
   }
 
   void _applyReplicatedEntities(ReplicationClient client) {
+    final now = _movementClock.elapsedMicroseconds;
     for (final entity in client.entities.values) {
       _materializeReplicatedAvatar(entity);
       final handle = widget.runtimeWorld.ecs.handleFor(entity.entityId);
@@ -1043,41 +1069,25 @@ class _PresentationBoundaryScreenState
           !widget.runtimeWorld.ecs.hasComponent<TransformComponent>(handle)) {
         continue;
       }
-      final value = entity.transform;
-      var position = Vector3(
-        value.position[0],
-        value.position[1],
-        value.position[2],
-      );
-      var rotation = Quaternion(
-        value.rotation[0],
-        value.rotation[1],
-        value.rotation[2],
-        value.rotation[3],
-      );
-      if (entity.entityId == _playerEntityId &&
-          _pendingMovementInputs.isNotEmpty) {
+      final authoritative = _transformFromNetwork(entity.transform);
+      if (entity.entityId == _playerEntityId) {
+        widget.runtimeWorld.ecs.replaceComponent(handle, authoritative);
         final tickRateHz = client.tickRateHz ?? 30;
-        final pending = _pendingMovementInputs.entries.toList()
-          ..sort((left, right) => left.key.compareTo(right.key));
-        for (final entry in pending) {
-          final direction = entry.value;
-          position += direction * (_playerMoveSpeed / tickRateHz);
-          if (direction.length2 > 1e-12) {
-            rotation = Quaternion.axisAngle(
-              Vector3(0, 1, 0),
-              math.atan2(direction.x, direction.z),
-            );
-          }
+        for (final input in _pendingMovementInputs.inputs) {
+          _movementSystem.moveDirection(
+            entityId: _playerEntityId,
+            direction: input.direction,
+            deltaSeconds: 1 / tickRateHz,
+          );
         }
+        continue;
       }
+      final displayed = entity.kind == NetworkEntityKind.playerAvatar
+          ? _remoteInterpolators[entity.entityId]?.sample(now)
+          : null;
       widget.runtimeWorld.ecs.replaceComponent(
         handle,
-        TransformComponent(
-          position: position,
-          rotation: rotation,
-          scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
-        ),
+        displayed == null ? authoritative : _transformFromNetwork(displayed),
       );
     }
     _presentation = const PresentationExtractor().extract(
@@ -1096,6 +1106,10 @@ class _PresentationBoundaryScreenState
         .handle;
     final renderable = widget.runtimeWorld.ecs
         .component<RenderableReferenceComponent>(template);
+    final controller = widget.runtimeWorld.ecs
+        .tryComponent<CharacterControllerComponent>(template);
+    final collider = widget.runtimeWorld.ecs
+        .tryComponent<PhysicsColliderComponent>(template);
     final value = entity.transform;
     final handle = widget.runtimeWorld.ecs.createEntity(
       entityId: entity.entityId,
@@ -1121,6 +1135,26 @@ class _PresentationBoundaryScreenState
       handle,
       RenderableReferenceComponent(assetId: renderable.assetId),
     );
+    if (controller != null) {
+      widget.runtimeWorld.ecs.addComponent(
+        handle,
+        CharacterControllerComponent(
+          moveSpeed: controller.moveSpeed,
+          skinWidth: controller.skinWidth,
+          arrivalTolerance: controller.arrivalTolerance,
+        ),
+      );
+    }
+    if (collider != null) {
+      widget.runtimeWorld.ecs.addComponent(
+        handle,
+        PhysicsColliderComponent.box(
+          halfExtents: collider.halfExtents,
+          bodyKind: collider.bodyKind,
+          isSensor: collider.isSensor,
+        ),
+      );
+    }
     _networkAvatarEntityIds.add(entity.entityId);
   }
 
@@ -1132,6 +1166,56 @@ class _PresentationBoundaryScreenState
     final handle = widget.runtimeWorld.ecs.handleFor(entity.entityId);
     if (handle != null) {
       widget.runtimeWorld.ecs.destroyEntity(handle);
+    }
+    _remoteInterpolators.remove(entity.entityId);
+  }
+
+  void _recordRemoteTransformTargets(ReplicationClient client) {
+    final now = _movementClock.elapsedMicroseconds;
+    final interval = Duration(
+      microseconds: Duration.microsecondsPerSecond ~/ (client.tickRateHz ?? 30),
+    );
+    for (final entity in client.entities.values) {
+      if (entity.entityId == _playerEntityId ||
+          entity.kind != NetworkEntityKind.playerAvatar) {
+        continue;
+      }
+      final interpolator = _remoteInterpolators.putIfAbsent(
+        entity.entityId,
+        () => NetworkTransformInterpolator(interval: interval),
+      );
+      interpolator.push(entity.transform, nowMicroseconds: now);
+    }
+  }
+
+  void _updateRemotePlayerInterpolation() {
+    if (_remoteInterpolators.isEmpty) {
+      return;
+    }
+    final now = _movementClock.elapsedMicroseconds;
+    var changed = false;
+    for (final entry in _remoteInterpolators.entries) {
+      final handle = widget.runtimeWorld.ecs.handleFor(entry.key);
+      final sampled = entry.value.sample(now);
+      if (handle == null || sampled == null) {
+        continue;
+      }
+      final next = _transformFromNetwork(sampled);
+      final current = widget.runtimeWorld.ecs.component<TransformComponent>(
+        handle,
+      );
+      if (!_transformValuesDiffer(current, next)) {
+        continue;
+      }
+      widget.runtimeWorld.ecs.replaceComponent(handle, next);
+      changed = true;
+    }
+    if (changed) {
+      setState(() {
+        _presentation = const PresentationExtractor().extract(
+          widget.runtimeWorld.ecs,
+        );
+      });
     }
   }
 
@@ -1328,15 +1412,25 @@ class _PresentationBoundaryScreenState
     }
     return direction;
   }
+}
 
-  double get _playerMoveSpeed {
-    final authoredPlayer = widget.runtimeWorld.ecs
-        .query<PlayerControlledComponent>()
-        .single;
-    return widget.runtimeWorld.ecs
-        .component<CharacterControllerComponent>(authoredPlayer.handle)
-        .moveSpeed;
-  }
+TransformComponent _transformFromNetwork(NetworkTransform value) {
+  return TransformComponent(
+    position: Vector3(value.position[0], value.position[1], value.position[2]),
+    rotation: Quaternion(
+      value.rotation[0],
+      value.rotation[1],
+      value.rotation[2],
+      value.rotation[3],
+    ),
+    scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
+  );
+}
+
+bool _transformValuesDiffer(TransformComponent left, TransformComponent right) {
+  return left.position != right.position ||
+      left.rotation != right.rotation ||
+      left.scale != right.scale;
 }
 
 final _movementKeys = {

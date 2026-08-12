@@ -50,6 +50,26 @@ void main() {
     expect(backend.destroyedHandles, ['scene-1', 'scene-2']);
   });
 
+  test(
+    'recreates an entity after its prior backend handle was destroyed',
+    () async {
+      final backend = _RecordingBackend();
+      final bridge = SceneBridge<String>(backend: backend);
+      final entity = _entity(1);
+      await bridge.synchronize(PresentationSnapshot([entity]));
+      await bridge.synchronize(PresentationSnapshot.empty);
+
+      final recreated = await bridge.synchronize(
+        PresentationSnapshot([entity]),
+      );
+
+      expect(recreated.created, 1);
+      expect(recreated.updated, 0);
+      expect(backend.destroyedHandles, ['scene-1']);
+      expect(backend.entitiesByHandle.keys, ['scene-2']);
+    },
+  );
+
   test('rejects overlapping asynchronous synchronization', () async {
     final backend = _BlockingBackend();
     final bridge = SceneBridge<String>(backend: backend);

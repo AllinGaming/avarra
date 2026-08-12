@@ -4,6 +4,7 @@ import 'dart:isolate';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_core/testing.dart';
 import 'package:avarra_network/avarra_network.dart';
+import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
 import 'package:test/test.dart';
@@ -144,6 +145,40 @@ void main() {
 
     await first.close();
     await second.close();
+    await hostEvents.cancel();
+    await host.close();
+  });
+
+  test('listen host blocks movement at an authored wall', () async {
+    final host = await MultiplayerProofHost.start(
+      worldPackageSource: _findProofWorld().readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+    );
+    final hostEvents = host.events.listen((_) {});
+    final client = await _connect(host, _primaryPlayerId);
+    await client.waitForControlledEntity();
+
+    for (var index = 0; index < 16; index += 1) {
+      final sequence = await client.sendMovementIntent(
+        directionX: 1,
+        directionZ: 0,
+      );
+      await _waitUntil(() => client.acknowledgedInputSequence == sequence);
+    }
+
+    final player = client.entities.values.singleWhere(
+      (entity) => entity.entityId == _playerEntityId,
+    );
+    expect(player.transform.position[0], closeTo(1.5, 0.001));
+    expect(
+      host.runtimeWorld.ecs.hasComponent<PhysicsColliderComponent>(
+        host.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+      ),
+      isTrue,
+    );
+
+    await client.close();
     await hostEvents.cancel();
     await host.close();
   });
