@@ -16,7 +16,10 @@ complete the configuration. Host mode embeds the server-safe Avarra Server
 runtime, listens on IPv4 interfaces, connects its own client through loopback,
 and accepts additional players with independent avatars. The HUD reports
 connection/ownership state plus frame, tick, memory, network, thermal, and
-active-chunk measurements. Backgrounding ends a hosted session safely.
+active-chunk measurements. Direction buttons support complete pointer holds
+and simultaneous directions. Multiplayer movement is host-rate paced, locally
+predicted, and reconciled against authoritative acknowledgments. Backgrounding
+ends a hosted session safely.
 
 The current `.avarra` JSON file is a prototype definition container. User
 import/export, cooked archive packaging, hashing, and package resource budgets
@@ -32,6 +35,10 @@ acknowledgment and clean disconnect.
 The Stage 9 reverse direction also passed functionally: an Android emulator
 listen host accepted the Windows Game client, displayed two independent
 players, acknowledged local host input, and closed the session on background.
+The follow-up release reduced captured single-client emulator frame time from
+roughly 100 ms to 9–11 ms average by coalescing renderer work and skipping
+unchanged native updates; a 1.2-second held direction produced 36 authoritative
+input sequences and crossed a chunk boundary.
 Physical Android rendering/performance remains an open manual gate; see
 ADR-016, ADR-017, ADR-020, ADR-021, ADR-022,
 `AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md`, and

@@ -363,6 +363,9 @@ Status:
 - Android reports frame/tick time, PSS memory, transport bytes, thermal state,
   and active chunks in the HUD.
 - Backgrounding ends the hosted session and disconnects clients.
+- Held/multitouch directions, host-rate input pacing, controlled-player local
+  prediction/reconciliation, and latest-only renderer synchronization are
+  implemented in the controls/performance follow-up.
 
 Gate:
 
@@ -381,7 +384,7 @@ thermal behavior
 active chunks
 ```
 
-Gate status (2026-08-10):
+Gate status (updated 2026-08-12):
 
 - functional Android emulator host → Windows release client passes through a
   temporary ADB forward;
@@ -389,8 +392,11 @@ Gate status (2026-08-10):
   authoritative entities, and host input acknowledgment `75`;
 - all requested measurements were captured and the background/end policy
   passed without crash signatures;
-- 131 automated tests, Android release, Windows release, and AOT server builds
+- 133 automated tests, Android release, Windows release, and AOT server builds
   pass;
+- a 1.2-second Android hold reached acknowledgment `35`, crossed a chunk
+  boundary, and a post-fix capture reported 9.01 ms average frame time versus
+  roughly 100 ms before renderer queue coalescing;
 - physical Android direct-Wi-Fi, sustained performance/battery/thermal, and
   degraded-network profiling remain open.
 

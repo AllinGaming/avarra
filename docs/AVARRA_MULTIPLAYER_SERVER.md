@@ -127,7 +127,9 @@ Use stable `NetworkEntityId`.
 The implemented `NetworkEntityId` is a positive session-scoped integer paired
 with canonical `EntityId` in spawn messages. Stage 8 sends complete relevant
 transforms each tick. Delta compression, quantization, interpolation,
-prediction, correction, and bandwidth budgets remain future work.
+generic prediction/rollback, and bandwidth budgets remain future work. The
+Stage 9 Game proof now predicts only its controlled movement and replays
+unacknowledged inputs over authoritative snapshots.
 
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape
@@ -160,7 +162,7 @@ changes. Party/quest/owned relevance remains later work.
 
 # 7. Prediction
 
-Later:
+Stage 9 proof path:
 
 ```text
 client input sequence
@@ -170,7 +172,11 @@ authoritative correction
 replay unacknowledged inputs
 ```
 
-Remote entities interpolate between snapshots.
+Remote entities should eventually interpolate between snapshots.
+
+The first five steps are implemented for direct proof-character movement.
+Remote interpolation, collision-aware/general rollback, and degraded-network
+tuning remain future work.
 
 ---
 

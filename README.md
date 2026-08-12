@@ -143,7 +143,12 @@ additional players, and exposes frame/tick/memory/network/thermal/chunk
 measurements. An Android emulator host accepted the configured Windows release
 client, displayed two clients and five replicated entities, acknowledged host
 input, and ended the session safely on background. Physical direct-LAN and
-sustained device profiling remain open. See
+sustained device profiling remain open. A controls/performance follow-up adds
+held and simultaneous touch directions, 30 Hz input pacing, local authoritative
+reconciliation, and bounded latest-only renderer synchronization. Its release
+emulator capture averaged 9–11 ms per frame and a 1.2-second hold produced 36
+sequenced movement submissions with latest authoritative acknowledgment `35`.
+See
 `docs/adr/ADR-022-stage-9-android-listen-host.md` and
 `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`.
 

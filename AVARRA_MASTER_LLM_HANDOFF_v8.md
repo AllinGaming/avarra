@@ -3553,9 +3553,10 @@ spawn messages.
 
 # AVARRA — Stage 9 Android Host Validation
 
-**Status:** Functional gate validated with an Android emulator host and Windows client
+**Status:** Functional gate validated; controls/performance follow-up passed on
+the Android emulator
 
-**Date:** 2026-08-10
+**Dates:** Initial gate 2026-08-10; controls/performance follow-up 2026-08-12
 
 ## Delivered slice
 
@@ -3608,6 +3609,11 @@ unknown authored world entities remain controlled by chunk streaming.
 - An Android platform channel reports process PSS memory, UID network totals,
   and `PowerManager.currentThermalStatus`.
 - The HUD also reports the active streamed chunk count.
+- Touch directions remain active for the complete pointer hold, and distinct
+  pointers can combine directions for diagonal movement.
+- Client movement is paced at the negotiated host tick rate, predicted
+  immediately, and reconciled by replaying inputs newer than the latest
+  authoritative acknowledgment.
 - Backgrounding flushes pending local save work and ends the hosted session;
   Android is not treated as an indefinite background server.
 
@@ -3615,9 +3621,9 @@ unknown authored world entities remain controlled by chunk streaming.
 
 The consolidated CI-equivalent pass produced:
 
-- formatter: 132 Dart files formatted;
+- formatter: 134 Dart files formatted;
 - analyzer: no issues;
-- 131 passing tests across all 17 package/application suites;
+- 133 passing tests across all 17 package/application suites;
 - protocol-v2 canonical round trips and strict unknown-field rejection;
 - exact memory/TCP frame and byte accounting;
 - two concurrent players with independent controlled entities and movement;
@@ -3666,8 +3672,46 @@ Observed evidence:
 
 The timing and traffic values are launch-to-capture aggregates from an Android
 emulator. They are evidence that every requested metric is observable, not a
-physical-device performance acceptance result. Full JSON snapshots dominate
-the current transmitted bytes.
+physical-device performance acceptance result. Full JSON snapshots still
+dominate transmitted bytes.
+
+## Controls and renderer follow-up
+
+The first Stage 9 build felt delayed for three concrete reasons:
+
+- the on-screen arrows emitted one movement impulse per tap instead of staying
+  active while held;
+- the 60 Hz UI movement timer could submit more work than the 30 Hz host could
+  consume;
+- scene snapshots, camera-follow updates, and occlusion updates were appended
+  to unbounded asynchronous renderer queues, and the scene bridge updated
+  unchanged entities on every snapshot.
+
+The follow-up replaces those paths with pointer-lifetime controls, negotiated
+host-rate input pacing, local prediction plus authoritative replay, latest-only
+renderer queues, and value-based scene/opacity/projection diffs. This preserves
+server authority while removing stale presentation work.
+
+The 2026-08-12 release-host APK passed on the same Pixel 10 Pro Android 17/API
+37 emulator at 1280×2856:
+
+- a 1.2-second forward hold reached authoritative acknowledgment `35`, proving
+  36 continuously paced submissions rather than one tap impulse;
+- the controlled avatar and following camera crossed from chunk `0,0` to
+  `0,-1`, then stopped on pointer release;
+- the post-hold HUD reported 9.01 ms average / 237.93 ms launch-maximum frame
+  time and 0.32 ms average / 6.67 ms maximum host tick time;
+- the same sample reported 68.5 MiB through the in-app PSS sampler, thermal
+  `none`, 1.1 MiB sent / 4.1 KiB received, and one active chunk;
+- filtered Android logs contained no fatal, Flutter, asset-load, or scene
+  initialization error signature.
+- the Android release host APK, configured Windows release client, and AOT
+  headless server executable all rebuilt successfully after the changes.
+
+The earlier single-client build was around 100 ms average frame time after
+startup; the new 9–11 ms captures demonstrate that stale renderer work was the
+dominant regression. These are emulator observations, not a physical-device
+performance budget or percentile study.
 
 ## Provisional limits and remaining gates
 
@@ -3682,13 +3726,16 @@ the current transmitted bytes.
   replicated prefab/component construction path is not implemented.
 - Full JSON transform snapshots, TCP-only delivery, and text package hashing
   remain provisional under OD-003, OD-004, and OD-019.
-- The emulator frame aggregate is too slow to establish a mobile performance
-  budget. Profile/release measurements on physical hardware remain mandatory.
+- The improved emulator frame aggregate is promising but does not establish a
+  mobile performance budget. Profile/release percentiles on physical hardware
+  remain mandatory.
 - The host player's existing local save can be flushed on background, but
   authoritative multi-player persistence and disconnected remote-player saves
   are not yet integrated.
-- Prediction, reconciliation, interpolation, degraded-network simulation,
-  host migration, and indefinite Android background hosting remain absent.
+- Remote-entity interpolation, degraded-network simulation, host migration,
+  and indefinite Android background hosting remain absent. The current local
+  prediction/reconciliation path is intentionally limited to proof-character
+  movement.
 
 Before treating Stage 9 as a physical-device gate pass, repeat Android host →
 Windows client over direct Wi-Fi and record sustained frame/tick percentiles,
@@ -4125,7 +4172,9 @@ Use stable `NetworkEntityId`.
 The implemented `NetworkEntityId` is a positive session-scoped integer paired
 with canonical `EntityId` in spawn messages. Stage 8 sends complete relevant
 transforms each tick. Delta compression, quantization, interpolation,
-prediction, correction, and bandwidth budgets remain future work.
+generic prediction/rollback, and bandwidth budgets remain future work. The
+Stage 9 Game proof now predicts only its controlled movement and replays
+unacknowledged inputs over authoritative snapshots.
 
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape
@@ -4158,7 +4207,7 @@ changes. Party/quest/owned relevance remains later work.
 
 # 7. Prediction
 
-Later:
+Stage 9 proof path:
 
 ```text
 client input sequence
@@ -4168,7 +4217,11 @@ authoritative correction
 replay unacknowledged inputs
 ```
 
-Remote entities interpolate between snapshots.
+Remote entities should eventually interpolate between snapshots.
+
+The first five steps are implemented for direct proof-character movement.
+Remote interpolation, collision-aware/general rollback, and degraded-network
+tuning remain future work.
 
 ---
 
@@ -6943,6 +6996,9 @@ Status:
 - Android reports frame/tick time, PSS memory, transport bytes, thermal state,
   and active chunks in the HUD.
 - Backgrounding ends the hosted session and disconnects clients.
+- Held/multitouch directions, host-rate input pacing, controlled-player local
+  prediction/reconciliation, and latest-only renderer synchronization are
+  implemented in the controls/performance follow-up.
 
 Gate:
 
@@ -6961,7 +7017,7 @@ thermal behavior
 active chunks
 ```
 
-Gate status (2026-08-10):
+Gate status (updated 2026-08-12):
 
 - functional Android emulator host → Windows release client passes through a
   temporary ADB forward;
@@ -6969,8 +7025,11 @@ Gate status (2026-08-10):
   authoritative entities, and host input acknowledgment `75`;
 - all requested measurements were captured and the background/end policy
   passed without crash signatures;
-- 131 automated tests, Android release, Windows release, and AOT server builds
+- 133 automated tests, Android release, Windows release, and AOT server builds
   pass;
+- a 1.2-second Android hold reached acknowledgment `35`, crossed a chunk
+  boundary, and a post-fix capture reported 9.01 ms average frame time versus
+  roughly 100 ms before renderer queue coalescing;
 - physical Android direct-Wi-Fi, sustained performance/battery/thermal, and
   degraded-network profiling remain open.
 
@@ -8805,6 +8864,19 @@ Clients instantiate an unknown `playerAvatar` using the proof avatar's
 renderer-neutral asset shape. They do not instantiate unknown `world` entities;
 authored world/chunk lifecycle remains owned by world streaming.
 
+The 2026-08-12 controls follow-up keeps authority unchanged while adding
+client-side responsiveness. Game allocates an input sequence synchronously,
+predicts the controlled transform immediately, removes acknowledged inputs,
+and replays the remaining ordered inputs over every authoritative snapshot.
+Input emission follows the negotiated host tick rate. This is a proof-specific
+movement predictor, not a general physics rollback system.
+
+Renderer synchronization is latest-state rather than FIFO. Scene, camera, and
+occlusion queues retain at most the newest pending state; the scene bridge
+compares immutable presentation values before invoking backend updates, while
+opacity and projection calls are also skipped when unchanged. Canonical ECS
+state remains independent of these presentation optimizations.
+
 Keep metrics at their ownership boundaries:
 
 - server runtime: tick duration, authoritative entities, clients, framed bytes;
@@ -8828,6 +8900,11 @@ and indefinite background service behavior remain out of scope.
   replication.
 - Full TCP/JSON snapshots generate measurable bandwidth and do not resolve
   OD-003 or OD-004.
+- Local prediction can be corrected by authority without allowing the client
+  to become authoritative; remote interpolation and general rollback remain
+  separate future decisions.
+- Latest-state renderer coalescing deliberately permits intermediate visual
+  snapshots to be skipped when the native renderer is slower than simulation.
 - Importing the Avarra Server library from Game is acceptable for this
   headless/listen composition. Extract it to a dedicated shared host package
   only if another product consumer proves that boundary useful.

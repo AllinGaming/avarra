@@ -41,6 +41,19 @@ Clients instantiate an unknown `playerAvatar` using the proof avatar's
 renderer-neutral asset shape. They do not instantiate unknown `world` entities;
 authored world/chunk lifecycle remains owned by world streaming.
 
+The 2026-08-12 controls follow-up keeps authority unchanged while adding
+client-side responsiveness. Game allocates an input sequence synchronously,
+predicts the controlled transform immediately, removes acknowledged inputs,
+and replays the remaining ordered inputs over every authoritative snapshot.
+Input emission follows the negotiated host tick rate. This is a proof-specific
+movement predictor, not a general physics rollback system.
+
+Renderer synchronization is latest-state rather than FIFO. Scene, camera, and
+occlusion queues retain at most the newest pending state; the scene bridge
+compares immutable presentation values before invoking backend updates, while
+opacity and projection calls are also skipped when unchanged. Canonical ECS
+state remains independent of these presentation optimizations.
+
 Keep metrics at their ownership boundaries:
 
 - server runtime: tick duration, authoritative entities, clients, framed bytes;
@@ -64,6 +77,11 @@ and indefinite background service behavior remain out of scope.
   replication.
 - Full TCP/JSON snapshots generate measurable bandwidth and do not resolve
   OD-003 or OD-004.
+- Local prediction can be corrected by authority without allowing the client
+  to become authoritative; remote interpolation and general rollback remain
+  separate future decisions.
+- Latest-state renderer coalescing deliberately permits intermediate visual
+  snapshots to be skipped when the native renderer is slower than simulation.
 - Importing the Avarra Server library from Game is acceptable for this
   headless/listen composition. Extract it to a dedicated shared host package
   only if another product consumer proves that boundary useful.
