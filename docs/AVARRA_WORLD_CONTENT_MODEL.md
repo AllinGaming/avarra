@@ -240,7 +240,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–7 Implementation
+# 14. Current Stage 4–10.1 Implementation
 
 The initial vertical slice now provides:
 
@@ -248,7 +248,8 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 3, with versions 1 and 2 still readable
+  content schema version 4, with versions 1 through 3 still readable
+  typed persistent-flag interaction effect
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -276,7 +277,7 @@ avarra_persistence
   stable-ID capture/restore for active and unloaded entities
 ```
 
-The Game's isometric proof world is creator-style data rather than hard-coded
+The Game's Relay Zero prototype world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
 interactable, and persistent-flag semantics in `isometric_proof.avarra`.

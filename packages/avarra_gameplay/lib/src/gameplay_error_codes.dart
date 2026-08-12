@@ -5,4 +5,7 @@ abstract final class GameplayErrorCodes {
     'GAMEPLAY_CHARACTER_NOT_FOUND',
   );
   static const invalidMovement = AvarraErrorCode('GAMEPLAY_MOVEMENT_INVALID');
+  static const invalidInteraction = AvarraErrorCode(
+    'GAMEPLAY_INTERACTION_INVALID',
+  );
 }

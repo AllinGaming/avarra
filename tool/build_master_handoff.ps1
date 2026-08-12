@@ -21,6 +21,10 @@ $sourcePaths = @(
     'docs/AVARRA_STAGE_7_PERSISTENCE_VALIDATION.md'
     'docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md'
     'docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md'
+    'docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md'
+    'docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md'
+    'docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md'
+    'docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md'
     'docs/AVARRA_WORLD_CONTENT_MODEL.md'
     'docs/AVARRA_MULTIPLAYER_SERVER.md'
     'docs/AVARRA_FORGE_ARCHITECTURE.md'
@@ -46,6 +50,8 @@ $sourcePaths = @(
     'docs/adr/ADR-020-stage-7-persistence-model.md'
     'docs/adr/ADR-021-stage-8-multiplayer-baseline.md'
     'docs/adr/ADR-022-stage-9-android-listen-host.md'
+    'docs/adr/ADR-023-stage-10-forge-command-foundation.md'
+    'docs/adr/ADR-024-playable-world-profile-and-interaction-effect.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

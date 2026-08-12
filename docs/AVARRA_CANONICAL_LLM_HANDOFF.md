@@ -477,14 +477,17 @@ desktop export through `AVARRA_WORLD_PATH` without depending on Forge. The
 initial viewport is an isometric editor schematic, not a renderer replacement.
 See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
 
-The 2026-08-12 engineering review classifies this as a foundation proof rather
-than a closed creator-facing gate. Stage 10.1 must first establish a shared
-playable-world profile, remove proof entity/player IDs from Game behavior, add
-recoverable Forge project persistence and safe export, and replace the
-build-time import hook with runtime import plus explicit asset dependency
-handling. Stage 10.2 then adds the schema-driven inspector, bounded history, and
-shared 3D editing viewport. Do not start Stage 10A AI/MCP or broad Stage 11 RPG
-work before those gates. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+The 2026-08-12 engineering review classifies the initial result as a foundation
+proof rather than a closed creator-facing gate. Stage 10.1A is now implemented:
+Forge, Game, and Server share a Game-ready profile; Game has no proof-ID
+interaction/persistence behavior; and content schema v4 supplies a typed
+persistent interaction effect used by `Relay Zero Prototype`. Stage 10.1B must
+add recoverable Forge project persistence, safe export, runtime import, and
+explicit asset dependency handling. Stage 10.2 then adds the schema-driven
+inspector, bounded history, and shared 3D editing viewport. Build the Relay Zero
+playable RPG slice after those gates and before AI/MCP expansion. See
+`AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and ADR-024.
 
 ---
 
@@ -601,8 +604,11 @@ Use ADRs.
 9. Multiplayer baseline
 10. Android hosting
 11. Forge foundation
-12. RPG vertical slice
-13. Creator export/import loop
+12. Forge/Game playable contract
+13. Recoverable creator export/runtime import loop
+14. Minimum complete Forge editor
+15. Relay Zero RPG vertical slice
+16. Creator API / AI expansion
 ```
 
 ---

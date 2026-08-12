@@ -39,24 +39,26 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 14. `docs/AVARRA_STAGE_8_MULTIPLAYER_VALIDATION.md`
 15. `docs/AVARRA_STAGE_9_ANDROID_HOST_VALIDATION.md`
 16. `docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`
-17. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-18. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-19. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-20. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-21. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-22. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-23. `docs/AVARRA_OPEN_DECISIONS.md`
-24. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-25. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-26. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-27. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-28. ADRs under `docs/adr/`
+17. `docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`
+18. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+19. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+20. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+21. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+22. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+23. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+24. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+25. `docs/AVARRA_OPEN_DECISIONS.md`
+26. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+27. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+28. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+29. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+30. ADRs under `docs/adr/`
 
 ## Implementation status
 
 Stages 0 through 9 and the initial Stage 10 Forge vertical slice have
-implemented prototype slices. Stage 10's foundation evidence passes, but its
-creator-facing project/import gate remains open pending Stage 10.1/10.2 repairs.
+implemented prototype slices. Stage 10.1A's playable contract passes; the
+creator-facing project/import gate remains open pending Stage 10.1B/10.2.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -168,10 +170,15 @@ invalid candidate worlds atomically, and Game can load a Forge file through
 `docs/AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md`.
 
 The professional checkpoint classifies that result as a foundation proof. The
-required next work is a shared playable-world contract, removal of proof IDs
-from Game behavior, recoverable Forge project persistence/safe export, runtime
-Game import with asset diagnostics, then generic component editing and the
-shared 3D viewport. AI/MCP and broad RPG work follow those gates. See
+shared playable-world contract and proof-ID removal are now implemented as
+Stage 10.1A. Content schema v4 adds a typed persistent interaction effect and
+the bundled world is now `Relay Zero Prototype`, the first foundation for a
+concrete 10–15 minute built-in adventure. Next are recoverable Forge project
+persistence/safe export, runtime Game import with asset diagnostics, then the
+minimum complete editor needed to author Relay Zero. The playable RPG slice
+comes before AI/MCP expansion. See
+`docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 The root uses a native Dart Pub workspace. Resolve dependencies with:
@@ -266,3 +273,4 @@ but does not directly own or rewrite canonical project state.
 - `docs/AVARRA_GAME_FORGE_BOUNDARIES.md` — authoritative Game vs Forge ownership and dependencies.
 - `docs/AVARRA_DOCUMENTATION_REVIEW.md` — consistency/completeness review.
 - `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md` — current implementation risks, priorities, and next-work gates.
+- `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md` — concrete built-in adventure and gameplay acceptance gate.

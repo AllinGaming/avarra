@@ -131,6 +131,14 @@ final class RuntimeEntityLoader {
               range: component.range,
             ),
           );
+        case SetPersistentFlagOnInteractDefinition():
+          ecs.addComponent(
+            handle,
+            SetPersistentFlagOnInteractComponent(
+              flagKey: component.flagKey,
+              value: component.value,
+            ),
+          );
         case PersistentFlagsDefinition():
           ecs.addComponent(handle, PersistentFlagsComponent(component.flags));
       }

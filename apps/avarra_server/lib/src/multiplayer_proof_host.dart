@@ -55,6 +55,7 @@ final class MultiplayerProofHost {
     int maximumClients = 4,
   }) async {
     final definition = WorldPackageCodec().decode(worldPackageSource);
+    const PlayableWorldValidator().validate(definition).throwIfInvalid();
     final runtimeWorld = const RuntimeWorldLoader().load(definition);
     const entityLoader = RuntimeEntityLoader();
     for (final chunk in definition.chunks) {

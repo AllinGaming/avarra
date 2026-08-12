@@ -486,14 +486,17 @@ desktop export through `AVARRA_WORLD_PATH` without depending on Forge. The
 initial viewport is an isometric editor schematic, not a renderer replacement.
 See `AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md` and ADR-023.
 
-The 2026-08-12 engineering review classifies this as a foundation proof rather
-than a closed creator-facing gate. Stage 10.1 must first establish a shared
-playable-world profile, remove proof entity/player IDs from Game behavior, add
-recoverable Forge project persistence and safe export, and replace the
-build-time import hook with runtime import plus explicit asset dependency
-handling. Stage 10.2 then adds the schema-driven inspector, bounded history, and
-shared 3D editing viewport. Do not start Stage 10A AI/MCP or broad Stage 11 RPG
-work before those gates. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+The 2026-08-12 engineering review classifies the initial result as a foundation
+proof rather than a closed creator-facing gate. Stage 10.1A is now implemented:
+Forge, Game, and Server share a Game-ready profile; Game has no proof-ID
+interaction/persistence behavior; and content schema v4 supplies a typed
+persistent interaction effect used by `Relay Zero Prototype`. Stage 10.1B must
+add recoverable Forge project persistence, safe export, runtime import, and
+explicit asset dependency handling. Stage 10.2 then adds the schema-driven
+inspector, bounded history, and shared 3D editing viewport. Build the Relay Zero
+playable RPG slice after those gates and before AI/MCP expansion. See
+`AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and ADR-024.
 
 ---
 
@@ -610,8 +613,11 @@ Use ADRs.
 9. Multiplayer baseline
 10. Android hosting
 11. Forge foundation
-12. RPG vertical slice
-13. Creator export/import loop
+12. Forge/Game playable contract
+13. Recoverable creator export/runtime import loop
+14. Minimum complete Forge editor
+15. Relay Zero RPG vertical slice
+16. Creator API / AI expansion
 ```
 
 ---
@@ -777,7 +783,7 @@ Read `AVARRA_DOCUMENTATION_REVIEW.md` for what is covered, what is deliberately 
 # AVARRA — Documentation Architecture Review
 
 **Review date:** 2026-08-12
-**Reviewed baseline:** Stage 10 Forge foundation (`46e26a0`)
+**Reviewed baseline:** Stage 10.1A playable contract
 **Result:** Coherent; the post-foundation repair order is now explicit
 
 ---
@@ -898,11 +904,14 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1A.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1B.
 
-The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The current Forge proof is not yet the complete creator-facing loop: the shared playable-world contract, proof-ID removal, recoverable project lifecycle and runtime import path are the next gates.
+The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract and proof-ID removal are complete. Recoverable Forge project lifecycle and runtime Game import are the next gate, followed by the minimum editor completion and Relay Zero playable slice.
 
-The evidence, defects and prioritized repair sequence are recorded in `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+The evidence and sequence are recorded in
+`AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
 Future detailed specs should be written as each roadmap stage begins, using implementation findings rather than speculative overdesign.
 
@@ -3804,6 +3813,627 @@ state.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md -->
+
+# AVARRA — Stage 10 Forge Foundation Validation
+
+**Status:** Foundation proof passed; creator-facing gate remains open
+
+**Date:** 2026-08-12
+
+## Scope
+
+This slice proves the first executable creator integration path without
+selecting the final project format, renderer, or AI integration:
+
+```text
+Forge hierarchy / viewport / inspector
+  → typed creator command
+  → validated immutable WorldDefinition
+  → undo / redo
+  → canonical .avarra export
+  → Game file-source loader
+  → canonical decode and RuntimeWorld load
+```
+
+## Implemented
+
+- `avarra_creator_api` is pure Dart and owns stable tool IDs, typed commands,
+  candidate validation, immutable history, undo/redo, dirty-state comparison,
+  and playable export checks.
+- Forge has a desktop hierarchy, selectable isometric schematic, component
+  summary, full position/quaternion/scale inspector, add/delete controls,
+  validation, export, undo, and redo.
+- The included tiny world contains one player, ground, and an interactable
+  console using the same cube asset path already packaged by Game.
+- Forge export writes only after the command session produces canonical valid
+  source. A headless helper exposes the same path for automation.
+- Game keeps its bundled proof by default and reads a creator export when built
+  with `AVARRA_WORLD_PATH`; imported world IDs derive separate save slots.
+
+## Automated foundation evidence
+
+The creator tests cover command execution, atomic validation rejection,
+stable-ID undo/redo, dirty-state recovery, chunk-local transform enforcement,
+Game-entry validation, canonical export, and stable missing-entity failures.
+The Forge widget test adds an entity, undoes/redoes, validates, exports through
+an injected writer, decodes the result, and instantiates it with
+`RuntimeWorldLoader`, the same world boundary used by Game. The Game loader test
+confirms a configured filesystem export takes precedence over the bundled
+asset.
+
+The consolidated gate produced:
+
+- formatter: 149 Dart files formatted;
+- analyzer: no issues;
+- 150 passing tests across all 18 package/application suites;
+- Forge Windows release build: passed;
+- Game Windows release build with the exact 1,818-byte Forge export configured
+  through `AVARRA_WORLD_PATH`: passed;
+- the headless Forge export helper, Forge release, and configured Game release
+  all completed; both native processes remained alive through a 12-second
+  startup/world-bootstrap smoke window and were then stopped by the harness.
+
+The native smoke establishes startup stability. It does not by itself assert
+which world was displayed; canonical decode/`RuntimeWorldLoader` tests provide
+the semantic world-load evidence.
+
+## Post-implementation gate assessment
+
+A professional review after the initial pass found that the full Stage 10 gate
+must remain open:
+
+- Forge's playable check counts players across root and chunk definitions, but
+  Game queries one always-active player before chunk activation;
+- world-format v1 can pass the current export check while Game requires a
+  non-null chunk size;
+- Game still uses a proof console entity ID/flag and proof player identity in
+  interaction/persistence paths;
+- `AVARRA_WORLD_PATH` is a build-time integration hook, not runtime user import;
+- the export references an asset already packaged by Game;
+- Forge has no recoverable editable-project open/save lifecycle and its raw path
+  writer can replace an existing file without overwrite confirmation.
+
+These are Stage 10.1 gate blockers, not reasons to discard the command
+foundation. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md` for evidence,
+priorities, and acceptance criteria.
+
+Stage 10.1A subsequently closed the playable-profile and proof-ID items. The
+build-time import, asset closure, and recoverable project lifecycle items remain
+Stage 10.1B. See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`.
+
+## Honest limits
+
+- The viewport is an interactive isometric schematic; shared Thermion-backed 3D
+  editing, camera tools, gizmos, and asset preview remain next Forge work.
+- Only entity create/delete, transform replacement, and world rename commands
+  exist. Generic schema-driven component editing is not implemented.
+- Forge edits one in-memory world definition. Project browser, source-project
+  persistence, asset import/cooking, and editor-only metadata are absent.
+- The exported prototype references Game-packaged asset paths and is not yet a
+  self-contained `.avarra` archive.
+- Validation covers current canonical package rules and one playable entry, not
+  navigation, package-size, or measured mobile performance budgets.
+- Stage 10A transactions, semantic diffs, permissions, fake/provider AI, and
+  external-agent adapters have intentionally not started.
+
+<!-- END AVARRA_STAGE_10_FORGE_FOUNDATION_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md -->
+
+# AVARRA — Stage 10.1A Playable Contract Validation
+
+**Status:** Implemented; automated gate passed
+
+**Date:** 2026-08-12
+
+## Scope
+
+Stage 10.1A removes proof-specific assumptions from the Forge-to-Game path and
+adds the first reusable authored objective behavior.
+
+## Implemented
+
+- `avarra_world` owns one server-safe `PlayableWorldValidator` with stable
+  structured errors.
+- Forge export, Game bootstrap, and listen/headless host startup invoke that
+  same profile.
+- The profile requires current world format, a valid chunk size, exactly one
+  always-active player, and its transform, renderable, solid character
+  collider, controller, and manifest asset.
+- Game persistence registers and dirties the configured `PlayerId`; it no
+  longer uses the fixed proof player identity.
+- Content schema v4 adds `avarra.interaction.set_persistent_flag`, a narrow
+  typed effect that may update only a declared flag on the interacted entity.
+- Game no longer special-cases the proof console entity ID. It executes the
+  authored effect and derives an active objective summary from authored data.
+- Forge's sample console uses an independent stable ID and the same effect.
+- The bundled world is presented as `Relay Zero Prototype`, the first gameplay
+  foundation for the product's built-in adventure.
+
+## Automated evidence
+
+- negative playable-profile cases cover legacy format/missing chunk size,
+  chunk-owned player, zero/multiple players, missing renderable/asset, and an
+  invalid sensor collider;
+- Game and Server both reject a syntactically decoded but non-playable v1 world
+  with `WORLD_PLAYABLE_FORMAT_UNSUPPORTED` before runtime construction;
+- a generated-ID fixture performs proximity interaction, changes an authored
+  flag, persists an arbitrary generated player identity and entity identity,
+  rebuilds ECS/save sessions, and restores both player position and objective;
+- consolidated gate: 162 tests across all 18 suites passed;
+- full workspace analyzer: no issues found;
+- native Server AOT compile passed;
+- Game Windows release and Android debug builds passed;
+- Forge Windows release build passed.
+
+The Android build still reports upstream Thermion/Kotlin migration and native
+C-linkage warnings already associated with the provisional renderer dependency;
+they are non-fatal and did not change in this slice.
+
+## Honest limits
+
+- the current objective summary covers active authored interaction objectives;
+  the Stage 11 quest/objective model must represent world-wide progression;
+- multiplayer interaction commands and authoritative shared objectives remain
+  Stage 11 work;
+- runtime import, Forge project recovery, and asset closure are Stage 10.1B;
+- Relay Zero still uses proof geometry and is not yet the complete adventure.
+
+## Gate
+
+> A world with newly generated player and interactable IDs either completes
+> Game interaction/persistence or is rejected before runtime construction with
+> a structured creator-visible error.
+
+Automated evidence passes. Physical Android gameplay remains part of the
+eventual Relay Zero release gate, not a blocker for this server-safe contract.
+
+<!-- END AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
+
+# AVARRA — First Playable: Relay Zero
+
+**Status:** Product target; foundation gameplay started
+
+**Date:** 2026-08-12
+
+## Purpose
+
+AVARRA needs a game worth playing, not only a platform proof. **Relay Zero** is
+the first built-in adventure and the reference world used to prove that Game,
+Forge, hosting, persistence, and creator content form one coherent product.
+
+It is deliberately small: approximately 10–15 minutes for the first complete
+version, playable solo or with one friend on Windows and Android.
+
+## Player fantasy
+
+The player enters an abandoned relay station whose power network has failed.
+They explore the site, restore its stabilizers, survive the awakened guardian,
+recover the relay core, and return it to the control console to transmit the
+first signal.
+
+## Complete loop
+
+```text
+enter the relay
+  → learn movement and interaction
+  → restore three stabilizers in any order
+  → open the sealed core chamber
+  → defeat the guardian
+  → collect the relay core
+  → return to the control console
+  → complete the signal and persist the result
+```
+
+## Required playable systems
+
+- readable isometric movement, collision, camera, selection, and interaction;
+- authored objectives with persistent progress;
+- player/enemy health, one basic attack, damage, death, and restart;
+- one enemy behavior with pursuit and attack;
+- one collectible item and a minimal inventory;
+- an objective gate driven by authored state rather than entity IDs;
+- solo/listen-host play with authoritative combat and objective state;
+- save, close, restart, and continue;
+- a clear start, current objective, success state, and failure state.
+
+## Current foundation
+
+Stage 10.1A introduces the first reusable gameplay primitive: an authored
+interaction can set a declared persistent flag, and Game derives a compact
+objective status from that data. The bundled world is now named **Relay Zero
+Prototype** and asks the player to restore its first relay control.
+
+This is not yet the complete adventure. It intentionally reuses the current
+cube assets while the gameplay contract is made reliable.
+
+## Delivery sequence
+
+1. Finish Stage 10.1A shared playable validation and de-proof Game behavior.
+2. Finish Stage 10.1B so the same world can be safely saved in Forge and
+   imported into an unchanged Game build.
+3. Complete only the Stage 10.2 editor capabilities needed to author Relay
+   Zero: component editing, validation, real viewport, selection, and transform.
+4. Implement the Stage 11 gameplay loop in thin vertical slices:
+   health/combat → guardian AI → item/core → objective gate → co-op authority.
+5. Replace proof geometry incrementally after the loop is fun and measurable.
+6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
+   physical Android.
+
+AI/MCP work follows the playable slice. This ensures future creator tools are
+grounded in the actual schemas and workflows creators need.
+
+## Acceptance gate
+
+> A new player can launch Relay Zero, understand the objective without
+> developer guidance, complete the adventure solo or with one friend, close
+> the app, and continue from valid persisted progress on Windows and Android.
+
+The gate requires real physical-Android evidence. Emulator-only evidence is
+insufficient for final input, performance, hosting, thermal, and lifecycle
+validation.
+
+<!-- END AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
+
+---
+
+<!-- BEGIN AVARRA_ENGINEERING_REVIEW_2026-08-12.md -->
+
+# AVARRA — Engineering Review and Next-Work Plan
+
+**Status:** Current implementation checkpoint
+
+**Date:** 2026-08-12
+
+**Reviewed baseline:** `46e26a0` / Stage 10 Forge foundation
+
+## Executive assessment
+
+The repository has a sound product architecture and unusually good proof-stage
+discipline: Game, Forge, and Server remain separate applications; server-safe
+packages are tested as such; stable IDs survive world, save, network, and editor
+boundaries; renderer work stays behind adapters; and the current 150-test gate
+is meaningful.
+
+Stage 10 is nevertheless a **foundation proof, not a completed creator-facing
+import/export gate**. The typed command boundary is the right base, but the
+current sample succeeds partly because it mirrors assumptions from the bundled
+Game proof. Work must stay in Stage 10 until those assumptions are replaced by
+an explicit shared contract and creators cannot lose or overwrite work through
+normal editor use.
+
+Do not start Stage 10A AI/MCP work or broad Stage 11 RPG content yet. The next
+implementation milestone is Stage 10.1A: playable-world contract hardening and
+removal of proof-specific Game behavior.
+
+## Resolution update
+
+Stage 10.1A was implemented later on 2026-08-12. P0-01 and P0-02 are resolved:
+Forge/Game/Server share one structured Game-ready profile, Game persistence
+uses configured player identity, proof entity behavior is removed, and content
+schema v4 provides a typed persistent interaction effect. Generated-ID
+interaction/save/reconstruction coverage passes. See
+`AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
+
+The next implementation milestone is now Stage 10.1B. P0-03 and P0-04 remain
+open. Product work is anchored by `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`; AI/MCP
+expansion follows the first playable RPG slice.
+
+## What is working well
+
+- Application boundaries match the product: Forge does not import Game UI and
+  Server remains free of Flutter and renderer dependencies.
+- `WorldDefinition` is immutable and stable-ID based; runtime ECS handles do not
+  leak into authored, saved, or replicated identity.
+- `avarra_creator_api` validates candidate snapshots before committing history,
+  so rejected commands are atomic and undo/redo is deterministic.
+- Forge, Game, and Server reuse the same canonical world codec instead of
+  maintaining separate serialization rules.
+- CI formats, analyzes, tests all 18 suites, compiles Server, builds Game on
+  Windows/Android, builds Forge on Windows, and verifies the generated handoff.
+- Stage 9 authority/prediction collision parity, bounded pending input, renderer
+  queue coalescing, and remote interpolation are reasonable proof-grade choices.
+- Open renderer, physics, transport, serialization, and package-container
+  decisions are still documented as provisional rather than silently finalized.
+
+## Priority definitions
+
+- **P0 — gate blocker:** can accept a world that Game cannot safely run, preserve
+  proof-only coupling, or lose/overwrite creator work.
+- **P1 — next hardening:** does not invalidate the proof but will become costly or
+  unreliable with real creator content.
+- **P2 — planned polish:** important before external creator release but does not
+  block the next vertical slice.
+
+## Findings
+
+### P0-01 — Forge and Game do not share a complete playable-world contract
+
+Evidence:
+
+- `CreatorWorldValidator` counts player components across
+  `WorldDefinition.allEntities` and accepts exactly one.
+- Game instantiates only always-active root entities before calling
+  `.query<PlayerControlledComponent>().single`.
+- A player authored inside a chunk therefore passes Forge export validation but
+  is absent when Game performs its bootstrap query.
+- World-format v1 remains valid to `WorldPackageCodec` and can pass the current
+  playable-entry check, while Game dereferences `definition.chunkSize!`.
+- Multiplayer avatar materialization assumes the authored player has a
+  `RenderableReferenceComponent`; the playable-entry check does not require it.
+
+Consequence:
+
+Forge can label a package “ready for Game import” even though Game can fail with
+an unstructured `StateError`, null assertion, or missing-component error.
+
+Required repair:
+
+Create one server-safe playable-world validation contract and invoke it from
+both Forge export and Game before runtime construction. It must at least define:
+
+```text
+supported Game world-format/profile
+positive chunk size or an explicit v1 compatibility policy
+exactly one always-active player entry
+required player transform/renderable/controller/character collider
+valid entry position and referenced asset closure
+structured stable error codes for every rejected condition
+```
+
+Add negative tests for v1, chunk-owned player, zero/multiple players, invisible
+player, invalid entry collider, and missing entry asset.
+
+### P0-02 — Imported worlds still depend on proof-specific Game identities
+
+Evidence:
+
+- Game special-cases entity `01890f47-e8b8-7a68-8000-000000000004` when
+  interaction succeeds and writes its `activated` flag.
+- HUD persistence text reads that same entity and key directly.
+- Player persistence registers and dirties the fixed proof `PlayerId` instead of
+  the already parsed configured player identity.
+- The Forge sample deliberately reuses the proof console entity ID, masking the
+  coupling during the Stage 10 smoke test.
+
+Consequence:
+
+A genuinely creator-authored interactable does not receive the proof behavior,
+and the current successful sample is not evidence that arbitrary stable IDs work
+through the complete gameplay/persistence loop.
+
+Required repair:
+
+- Remove proof entity and player IDs from ordinary Game behavior.
+- Use the configured/local player identity consistently for persistence.
+- Introduce a typed, data-driven interaction effect for the proof action (for
+  example, setting a bounded persistent flag on the interacted entity). This is
+  a content-schema change and requires an ADR/migration decision rather than a
+  new hard-coded convention.
+- Test a Forge-generated console with a newly generated stable ID through
+  interaction, save, process restart, and restore.
+
+### P0-03 — `AVARRA_WORLD_PATH` is a build hook, not a product import flow
+
+Evidence:
+
+- The path is a compile-time `String.fromEnvironment` value; changing worlds
+  requires rebuilding Game and can embed a machine-local absolute path.
+- The 1,818-byte sample references a cube that is already bundled by Game. The
+  exported file does not contain or resolve its own asset dependency.
+- The native smoke check proves process survival, while the codec/runtime tests
+  prove definition loading. It does not yet prove a movable, self-contained
+  package selected by a user in an unchanged release build.
+
+Consequence:
+
+The current result is a valuable integration fixture but not portable world
+import as described by the long-term product loop.
+
+Required repair:
+
+- Keep `AVARRA_WORLD_PATH` as a test/developer hook.
+- Add a runtime Game import service and UI that validates before copying or
+  registering the world in application storage.
+- Produce structured missing/incompatible asset diagnostics.
+- Resolve the minimum asset-closure/container decision under OD-019 before
+  calling an export distributable. Do not prematurely choose the final cooked
+  format merely to add a file picker.
+- Add an end-to-end test that exports, moves the result, imports it into an
+  already-built Game, renders/identifies the authored world, and restarts it.
+
+### P0-04 — Forge has no recoverable source-project lifecycle
+
+Evidence:
+
+- Forge always starts from the in-code sample and cannot open or save editable
+  source state.
+- Export asks for a raw text path and `File.writeAsString` truncates an existing
+  target without a native save picker or overwrite confirmation.
+- There is no unsaved-close prompt, autosave/recovery journal, recent project
+  entry, or failed-write recovery policy.
+
+Consequence:
+
+The current shell is safe for tests but is not safe for creator work: normal
+usage can lose the in-memory project or overwrite another file.
+
+Required repair:
+
+- Decide the initial editable Forge project representation under OD-020.
+- Add open/new/save/save-as with recoverable atomic writes.
+- Use a platform file selector, enforce expected extensions, and confirm
+  replacement of existing targets.
+- Block or confirm close while dirty and provide a recovery snapshot.
+- Keep editable source state distinct from validated runtime export.
+
+### P1-01 — Component metadata is not yet sufficient for a generic inspector
+
+`ComponentFieldSchema` lacks numeric bounds, defaults, editor labels/help,
+reference target domains, and field-level mutation hooks. Its generic
+`stableId` validation currently parses every value as `AssetId`, which cannot
+describe future entity, quest, item, prefab, or definition references.
+
+Extend schema metadata before implementing generic
+`world.set_component_field`, add/remove component commands, or agent tool
+schemas. Do not encode editor behavior as a large switch in Forge widgets.
+
+### P1-02 — Validation is fail-fast rather than creator-oriented
+
+The world codec normally returns the first structural error, and Forge renders
+only a one-line status. A useful creator pass needs an aggregated report with
+stable issue code, severity, entity/component/field location, suggested repair,
+and export-blocking status. The canonical codec can remain fail-fast for runtime
+security; Forge should layer an aggregating validator over it.
+
+### P1-03 — Undo history retains full world snapshots without a bound
+
+Every history entry retains complete before/after `WorldDefinition` graphs.
+This is acceptable for three cubes but will scale poorly for real chunked
+worlds and AI batch operations. Before bulk placement, add a measured history
+budget and command/inverse or structurally shared representation. Preserve
+atomic batches and stable IDs; do not optimize speculatively beyond measured
+creator fixtures.
+
+### P1-04 — Application composition files are already oversized
+
+`apps/avarra_game/lib/main.dart` is approximately 1,446 lines and
+`apps/avarra_forge/lib/main.dart` approximately 801 lines. Both mix bootstrap,
+state orchestration, UI, and product-specific policy. Extract cohesive screens,
+controllers/services, and widgets before adding project management, generic
+inspectors, or RPG UI. Do not turn the extraction into a generic framework.
+
+### P1-05 — CI does not execute the actual export-to-import chain
+
+CI tests Forge and Game independently and builds both, but does not run the
+headless Forge exporter, validate the produced artifact, then start/test Game
+against it. Add one deterministic Stage 10 gate after the runtime import service
+exists. Process-alive smoke evidence should be supplemented with a semantic
+world ID/name assertion or screenshot/accessibility assertion.
+
+### P1-06 — Forge still needs the shared 3D editing viewport
+
+The schematic is a good renderer-independent interaction proof. The next editor
+viewport should consume immutable AVARRA presentation state through the existing
+scene/Thermion bridge, then add Forge-owned selection, camera, and transform
+gizmo policy. Do not create a separate custom renderer or store renderer handles
+in creator state.
+
+### P1-07 — Physical Android and release-distribution gates remain open
+
+The connected “Pixel 10 Pro” evidence is an emulator, not physical hardware.
+Physical performance/lifecycle, direct-LAN hosting, storage interruption,
+battery/thermal behavior, and touch comfort remain required. Android release
+signing is still using the development configuration. Track these as a parallel
+release-readiness stream; do not claim mobile production readiness from the
+emulator results.
+
+### P2 — Creator UX and maintenance backlog
+
+- Native keyboard shortcuts and command routing for undo/redo/save.
+- Field-level invalid-input feedback and quaternion/rotation editing UX.
+- Authored/editor display names instead of hierarchy heuristics.
+- Multi-selection, duplicate, reparent, and chunk-move workflows.
+- Bounded recent-project list and explicit save-slot/profile UI.
+- Dependency/update review and removal of template TODO comments when release
+  packaging is addressed.
+
+## Required implementation order
+
+### Stage 10.1A — Playable contract and de-proof Game
+
+1. Define the shared playable-world profile and stable validation errors.
+2. Call it from Forge export, Game bootstrap, and headless/listen-host startup.
+3. Replace hard-coded console/player identities with configured identity and a
+   typed data-driven interaction effect.
+4. Add negative contract tests plus generated-ID interaction/save/restore.
+5. Split the touched Game/Forge composition code into product-sized modules.
+
+Gate:
+
+> A world with newly generated player and interactable IDs either runs through
+> Game interaction/persistence or is rejected before runtime construction with
+> a structured creator-visible error.
+
+### Stage 10.1B — Recoverable Forge project and runtime Game import
+
+1. Resolve OD-020's initial source-project representation.
+2. Add new/open/save/save-as, atomic recovery, dirty-close protection, and safe
+   export destination handling.
+3. Add runtime Game import while retaining `AVARRA_WORLD_PATH` only for tests.
+4. Define the minimum OD-019 asset closure/dependency behavior and report all
+   missing assets before activation.
+5. Add CI export → move → import → restart coverage.
+
+Gate:
+
+> An unchanged Game release imports a Forge export chosen at runtime, identifies
+> its authored world, survives restart, and cannot silently overwrite or lose
+> the editable Forge project.
+
+### Stage 10.2 — Editor completion
+
+1. Extend component schema metadata and typed component commands.
+2. Build an aggregated validation-results panel and generic inspector controls.
+3. Add bounded/batched history based on measured creator fixtures.
+4. Integrate the shared Thermion-backed Forge viewport and transform gizmos.
+5. Add project fixtures large enough to measure editor latency and history use.
+
+Gate:
+
+> A creator opens a project, edits transform and non-transform components,
+> receives actionable validation, previews the real 3D result, safely saves,
+> exports, imports, and undoes the complete edit.
+
+### Stage 11 — Relay Zero playable slice
+
+After the Stage 10.2 editor gate, build the concrete solo/co-op adventure in
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`. Health/combat, guardian AI, inventory,
+world-wide objectives, authoritative co-op commands, and save/resume must be
+proved by actual play before broad creator automation.
+
+### Stage 10A — Creator API / AI foundation
+
+After Relay Zero, add transactions, semantic diff, permissions, read-only
+resources, fake AI provider, and an external-agent adapter skeleton. MCP remains
+an adapter; no live LLM dependency belongs in CI.
+
+## Immediate next coding slice
+
+Start with Stage 10.1B. Expected affected boundaries:
+
+```text
+avarra_forge
+  source-project new/open/save/save-as and recovery
+
+avarra_game
+  runtime import/catalog selection and diagnostics
+
+avarra_world / avarra_tooling
+  minimum asset dependency/closure checks
+
+tests/docs/CI
+  export, move, import, identify, restart proof
+```
+
+## Completion criteria for this review
+
+This review is complete when the roadmap explicitly places Stage 10.1 before
+Stage 10A/11, the Stage 10 validation report describes the gate as partial, the
+new Forge source-project decision is tracked, and the consolidated handoff
+contains this repair order.
+
+<!-- END AVARRA_ENGINEERING_REVIEW_2026-08-12.md -->
+
+---
+
 <!-- BEGIN AVARRA_WORLD_CONTENT_MODEL.md -->
 
 # AVARRA — World & Content Model
@@ -4048,7 +4678,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–7 Implementation
+# 14. Current Stage 4–10.1 Implementation
 
 The initial vertical slice now provides:
 
@@ -4056,7 +4686,8 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 3, with versions 1 and 2 still readable
+  content schema version 4, with versions 1 through 3 still readable
+  typed persistent-flag interaction effect
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -4084,7 +4715,7 @@ avarra_persistence
   stable-ID capture/restore for active and unloaded entities
 ```
 
-The Game's isometric proof world is creator-style data rather than hard-coded
+The Game's Relay Zero prototype world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
 interactable, and persistent-flag semantics in `isometric_proof.avarra`.
@@ -4677,14 +5308,17 @@ See `AVARRA_AI_CREATOR_ARCHITECTURE.md`.
 The Stage 10 foundation is not yet a creator-safe project loop. The required
 order is:
 
-1. share one playable-world profile between Forge export and Game bootstrap;
-2. remove proof console/player stable IDs from Game interaction/persistence;
+1. **Complete:** share one playable-world profile between Forge export, Game,
+   and Server;
+2. **Complete:** remove proof console/player stable IDs from Game
+   interaction/persistence;
 3. add recoverable Forge new/open/save/save-as and safe export destinations;
 4. add runtime Game import and minimum asset dependency/closure diagnostics;
 5. extend schemas and typed commands for a generic inspector;
 6. bound/batch command history using measured creator fixtures;
 7. integrate the shared Thermion-backed editing viewport and gizmos;
-8. only then add Stage 10A transactions, permissions, semantic diff, and agent
+8. build the Relay Zero RPG slice;
+9. only then add Stage 10A transactions, permissions, semantic diff, and agent
    adapters.
 
 The source-project representation is tracked by OD-020. The runtime package and
@@ -7213,6 +7847,18 @@ Gate:
 > Game interaction/persistence or is rejected before runtime construction with
 > a structured creator-visible error.
 
+Gate status (implemented 2026-08-12):
+
+- Forge export, Game bootstrap, and listen/headless host startup share the
+  server-safe Game-ready profile and stable errors;
+- content schema v4 supplies a typed persistent-flag interaction effect;
+- Game uses configured player identity and no longer special-cases proof IDs;
+- generated player/interactable IDs pass interaction, save, reconstruction,
+  and restore coverage;
+- the bundled world begins the `Relay Zero Prototype` objective loop.
+
+See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
+
 ## Stage 10.1B — Recoverable Project and Runtime Import
 
 Build:
@@ -7252,65 +7898,48 @@ Gate:
 
 ---
 
-# Stage 10A — Creator API / AI Foundation
+# Stage 11 — Relay Zero RPG Vertical Slice
 
-After the Stage 10.2 gate, build the AI-friendly automation boundary.
+After the Stage 10.2 gate, prioritize the first actual playable adventure. See
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
-Build:
+Build in thin vertical slices:
 
 ```text
-Avarra Creator API
-transaction staging
-semantic diff
-tool permissions
+player/enemy health and damage
+one basic attack and death/restart
+one pursuing/attacking guardian
+three persistent relay stabilizer objectives
+one relay-core item and minimal inventory
+objective gate and completion state
+authoritative co-op combat/objective commands
+save/resume across the full adventure
+```
+
+Gate:
+
+> Relay Zero is a comprehensible 10–15 minute solo/co-op adventure that saves,
+> closes, restores, and completes on Windows and physical Android.
+
+---
+
+# Stage 10A — Creator API / AI Foundation
+
+After Relay Zero proves the real creator/gameplay schemas, build the AI-friendly
+automation boundary:
+
+```text
+Avarra Creator API transactions
+semantic diff and permissions
 read-only project/world resources
 validation tool wrappers
 fake AI provider
 external-agent adapter skeleton
 ```
 
-Then add a limited AI proof:
-
-```text
-creator prompt
-→ AI/tool plan
-→ place existing prefabs
-→ create one encounter
-→ validate
-→ preview diff
-→ approve
-```
-
-Gate:
-
-> An external/fake agent can transform a selected empty area using only typed Creator API tools, with no direct file editing, and the complete change can be validated, reviewed, committed and undone.
-
-Do not make live LLM calls a required CI dependency.
-
----
-
-# Stage 11 — RPG Vertical Slice
-
-Add:
-
-```text
-enemy
-health
-combat
-ability
-item
-inventory
-chest
-NPC
-quest
-loot
-save
-multiplayer
-```
-
-Gate:
-
-> Forge-authored 20–30 minute co-op adventure works Windows/Android.
+Then prove an external/fake agent can populate one selected Relay Zero-style
+area using only typed tools, with validation, preview, approval, commit, and
+complete undo. Live LLM calls remain outside required CI.
 
 ---
 
@@ -9170,5 +9799,155 @@ and indefinite background service behavior remain out of scope.
   as permanent without physical-device and degraded-network evidence.
 
 <!-- END adr/ADR-022-stage-9-android-listen-host.md -->
+
+---
+
+<!-- BEGIN adr/ADR-023-stage-10-forge-command-foundation.md -->
+
+# ADR-023 — Stage 10 Forge Command Foundation
+
+**Status:** Accepted initial editor boundary
+
+**Date:** 2026-08-12
+
+## Context
+
+Stage 10 must prove that Forge can create, inspect, edit, validate, and export a
+small world that Game accepts. The AI-friendly architecture also requires human
+and future agent edits to converge on one typed, undoable mutation boundary.
+Letting widgets modify JSON would make stable identity, validation, undo, and
+later transaction review unreliable.
+
+The permanent source-project format, cooked `.avarra` archive, editor renderer,
+and AI/MCP transport are still open or later-stage concerns. This milestone must
+not silently decide them.
+
+## Decision
+
+Introduce the pure-Dart `avarra_creator_api` package. Its initial scope is the
+Forge command foundation, despite the package's planned broader Stage 10A role.
+Commands expose stable tool IDs and typed values for entity creation/deletion,
+transform replacement, and world rename. They transform immutable
+`WorldDefinition` snapshots; `CreatorWorldSession` validates the candidate
+snapshot before committing it to undo history and clears redo history on a new
+branch.
+
+Validation delegates to canonical `WorldPackageCodec` encode/decode checks so
+Forge, Game, and Server do not develop divergent package rules. A stricter
+export check requires exactly one authored player entry for the current Game
+bootstrap. Successful filesystem writing happens only after canonical export;
+ordinary editor mutations never directly edit source files.
+
+Forge provides a Flutter desktop shell with hierarchy, inspector, toolbar, and
+a selectable isometric schematic. The schematic is a lightweight spatial editor
+view, not a custom runtime renderer or a permanent replacement for the shared
+Thermion scene bridge.
+
+Game accepts an optional build-time `AVARRA_WORLD_PATH` and reads that desktop
+file through its existing strict decode/runtime-loading boundary. With no path,
+the bundled proof world remains the default. Forge does not import Game UI and
+Game does not depend on Forge or the creator package.
+
+## Consequences
+
+- Human editor actions and future automation can reuse the same command IDs and
+  validation behavior.
+- Undo/redo preserves stable IDs because history stores immutable before/after
+  definitions, not inverse JSON patches.
+- Invalid candidate commands do not change revision, history, or world state.
+- Canonical export remains the provisional single-document world format; this
+  ADR does not close OD-004 or OD-019.
+- A Game-compatible export is distinct from a future editable Forge source
+  project and contains no editor-only metadata yet.
+- Full component add/remove/field commands, transactions, semantic diffs,
+  permissions, AI providers, and MCP remain Stage 10A work.
+- The schematic proves editor interaction while leaving the production Forge
+  3D viewport choice replaceable.
+
+## Rejected for this stage
+
+- Direct world JSON mutation from Flutter widgets.
+- Storing renderer handles in creator world state.
+- Depending on Game UI from Forge or on Forge from Game.
+- Treating the prototype JSON document as the final cooked/archive format.
+- Adding live LLM or MCP dependencies before the typed command foundation.
+
+<!-- END adr/ADR-023-stage-10-forge-command-foundation.md -->
+
+---
+
+<!-- BEGIN adr/ADR-024-playable-world-profile-and-interaction-effect.md -->
+
+# ADR-024 — Playable World Profile and Authored Interaction Effect
+
+**Status:** Accepted Stage 10.1A boundary
+
+**Date:** 2026-08-12
+
+## Context
+
+The canonical world codec validates safe, well-formed content, but Game and the
+authoritative host require a stronger product profile. Forge previously counted
+players across root and streamed entities while Game bootstrapped only root
+entities. Game also required a chunk size, renderable player template, fixed
+proof player identity, and fixed proof console identity without expressing all
+of those requirements in creator validation.
+
+Real gameplay needs creator-authored effects, but Stage 11's complete quest and
+ability model does not exist yet. A narrow interaction behavior is required now
+to prove arbitrary stable IDs and start Relay Zero without introducing a broad
+scripting system.
+
+## Decision
+
+`avarra_world` owns a server-safe `PlayableWorldValidator` distinct from the
+general package codec. Forge export, Game bootstrap, and listen/headless host
+startup call it before constructing runtime services. Stable issue codes cover
+format, chunk size, player count/location, required components, collider, entry
+transform, and player asset requirements.
+
+The current Game-ready profile requires world format v2 and exactly one
+always-active authored player. The player must have transform, renderable
+reference, solid character collider, character controller, player-controlled
+marker, and a manifest-declared renderable asset. World format v1 remains
+readable by the general codec but is not Game-ready.
+
+Content schema v4 adds the component
+`avarra.interaction.set_persistent_flag`. It declares one valid persistent flag
+key and boolean value. The same entity must be interactable and declare that
+flag in `avarra.persistence.flags`. The runtime executes this effect only after
+the existing authoritative proximity/line-of-sight interaction check succeeds.
+
+Game persistence consistently uses its configured/local `PlayerId`. Neither
+interaction behavior nor persistence policy uses proof entity/player IDs.
+
+## Consequences
+
+- Forge, Game, and Server cannot silently disagree about the minimum playable
+  entry contract.
+- Legacy worlds may still be inspected/migrated without being accepted as
+  directly playable.
+- Arbitrary generated entity and player IDs work through interaction and save
+  restoration.
+- The effect is intentionally less powerful than a general event graph or
+  script. It cannot mutate another entity, execute arbitrary code, or bypass
+  persistence validation.
+- Stage 11 should replace the active-objective summary with typed world-wide
+  quest/objective state while preserving this component as a useful primitive
+  or migrating it explicitly.
+- Multiplayer interaction authority is not implied by this ADR; it requires a
+  later protocol/gameplay command.
+
+## Rejected
+
+- Retaining special behavior for known sample stable IDs.
+- Making every syntactically valid world automatically Game-ready.
+- Treating v1's missing chunk size as an implicit runtime default.
+- Adding arbitrary scripts or a generic trigger/action graph before one real
+  game loop proves its requirements.
+- Coupling `avarra_gameplay` directly to the persistence package merely to
+  execute this application-level effect.
+
+<!-- END adr/ADR-024-playable-world-profile-and-interaction-effect.md -->
 
 ---

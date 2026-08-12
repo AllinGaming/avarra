@@ -25,6 +25,19 @@ Do not start Stage 10A AI/MCP work or broad Stage 11 RPG content yet. The next
 implementation milestone is Stage 10.1A: playable-world contract hardening and
 removal of proof-specific Game behavior.
 
+## Resolution update
+
+Stage 10.1A was implemented later on 2026-08-12. P0-01 and P0-02 are resolved:
+Forge/Game/Server share one structured Game-ready profile, Game persistence
+uses configured player identity, proof entity behavior is removed, and content
+schema v4 provides a typed persistent interaction effect. Generated-ID
+interaction/save/reconstruction coverage passes. See
+`AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
+
+The next implementation milestone is now Stage 10.1B. P0-03 and P0-04 remain
+open. Product work is anchored by `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`; AI/MCP
+expansion follows the first playable RPG slice.
+
 ## What is working well
 
 - Application boundaries match the product: Forge does not import Game UI and
@@ -291,35 +304,36 @@ Gate:
 > receives actionable validation, previews the real 3D result, safely saves,
 > exports, imports, and undoes the complete edit.
 
+### Stage 11 — Relay Zero playable slice
+
+After the Stage 10.2 editor gate, build the concrete solo/co-op adventure in
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`. Health/combat, guardian AI, inventory,
+world-wide objectives, authoritative co-op commands, and save/resume must be
+proved by actual play before broad creator automation.
+
 ### Stage 10A — Creator API / AI foundation
 
-Only after the Stage 10.2 gate, add transactions, semantic diff, permissions,
-read-only resources, fake AI provider, and an external-agent adapter skeleton.
-MCP remains an adapter; no live LLM dependency belongs in CI.
+After Relay Zero, add transactions, semantic diff, permissions, read-only
+resources, fake AI provider, and an external-agent adapter skeleton. MCP remains
+an adapter; no live LLM dependency belongs in CI.
 
 ## Immediate next coding slice
 
-Start with Stage 10.1A only. Expected affected boundaries:
+Start with Stage 10.1B. Expected affected boundaries:
 
 ```text
-avarra_world or another existing server-safe shared package
-  playable-world contract and stable issues
+avarra_forge
+  source-project new/open/save/save-as and recovery
 
-avarra_content
-  typed interaction effect schema/migration if selected by ADR
+avarra_game
+  runtime import/catalog selection and diagnostics
 
-avarra_creator_api
-  export profile validation
+avarra_world / avarra_tooling
+  minimum asset dependency/closure checks
 
-avarra_game / avarra_server
-  pre-bootstrap validation and removal of proof IDs
-
-tests/docs
-  invalid profiles and generated-ID persistence proof
+tests/docs/CI
+  export, move, import, identify, restart proof
 ```
-
-Prefer an existing shared package for the contract unless a second real
-consumer proves a new package is warranted.
 
 ## Completion criteria for this review
 

@@ -246,6 +246,21 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.setPersistentFlagOnInteract,
+          version: 1,
+          introducedInContentSchemaVersion: 4,
+          fields: const [
+            ComponentFieldSchema(
+              name: 'flagKey',
+              kind: ComponentFieldKind.string,
+            ),
+            ComponentFieldSchema(
+              name: 'value',
+              kind: ComponentFieldKind.boolean,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.persistentFlags,
           version: 1,
           introducedInContentSchemaVersion: 3,
@@ -316,6 +331,8 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.playerControlled =>
         const PlayerControlledDefinition(),
       AvarraComponentType.interactable => _decodeInteractable(data),
+      AvarraComponentType.setPersistentFlagOnInteract =>
+        _decodeSetPersistentFlagOnInteract(data),
       AvarraComponentType.persistentFlags => _decodePersistentFlags(data),
       _ => throw StateError('Validated component type has no decoder: $type'),
     };
@@ -365,6 +382,23 @@ final class ComponentSchemaRegistry {
       );
     }
     return InteractableDefinition(label: label, range: range);
+  }
+
+  SetPersistentFlagOnInteractDefinition _decodeSetPersistentFlagOnInteract(
+    Map<String, Object?> data,
+  ) {
+    final flagKey = data['flagKey']! as String;
+    final keyPattern = RegExp(r'^[a-z][a-z0-9_.-]{0,63}$');
+    if (!keyPattern.hasMatch(flagKey)) {
+      _invalidComponent(
+        AvarraComponentType.setPersistentFlagOnInteract,
+        'Interaction effect flag key is invalid.',
+      );
+    }
+    return SetPersistentFlagOnInteractDefinition(
+      flagKey: flagKey,
+      value: data['value']! as bool,
+    );
   }
 
   PersistentFlagsDefinition _decodePersistentFlags(Map<String, Object?> data) {

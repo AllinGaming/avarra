@@ -475,6 +475,18 @@ Gate:
 > Game interaction/persistence or is rejected before runtime construction with
 > a structured creator-visible error.
 
+Gate status (implemented 2026-08-12):
+
+- Forge export, Game bootstrap, and listen/headless host startup share the
+  server-safe Game-ready profile and stable errors;
+- content schema v4 supplies a typed persistent-flag interaction effect;
+- Game uses configured player identity and no longer special-cases proof IDs;
+- generated player/interactable IDs pass interaction, save, reconstruction,
+  and restore coverage;
+- the bundled world begins the `Relay Zero Prototype` objective loop.
+
+See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
+
 ## Stage 10.1B — Recoverable Project and Runtime Import
 
 Build:
@@ -514,65 +526,48 @@ Gate:
 
 ---
 
-# Stage 10A — Creator API / AI Foundation
+# Stage 11 — Relay Zero RPG Vertical Slice
 
-After the Stage 10.2 gate, build the AI-friendly automation boundary.
+After the Stage 10.2 gate, prioritize the first actual playable adventure. See
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
-Build:
+Build in thin vertical slices:
 
 ```text
-Avarra Creator API
-transaction staging
-semantic diff
-tool permissions
+player/enemy health and damage
+one basic attack and death/restart
+one pursuing/attacking guardian
+three persistent relay stabilizer objectives
+one relay-core item and minimal inventory
+objective gate and completion state
+authoritative co-op combat/objective commands
+save/resume across the full adventure
+```
+
+Gate:
+
+> Relay Zero is a comprehensible 10–15 minute solo/co-op adventure that saves,
+> closes, restores, and completes on Windows and physical Android.
+
+---
+
+# Stage 10A — Creator API / AI Foundation
+
+After Relay Zero proves the real creator/gameplay schemas, build the AI-friendly
+automation boundary:
+
+```text
+Avarra Creator API transactions
+semantic diff and permissions
 read-only project/world resources
 validation tool wrappers
 fake AI provider
 external-agent adapter skeleton
 ```
 
-Then add a limited AI proof:
-
-```text
-creator prompt
-→ AI/tool plan
-→ place existing prefabs
-→ create one encounter
-→ validate
-→ preview diff
-→ approve
-```
-
-Gate:
-
-> An external/fake agent can transform a selected empty area using only typed Creator API tools, with no direct file editing, and the complete change can be validated, reviewed, committed and undone.
-
-Do not make live LLM calls a required CI dependency.
-
----
-
-# Stage 11 — RPG Vertical Slice
-
-Add:
-
-```text
-enemy
-health
-combat
-ability
-item
-inventory
-chest
-NPC
-quest
-loot
-save
-multiplayer
-```
-
-Gate:
-
-> Forge-authored 20–30 minute co-op adventure works Windows/Android.
+Then prove an external/fake agent can populate one selected Relay Zero-style
+area using only typed tools, with validation, preview, approval, commit, and
+complete undo. Live LLM calls remain outside required CI.
 
 ---
 

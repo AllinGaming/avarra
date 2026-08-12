@@ -60,7 +60,7 @@ WorldDefinition createForgeSampleWorld() {
         ],
       ),
       WorldEntityDefinition(
-        id: EntityId.parse('01890f47-e8b8-7a68-8000-000000000004'),
+        id: EntityId.parse('01890f47-e8b8-7a68-8000-000000000505'),
         components: [
           const TransformDefinition(
             position: ContentVector3(2, 0.5, 0),
@@ -74,6 +74,10 @@ WorldDefinition createForgeSampleWorld() {
             isSensor: false,
           ),
           const InteractableDefinition(label: 'Forge console', range: 2.2),
+          const SetPersistentFlagOnInteractDefinition(
+            flagKey: 'activated',
+            value: true,
+          ),
           PersistentFlagsDefinition(const {'activated': false}),
         ],
       ),

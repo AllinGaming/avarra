@@ -10,4 +10,28 @@ abstract final class WorldErrorCodes {
   static const missingAssetReference = AvarraErrorCode(
     'WORLD_ASSET_REFERENCE_MISSING',
   );
+  static const playableFormatUnsupported = AvarraErrorCode(
+    'WORLD_PLAYABLE_FORMAT_UNSUPPORTED',
+  );
+  static const playableChunkSizeInvalid = AvarraErrorCode(
+    'WORLD_PLAYABLE_CHUNK_SIZE_INVALID',
+  );
+  static const playablePlayerCountInvalid = AvarraErrorCode(
+    'WORLD_PLAYABLE_PLAYER_COUNT_INVALID',
+  );
+  static const playablePlayerNotAlwaysActive = AvarraErrorCode(
+    'WORLD_PLAYABLE_PLAYER_NOT_ALWAYS_ACTIVE',
+  );
+  static const playablePlayerComponentMissing = AvarraErrorCode(
+    'WORLD_PLAYABLE_PLAYER_COMPONENT_MISSING',
+  );
+  static const playablePlayerTransformInvalid = AvarraErrorCode(
+    'WORLD_PLAYABLE_PLAYER_TRANSFORM_INVALID',
+  );
+  static const playablePlayerColliderInvalid = AvarraErrorCode(
+    'WORLD_PLAYABLE_PLAYER_COLLIDER_INVALID',
+  );
+  static const playablePlayerAssetMissing = AvarraErrorCode(
+    'WORLD_PLAYABLE_PLAYER_ASSET_MISSING',
+  );
 }

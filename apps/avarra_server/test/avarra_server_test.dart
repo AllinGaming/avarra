@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -7,6 +8,7 @@ import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
+import 'package:avarra_world/avarra_world.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -96,6 +98,30 @@ void main() {
     await client.close();
     await hostEvents.cancel();
     await host.close();
+  });
+
+  test('rejects a decoded world outside the shared playable profile', () async {
+    final json =
+        jsonDecode(_findProofWorld().readAsStringSync())
+            as Map<String, dynamic>;
+    json['worldFormatVersion'] = 1;
+    (json['world']! as Map<String, dynamic>).remove('chunkSize');
+    json.remove('chunks');
+
+    expect(
+      () => MultiplayerProofHost.start(
+        worldPackageSource: jsonEncode(json),
+        primaryPlayerId: _primaryPlayerId,
+        port: 0,
+      ),
+      throwsA(
+        isA<AvarraException>().having(
+          (error) => error.code,
+          'code',
+          WorldErrorCodes.playableFormatUnsupported,
+        ),
+      ),
+    );
   });
 
   test('listen host gives two clients independent player avatars', () async {

@@ -1,3 +1,4 @@
+export 'src/playable_world_profile.dart';
 export 'src/runtime_world.dart';
 export 'src/world_definition.dart';
 export 'src/world_error_codes.dart';

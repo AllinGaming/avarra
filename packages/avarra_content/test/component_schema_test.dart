@@ -14,6 +14,7 @@ void main() {
         orderedEquals([
           AvarraComponentType.characterController,
           AvarraComponentType.interactable,
+          AvarraComponentType.setPersistentFlagOnInteract,
           AvarraComponentType.isometricOccluder,
           AvarraComponentType.isometricOcclusionTarget,
           AvarraComponentType.persistentFlags,
@@ -120,6 +121,36 @@ void main() {
         'schemaVersion': 1,
         'flags': {'activated': false},
       }, contentSchemaVersion: 2),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes a typed persistent interaction effect in content v4', () {
+    final effect = registry.decode(
+      AvarraComponentType.setPersistentFlagOnInteract,
+      {'schemaVersion': 1, 'flagKey': 'console.activated', 'value': true},
+    );
+
+    expect(effect, isA<SetPersistentFlagOnInteractDefinition>());
+    expect(
+      (effect as SetPersistentFlagOnInteractDefinition).flagKey,
+      'console.activated',
+    );
+    expect(effect.value, isTrue);
+    expect(
+      () => registry.decode(AvarraComponentType.setPersistentFlagOnInteract, {
+        'schemaVersion': 1,
+        'flagKey': 'Invalid Key',
+        'value': true,
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.setPersistentFlagOnInteract, {
+        'schemaVersion': 1,
+        'flagKey': 'activated',
+        'value': true,
+      }, contentSchemaVersion: 3),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

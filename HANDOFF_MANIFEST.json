@@ -1,12 +1,14 @@
 {
   "architecture_version": "v8-reviewed",
-  "date": "2026-08-10",
-  "current_direction": "Build AVARRA directly with AI-friendly Forge/Creator API; no standalone custom engine requirement.",
+  "date": "2026-08-12",
+  "current_direction": "Finish the creator-to-game loop and Relay Zero playable slice before AI expansion; no standalone custom engine requirement.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
   "stage_2b_validation": "docs/AVARRA_STAGE_2B_RENDERER_VALIDATION.md",
   "stage_3_validation": "docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md",
+  "stage_10_1a_validation": "docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md",
+  "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
   "adrs": [
     "ADR-008-build-avarra-not-an-engine.md",
     "ADR-009-scene-bridge-boundary.md",
@@ -17,7 +19,14 @@
     "ADR-014-initial-ecs-storage-model.md",
     "ADR-015-flutter-scene-stable-sdk-compatibility.md",
     "ADR-016-initial-thermion-renderer.md",
-    "ADR-017-thermion-windows-runtime-compatibility.md"
+    "ADR-017-thermion-windows-runtime-compatibility.md",
+    "ADR-018-stage-5-physics-query-backend.md",
+    "ADR-019-stage-6-world-streaming-model.md",
+    "ADR-020-stage-7-persistence-model.md",
+    "ADR-021-stage-8-multiplayer-baseline.md",
+    "ADR-022-stage-9-android-listen-host.md",
+    "ADR-023-stage-10-forge-command-foundation.md",
+    "ADR-024-playable-world-profile-and-interaction-effect.md"
   ],
   "ai_creator_docs": [
     "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",
@@ -25,7 +34,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed; Game/Forge/Server boundaries explicit.",
+  "review_status": "Consistency-reviewed through Stage 10.1A; Game/Forge/Server playable contract shared.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
@@ -21,27 +22,30 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 9 · Android Listen Host'), findsOneWidget);
-    expect(find.text('Isometric Persistence Proof'), findsOneWidget);
+    expect(find.text('Stage 10.1 · Authored World Runtime'), findsOneWidget);
+    expect(find.text('Relay Zero Prototype'), findsOneWidget);
     expect(find.text('4 ECS entities bound to the scene'), findsOneWidget);
     expect(
       find.text('Tap ground to move · WASD/arrow keys for direct movement'),
       findsOneWidget,
     );
-    expect(find.text('Select the console, then interact'), findsOneWidget);
+    expect(find.text('Select a world object, then interact'), findsOneWidget);
     expect(find.byKey(const Key('camera_status')), findsOneWidget);
     expect(find.byKey(const Key('world_version_status')), findsOneWidget);
     expect(find.text('Chunk 0,0 · 1/3 active'), findsOneWidget);
     expect(find.byKey(const Key('streaming_status')), findsOneWidget);
     expect(find.text('Save r0 · No save yet'), findsOneWidget);
-    expect(find.text('Ancient console: inactive'), findsOneWidget);
+    expect(
+      find.text('Objectives · 0/1 complete · Next: Restore the ancient relay'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('save_status')), findsOneWidget);
     expect(
       find.text('Network: Offline · local authority · 0 entities'),
       findsOneWidget,
     );
     expect(find.byKey(const Key('multiplayer_status')), findsOneWidget);
-    expect(find.byKey(const Key('persistent_console_status')), findsOneWidget);
+    expect(find.byKey(const Key('authored_objective_status')), findsOneWidget);
   });
 
   testWidgets('restores a persistent entity overlay during chunk activation', (
@@ -78,7 +82,7 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('Save r4 · Restored revision 4'), findsOneWidget);
-    expect(find.text('Ancient console: activated'), findsOneWidget);
+    expect(find.text('Objectives · 1/1 complete'), findsOneWidget);
   });
 
   testWidgets('surfaces malformed world packages', (tester) async {
@@ -93,6 +97,33 @@ void main() {
 
     expect(find.byKey(const Key('world_load_error')), findsOneWidget);
     expect(find.textContaining('WORLD_PACKAGE_MALFORMED'), findsOneWidget);
+  });
+
+  testWidgets('rejects a decoded world outside the playable profile', (
+    tester,
+  ) async {
+    final source = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    final json = jsonDecode(source!) as Map<String, dynamic>;
+    json['worldFormatVersion'] = 1;
+    (json['world']! as Map<String, dynamic>).remove('chunkSize');
+    json.remove('chunks');
+
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => jsonEncode(json),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('world_load_error')), findsOneWidget);
+    expect(
+      find.textContaining('WORLD_PLAYABLE_FORMAT_UNSUPPORTED'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('runs a local client inside a listen-host session', (

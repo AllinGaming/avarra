@@ -1,4 +1,3 @@
-import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_world/avarra_world.dart';
 
@@ -73,20 +72,18 @@ final class CreatorWorldValidator {
       );
     }
     if (requirePlayableEntry) {
-      final players = world.allEntities
-          .where(
-            (entity) => entity.component<PlayerControlledDefinition>() != null,
-          )
-          .length;
-      if (players != 1) {
-        issues.add(
-          CreatorValidationIssue(
-            code: CreatorErrorCodes.playableEntryInvalid,
-            message: 'A Game-importable world requires exactly one player.',
-            context: {'playerCount': players},
-          ),
-        );
-      }
+      issues.addAll(
+        const PlayableWorldValidator()
+            .validate(world)
+            .issues
+            .map(
+              (issue) => CreatorValidationIssue(
+                code: issue.code,
+                message: issue.message,
+                context: issue.context,
+              ),
+            ),
+      );
     }
     return CreatorValidationReport(issues);
   }

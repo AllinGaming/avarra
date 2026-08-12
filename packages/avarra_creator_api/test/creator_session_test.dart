@@ -152,7 +152,7 @@ void main() {
       final session = CreatorWorldSession(initialWorld: _world());
       expect(
         session.validate(requirePlayableEntry: true).issues.single.code,
-        CreatorErrorCodes.playableEntryInvalid,
+        WorldErrorCodes.playablePlayerCountInvalid,
       );
       expect(session.exportCanonical, throwsA(isA<AvarraException>()));
 
@@ -165,6 +165,7 @@ void main() {
             id: playerId,
             components: [
               ...entity.components.values,
+              RenderableReferenceDefinition(assetId: _creatorAssetId),
               const PhysicsColliderDefinition(
                 halfExtents: ContentVector3(0.4, 0.5, 0.4),
                 bodyKind: ContentPhysicsBodyKind.character,
@@ -220,7 +221,9 @@ WorldDefinition _world() {
     worldFormatVersion: currentWorldFormatVersion,
     contentSchemaVersion: currentContentSchemaVersion,
     chunkSize: 16,
-    assets: const [],
+    assets: [
+      WorldAssetDefinition(id: _creatorAssetId, path: 'assets/player.gltf'),
+    ],
     entities: [
       WorldEntityDefinition(
         id: EntityId.parse('01890f47-e8b8-7a68-8000-000000000602'),
@@ -230,6 +233,8 @@ WorldDefinition _world() {
     chunks: const [],
   );
 }
+
+final _creatorAssetId = AssetId.parse('01890f47-e8b8-7a68-9000-000000000606');
 
 TransformDefinition _transform({double x = 0}) {
   return TransformDefinition(

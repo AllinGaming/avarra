@@ -247,6 +247,31 @@ final class InteractableDefinition extends ContentComponentDefinition {
   };
 }
 
+/// Authored interaction effect that updates one declared persistent flag.
+final class SetPersistentFlagOnInteractDefinition
+    extends ContentComponentDefinition {
+  const SetPersistentFlagOnInteractDefinition({
+    required this.flagKey,
+    required this.value,
+  });
+
+  final String flagKey;
+  final bool value;
+
+  @override
+  String get type => AvarraComponentType.setPersistentFlagOnInteract;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'flagKey': flagKey,
+    'value': value,
+  };
+}
+
 final class PersistentFlagsDefinition extends ContentComponentDefinition {
   PersistentFlagsDefinition(Map<String, bool> flags)
     : flags = Map.unmodifiable(SplayTreeMap.of(flags));

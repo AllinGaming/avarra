@@ -209,6 +209,62 @@ void main() {
     expect(runtime.ecs.hasComponent<PlayerControlledComponent>(handle), isTrue);
   });
 
+  test('instantiates a typed persistent interaction effect', () {
+    final json = _validWorldJson();
+    final target =
+        (json['entities']! as List<dynamic>).first as Map<String, dynamic>;
+    final components = target['components']! as Map<String, dynamic>;
+    components
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.4, 0.4, 0.4],
+        'bodyKind': 'static',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.interactable] = {
+        'schemaVersion': 1,
+        'label': 'Generated console',
+        'range': 2.4,
+      }
+      ..[AvarraComponentType.persistentFlags] = {
+        'schemaVersion': 1,
+        'flags': {'activated': false},
+      }
+      ..[AvarraComponentType.setPersistentFlagOnInteract] = {
+        'schemaVersion': 1,
+        'flagKey': 'activated',
+        'value': true,
+      };
+
+    final runtime = const RuntimeWorldLoader().load(
+      codec.decode(jsonEncode(json)),
+    );
+    final handle = runtime.ecs.handleFor(EntityId.parse(_targetEntityId))!;
+    final effect = runtime.ecs.component<SetPersistentFlagOnInteractComponent>(
+      handle,
+    );
+
+    expect(effect.flagKey, 'activated');
+    expect(effect.value, isTrue);
+  });
+
+  test('rejects persistent interaction effects without declared flags', () {
+    final json = _validWorldJson();
+    final target =
+        (json['entities']! as List<dynamic>).first as Map<String, dynamic>;
+    final components = target['components']! as Map<String, dynamic>;
+    components[AvarraComponentType.setPersistentFlagOnInteract] = {
+      'schemaVersion': 1,
+      'flagKey': 'activated',
+      'value': true,
+    };
+
+    expect(
+      () => codec.decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
+
   test('rejects duplicate stable IDs', () {
     final json = _validWorldJson();
     final entities = json['entities']! as List<dynamic>;

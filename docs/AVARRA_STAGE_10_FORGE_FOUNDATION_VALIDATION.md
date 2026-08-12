@@ -81,6 +81,10 @@ These are Stage 10.1 gate blockers, not reasons to discard the command
 foundation. See `AVARRA_ENGINEERING_REVIEW_2026-08-12.md` for evidence,
 priorities, and acceptance criteria.
 
+Stage 10.1A subsequently closed the playable-profile and proof-ID items. The
+build-time import, asset closure, and recoverable project lifecycle items remain
+Stage 10.1B. See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`.
+
 ## Honest limits
 
 - The viewport is an interactive isometric schematic; shared Thermion-backed 3D

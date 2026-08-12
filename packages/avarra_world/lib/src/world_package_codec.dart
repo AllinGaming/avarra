@@ -345,6 +345,24 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
+    if (types.contains(AvarraComponentType.setPersistentFlagOnInteract)) {
+      final effect = components
+          .whereType<SetPersistentFlagOnInteractDefinition>()
+          .single;
+      final persistent = components
+          .whereType<PersistentFlagsDefinition>()
+          .firstOrNull;
+      if (!types.contains(AvarraComponentType.interactable) ||
+          persistent == null ||
+          !persistent.flags.containsKey(effect.flagKey)) {
+        _invalid(
+          '$path.components',
+          'A persistent interaction effect requires an interactable and a '
+              'declared persistent flag.',
+          context: {'entityId': entityId.value, 'flagKey': effect.flagKey},
+        );
+      }
+    }
   }
 
   void _validateReferences(

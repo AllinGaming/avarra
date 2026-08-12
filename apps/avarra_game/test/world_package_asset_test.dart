@@ -20,6 +20,10 @@ void main() {
       final codec = WorldPackageCodec();
       final definition = codec.decode(packageFile.readAsStringSync());
       expect(
+        const PlayableWorldValidator().validate(definition).isValid,
+        isTrue,
+      );
+      expect(
         networkPackageHashFromText(packageFile.readAsStringSync()),
         matches(RegExp(r'^[0-9a-f]{64}$')),
       );
@@ -37,8 +41,9 @@ void main() {
       ]);
       await streaming.pumpUntilStable();
 
-      expect(definition.name, 'Isometric Persistence Proof');
+      expect(definition.name, 'Relay Zero Prototype');
       expect(definition.worldFormatVersion, 2);
+      expect(definition.contentSchemaVersion, 4);
       expect(definition.chunkSize, 4);
       expect(definition.chunks, hasLength(3));
       expect(definition.allEntities, hasLength(8));

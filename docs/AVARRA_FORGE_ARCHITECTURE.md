@@ -269,14 +269,17 @@ See `AVARRA_AI_CREATOR_ARCHITECTURE.md`.
 The Stage 10 foundation is not yet a creator-safe project loop. The required
 order is:
 
-1. share one playable-world profile between Forge export and Game bootstrap;
-2. remove proof console/player stable IDs from Game interaction/persistence;
+1. **Complete:** share one playable-world profile between Forge export, Game,
+   and Server;
+2. **Complete:** remove proof console/player stable IDs from Game
+   interaction/persistence;
 3. add recoverable Forge new/open/save/save-as and safe export destinations;
 4. add runtime Game import and minimum asset dependency/closure diagnostics;
 5. extend schemas and typed commands for a generic inspector;
 6. bound/batch command history using measured creator fixtures;
 7. integrate the shared Thermion-backed editing viewport and gizmos;
-8. only then add Stage 10A transactions, permissions, semantic diff, and agent
+8. build the Relay Zero RPG slice;
+9. only then add Stage 10A transactions, permissions, semantic diff, and agent
    adapters.
 
 The source-project representation is tracked by OD-020. The runtime package and

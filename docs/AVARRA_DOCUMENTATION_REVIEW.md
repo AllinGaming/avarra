@@ -1,7 +1,7 @@
 # AVARRA — Documentation Architecture Review
 
 **Review date:** 2026-08-12
-**Reviewed baseline:** Stage 10 Forge foundation (`46e26a0`)
+**Reviewed baseline:** Stage 10.1A playable contract
 **Result:** Coherent; the post-foundation repair order is now explicit
 
 ---
@@ -122,10 +122,13 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1A.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1B.
 
-The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The current Forge proof is not yet the complete creator-facing loop: the shared playable-world contract, proof-ID removal, recoverable project lifecycle and runtime import path are the next gates.
+The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract and proof-ID removal are complete. Recoverable Forge project lifecycle and runtime Game import are the next gate, followed by the minimum editor completion and Relay Zero playable slice.
 
-The evidence, defects and prioritized repair sequence are recorded in `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+The evidence and sequence are recorded in
+`AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
 Future detailed specs should be written as each roadmap stage begins, using implementation findings rather than speculative overdesign.

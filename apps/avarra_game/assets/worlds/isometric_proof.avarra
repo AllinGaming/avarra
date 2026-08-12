@@ -1,10 +1,10 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 3,
+  "contentSchemaVersion": 4,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
-    "name": "Isometric Persistence Proof",
+    "name": "Relay Zero Prototype",
     "chunkSize": 4
   },
   "assets": [
@@ -113,8 +113,13 @@
             },
             "avarra.interactable": {
               "schemaVersion": 1,
-              "label": "Ancient console",
+              "label": "Restore the ancient relay",
               "range": 2.4
+            },
+            "avarra.interaction.set_persistent_flag": {
+              "schemaVersion": 1,
+              "flagKey": "activated",
+              "value": true
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,

@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
+import 'src/authored_interaction_effects.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
 import 'src/world_package_source_loader.dart';
@@ -44,10 +45,6 @@ const _configuredPlayerId = String.fromEnvironment(
   defaultValue: '01890f47-e8b8-7a68-8000-000000000402',
 );
 final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000401');
-final _proofPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
-final _proofConsoleEntityId = EntityId.parse(
-  '01890f47-e8b8-7a68-8000-000000000004',
-);
 
 typedef WorldPackageSourceLoader = Future<String> Function();
 typedef SaveStoreLoader = Future<SaveStore> Function();
@@ -167,6 +164,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           multiplayerClient: loadedWorld.multiplayerClient,
           multiplayerHost: loadedWorld.multiplayerHost,
           multiplayerStatus: loadedWorld.multiplayerStatus,
+          localPlayerId: loadedWorld.localPlayerId,
           hostDeviceMetricsSampler: widget.hostDeviceMetricsSampler,
         );
       },
@@ -177,6 +175,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
     final source = await widget.sourceLoader();
     final configuredPlayerId = PlayerId.parse(_configuredPlayerId);
     final definition = WorldPackageCodec().decode(source);
+    const PlayableWorldValidator().validate(definition).throwIfInvalid();
     final runtimeWorld = const RuntimeWorldLoader().load(definition);
     final player = runtimeWorld.ecs.query<PlayerControlledComponent>().single;
     final persistence = WorldSaveSession(
@@ -191,7 +190,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       worldId: definition.id,
       sourceWorldFormatVersion: definition.worldFormatVersion,
       chunkSize: definition.chunkSize!,
-      players: {_proofPlayerId: player.entityId},
+      players: {configuredPlayerId: player.entityId},
       knownPersistentEntityIds: definition.allEntities.map(
         (entity) => entity.id,
       ),
@@ -256,6 +255,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       multiplayerClient: multiplayerClient,
       multiplayerHost: multiplayerHost,
       multiplayerStatus: multiplayerStatus,
+      localPlayerId: configuredPlayerId,
     );
   }
 }
@@ -269,6 +269,7 @@ final class _LoadedWorld {
     required this.multiplayerClient,
     required this.multiplayerHost,
     required this.multiplayerStatus,
+    required this.localPlayerId,
   });
 
   final RuntimeWorld runtimeWorld;
@@ -278,6 +279,7 @@ final class _LoadedWorld {
   final ReplicationClient? multiplayerClient;
   final MultiplayerProofHost? multiplayerHost;
   final String multiplayerStatus;
+  final PlayerId localPlayerId;
 }
 
 class _PresentationBoundaryScreen extends StatefulWidget {
@@ -290,6 +292,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.multiplayerClient,
     required this.multiplayerHost,
     required this.multiplayerStatus,
+    required this.localPlayerId,
     required this.hostDeviceMetricsSampler,
   });
 
@@ -301,6 +304,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final ReplicationClient? multiplayerClient;
   final MultiplayerProofHost? multiplayerHost;
   final String multiplayerStatus;
+  final PlayerId localPlayerId;
   final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
@@ -317,6 +321,7 @@ class _PresentationBoundaryScreenState
   late DeterministicPhysicsCollisionWorld _collisionWorld;
   late CharacterMovementSystem _movementSystem;
   late InteractionSystem _interactionSystem;
+  late AuthoredInteractionEffectExecutor _interactionEffects;
   late final EntityId _playerEntityId;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
@@ -346,7 +351,7 @@ class _PresentationBoundaryScreenState
   int _maximumFrameMicroseconds = 0;
   bool _hostEnding = false;
   bool _inputSubmissionPaused = false;
-  String _interactionStatus = 'Select the console, then interact';
+  String _interactionStatus = 'Select a world object, then interact';
 
   @override
   void initState() {
@@ -379,6 +384,10 @@ class _PresentationBoundaryScreenState
     _interactionSystem = InteractionSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
+    );
+    _interactionEffects = AuthoredInteractionEffectExecutor(
+      ecs: widget.runtimeWorld.ecs,
+      persistence: widget.persistence,
     );
     _cameraRig = IsometricCameraRig(target: _playerPosition);
     _assetUriResolver = MapThermionAssetUriResolver({
@@ -462,7 +471,7 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 9 · Android Listen Host'),
+        const Text('Stage 10.1 · Authored World Runtime'),
         Text(widget.runtimeWorld.definition.name),
         Text('${_presentation.length} ECS entities bound to the scene'),
         Text(
@@ -491,8 +500,11 @@ class _PresentationBoundaryScreenState
           Text(_hostDeviceStatus, key: const Key('host_device_status')),
         ],
         Text(
-          'Ancient console: $_consolePersistenceStatus',
-          key: const Key('persistent_console_status'),
+          authoredInteractionObjectiveStatus(
+            widget.runtimeWorld.ecs,
+            widget.persistence,
+          ),
+          key: const Key('authored_objective_status'),
         ),
         Text(
           'Camera ${_cameraRig.quarterTurns + 1}/4 · '
@@ -820,15 +832,15 @@ class _PresentationBoundaryScreenState
           _interactionStatus = result.accepted
               ? 'Interacted: ${result.label}'
               : 'Cannot interact: ${result.rejection!.name}';
-          if (result.accepted && entityId == _proofConsoleEntityId) {
-            final changed = widget.persistence.setFlag(
-              entityId,
-              'activated',
-              true,
-            );
-            if (changed) {
-              _interactionStatus = 'Activated and queued atomic save';
-              _scheduleSave();
+          if (result.accepted) {
+            final effect = _interactionEffects.apply(entityId);
+            if (effect.handled) {
+              _interactionStatus = effect.changed
+                  ? '${result.label}: objective updated and queued for save'
+                  : '${result.label}: objective already complete';
+              if (effect.changed) {
+                _scheduleSave();
+              }
             }
           }
         case RotateCameraIntent(:final deltaQuarterTurns):
@@ -932,7 +944,7 @@ class _PresentationBoundaryScreenState
       _interactionStatus =
           'Movement blocked by ${result.collidedEntityIds.first.value}';
     }
-    widget.persistence.markPlayerDirty(_proofPlayerId);
+    widget.persistence.markPlayerDirty(widget.localPlayerId);
     _scheduleSave();
     _scheduleStreamingRefresh();
   }
@@ -1223,17 +1235,6 @@ class _PresentationBoundaryScreenState
         );
       });
     }
-  }
-
-  String get _consolePersistenceStatus {
-    return switch (widget.persistence.flagValue(
-      _proofConsoleEntityId,
-      'activated',
-    )) {
-      true => 'activated',
-      false => 'inactive',
-      null => 'not loaded',
-    };
   }
 
   void _scheduleSave() {
