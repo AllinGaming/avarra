@@ -2,6 +2,7 @@ import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_creator_api/avarra_creator_api.dart';
 import 'package:avarra_forge/main.dart';
 import 'package:avarra_forge/src/forge_file_services.dart';
+import 'package:avarra_forge/src/forge_panels.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +17,11 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 760));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      AvarraForgeApp(projectStorage: storage, fileDialogs: dialogs),
+      AvarraForgeApp(
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
     );
 
     expect(find.text('Hierarchy'), findsOneWidget);
@@ -33,7 +38,7 @@ void main() {
     expect(find.textContaining('3 entities'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('redo')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.textContaining('4 entities'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('position_x')), '3');
@@ -73,7 +78,11 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 760));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
-      AvarraForgeApp(projectStorage: storage, fileDialogs: dialogs),
+      AvarraForgeApp(
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
     );
 
     await tester.tap(find.byKey(const Key('add_cube')));
@@ -104,6 +113,51 @@ void main() {
 
     expect(find.textContaining('5 entities'), findsOneWidget);
     expect(find.textContaining('Recovered unsaved changes'), findsOneWidget);
+  });
+
+  testWidgets('edits a non-transform component through schema metadata', (
+    tester,
+  ) async {
+    final storage = _MemoryForgeStorage();
+    final dialogs = _FakeForgeFileDialogs()
+      ..savePaths.add('build/schema-edited.avarra');
+    await tester.binding.setSurfaceSize(const Size(1280, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      AvarraForgeApp(
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
+    );
+
+    await tester.tap(find.text('Forge console'));
+    await tester.pump();
+    await tester.drag(find.byType(SchemaInspectorPanel), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Interactable'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('interactable_label')),
+      'Relay terminal',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(find.textContaining('Set interactable.label'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+    final decoded = WorldPackageCodec().decode(
+      storage.files['build/schema-edited.avarra']!,
+    );
+    expect(
+      decoded.allEntities
+          .where((entity) => entity.component<InteractableDefinition>() != null)
+          .single
+          .component<InteractableDefinition>()!
+          .label,
+      'Relay terminal',
+    );
   });
 }
 

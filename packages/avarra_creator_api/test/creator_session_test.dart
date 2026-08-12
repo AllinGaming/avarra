@@ -211,7 +211,155 @@ void main() {
         ),
       );
     });
+
+    test('batches component edits into one undo boundary', () {
+      final session = CreatorWorldSession(initialWorld: _world());
+      final entityId = session.world.entities.single.id;
+      session.execute(
+        CreatorCommandBatch(
+          description: 'Make entity interactive',
+          commands: [
+            AddEntityComponentCommand(
+              entityId: entityId,
+              component: const PhysicsColliderDefinition(
+                halfExtents: ContentVector3(0.5, 0.5, 0.5),
+                bodyKind: ContentPhysicsBodyKind.staticBody,
+                isSensor: false,
+              ),
+            ),
+            AddEntityComponentCommand(
+              entityId: entityId,
+              component: const InteractableDefinition(
+                label: 'Terminal',
+                range: 2,
+              ),
+            ),
+            SetEntityComponentFieldCommand(
+              entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000602'),
+              componentType: AvarraComponentType.interactable,
+              fieldName: 'range',
+              value: 3.5,
+            ),
+          ],
+        ),
+      );
+
+      expect(session.undoHistory, hasLength(1));
+      expect(
+        session.world.entities.single
+            .component<InteractableDefinition>()!
+            .range,
+        3.5,
+      );
+      expect(session.undo(), isTrue);
+      expect(
+        session.world.entities.single.component<InteractableDefinition>(),
+        isNull,
+      );
+      expect(
+        session.world.entities.single.component<PhysicsColliderDefinition>(),
+        isNull,
+      );
+      expect(session.redo(), isTrue);
+      expect(
+        session.world.entities.single
+            .component<InteractableDefinition>()!
+            .label,
+        'Terminal',
+      );
+    });
+
+    test('bounds inverse-command history for a measured creator fixture', () {
+      final fixture = _measuredWorld(entityCount: 256);
+      final fixtureBytes = WorldPackageCodec().encodeCanonical(fixture).length;
+      const budget = CreatorHistoryBudget(
+        maximumEntries: 12,
+        maximumEstimatedBytes: 5000,
+      );
+      final session = CreatorWorldSession(
+        initialWorld: fixture,
+        historyBudget: budget,
+      );
+      final entityId = fixture.entities.first.id;
+
+      for (var index = 0; index < 80; index += 1) {
+        session.execute(
+          SetEntityTransformCommand(
+            entityId: entityId,
+            transform: _transform(x: index / 10),
+          ),
+        );
+      }
+
+      expect(fixtureBytes, greaterThan(40000));
+      expect(session.undoHistory.length, lessThanOrEqualTo(12));
+      expect(session.historyEstimatedBytes, lessThanOrEqualTo(5000));
+      expect(session.historyEstimatedBytes, lessThan(fixtureBytes ~/ 4));
+      expect(session.discardedHistoryEntryCount, greaterThan(0));
+      while (session.undo()) {}
+      expect(session.canUndo, isFalse);
+    });
+
+    test('aggregates actionable component validation locations', () {
+      final firstId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000671');
+      final secondId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000672');
+      final invalid = _copyWorld(
+        _world(),
+        entities: [
+          WorldEntityDefinition(
+            id: firstId,
+            components: [
+              const TransformDefinition(
+                position: ContentVector3(0, 0, 0),
+                rotation: ContentQuaternion(0, 0, 0, 1),
+                scale: ContentVector3(0, 1, 1),
+              ),
+            ],
+          ),
+          WorldEntityDefinition(
+            id: secondId,
+            components: [
+              _transform(),
+              const PhysicsColliderDefinition(
+                halfExtents: ContentVector3(-1, 1, 1),
+                bodyKind: ContentPhysicsBodyKind.staticBody,
+                isSensor: false,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final report = CreatorWorldValidator().validate(invalid);
+      expect(report.blocksExport, isTrue);
+      expect(report.errorCount, greaterThanOrEqualTo(2));
+      expect(report.issues.map((issue) => issue.entityId), contains(firstId));
+      expect(report.issues.map((issue) => issue.entityId), contains(secondId));
+      expect(
+        report.issues.where((issue) => issue.suggestedRepair != null),
+        isNotEmpty,
+      );
+    });
   });
+}
+
+WorldDefinition _measuredWorld({required int entityCount}) {
+  final ids = List.generate(
+    entityCount,
+    (index) => EntityId.parse(
+      '01890f47-e8b8-7a68-8000-${(100000000000 + index).toString().padLeft(12, '0')}',
+    ),
+  );
+  return _copyWorld(
+    _world(),
+    entities: [
+      for (var index = 0; index < ids.length; index += 1)
+        WorldEntityDefinition(
+          id: ids[index],
+          components: [_transform(x: index.toDouble())],
+        ),
+    ],
+  );
 }
 
 WorldDefinition _world() {

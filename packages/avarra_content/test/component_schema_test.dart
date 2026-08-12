@@ -57,6 +57,41 @@ void main() {
     );
   });
 
+  test(
+    'exposes editor metadata, creates defaults, and replaces typed fields',
+    () {
+      final colliderSchema = registry.schemaFor(
+        AvarraComponentType.physicsCollider,
+      )!;
+      expect(colliderSchema.label, 'Physics Collider');
+      expect(
+        colliderSchema.requiredComponentTypes,
+        contains(AvarraComponentType.transform),
+      );
+      expect(
+        colliderSchema.fields
+            .singleWhere((field) => field.name == 'bodyKind')
+            .defaultValue,
+        'static',
+      );
+
+      final interactable = registry.createDefault(
+        AvarraComponentType.interactable,
+      );
+      expect(interactable, isA<InteractableDefinition>());
+      final edited = registry.replaceField(interactable, 'range', 4.5);
+      expect((edited as InteractableDefinition).range, 4.5);
+      expect(
+        () => registry.replaceField(interactable, 'range', 0),
+        _throwsCode(ContentErrorCodes.invalidComponentData),
+      );
+      expect(
+        () => registry.createDefault(AvarraComponentType.renderableReference),
+        _throwsCode(ContentErrorCodes.invalidComponentData),
+      );
+    },
+  );
+
   test('decodes Stage 5 physics and gameplay components', () {
     final collider = registry.decode(AvarraComponentType.physicsCollider, {
       'schemaVersion': 1,

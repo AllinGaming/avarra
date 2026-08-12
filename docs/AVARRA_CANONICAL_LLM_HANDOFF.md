@@ -486,12 +486,16 @@ also implemented: Forge owns a versioned, recoverable `.avarra-forge` source
 lifecycle and safe native export; Game owns runtime import, persistent catalog
 selection, save isolation, and structured packaged-asset diagnostics. The
 original export may move or disappear after import. The prototype still does
-not embed assets or close OD-019. Stage 10.2 next adds the schema-driven
-inspector, bounded history, and shared 3D editing viewport. Build the Relay Zero
-playable RPG slice after that gate and before AI/MCP expansion. See
+not embed assets or close OD-019. Stage 10.2 is now implemented: shared content
+metadata drives transform and non-transform Inspector fields; typed component
+commands use bounded inverse-command batches; validation aggregates actionable
+locations; and Forge uses the shared Thermion presentation bridge for stable-ID
+selection and translation gizmos. The next product stage is the Relay Zero
+playable RPG slice, before AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, and ADR-025.
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, and ADR-026.
 
 ---
 

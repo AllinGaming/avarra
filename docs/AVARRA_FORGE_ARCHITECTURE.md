@@ -1,6 +1,6 @@
 # AVARRA — Forge Architecture
 
-**Implementation status:** Stage 10.1B project/import gate implemented 2026-08-13
+**Implementation status:** Stage 10.2 editor-completion gate implemented 2026-08-13
 
 ---
 
@@ -76,12 +76,13 @@ agent/MCP tooling
 testing
 ```
 
-The initial `avarra_creator_api` implementation now supplies typed
-`world.create_entity`, `world.delete_entity`, `world.set_transform`, and
-`world.rename` commands. `CreatorWorldSession` holds immutable validated world
-snapshots and undo/redo history. The human Forge UI uses this boundary directly;
-Stage 10A will add staging transactions, permissions, and semantic diffs around
-the same command model.
+`avarra_creator_api` supplies typed create/delete/transform/rename plus
+component add/remove/replace/set-field commands. Every command produces its
+inverse; related mutations use one atomic batch. `CreatorWorldSession` retains
+forward/inverse command data under entry and estimated-byte budgets instead of
+retaining full before/after world pairs. The human Forge UI uses this boundary
+directly; Stage 10A will later add staging transactions, permissions, and
+semantic diffs around the same model.
 
 ---
 
@@ -97,6 +98,12 @@ debug metadata
 ```
 
 Complex domain editors can override generic inspectors.
+
+Stage 10.2 implements the generic path for number, string/enum, boolean,
+vector, quaternion, stable-reference, and boolean-map fields. The same metadata
+also declares labels/help/order, defaults, bounds, reference domains, component
+dependencies, and dependency field requirements. Typed decode is the mutation
+hook, so a field update cannot bypass component semantics.
 
 ---
 
@@ -180,6 +187,10 @@ The first gate reuses `WorldPackageCodec` for the same schema, stable-ID,
 component, reference, chunk-local transform, and package validation used by
 Game/Server. Export additionally requires exactly one player entry. The broader
 navigation and measured mobile-budget suites above remain future work.
+
+Forge now layers an aggregated creator report over the fail-fast runtime codec.
+Issues contain stable code, severity, entity/component/field location, repair
+guidance, and export-blocking state and remain visible beside the Inspector.
 
 ---
 
@@ -275,14 +286,15 @@ The required delivery order is:
    interaction/persistence;
 3. **Complete:** add recoverable Forge new/open/save/save-as and safe export;
 4. **Complete:** add runtime Game import and minimum asset diagnostics;
-5. extend schemas and typed commands for a generic inspector;
-6. bound/batch command history using measured creator fixtures;
-7. integrate the shared Thermion-backed editing viewport and gizmos;
+5. **Complete:** extend schemas and typed commands for a generic inspector;
+6. **Complete:** bound/batch command history using measured creator fixtures;
+7. **Complete:** integrate the shared Thermion-backed editing viewport and
+   translation gizmo;
 8. build the Relay Zero RPG slice;
 9. only then add Stage 10A transactions, permissions, semantic diff, and agent
    adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
 behavior without closing the final project/archive decisions. Detailed findings
-and gates are in `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md` and
-`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-026,
+and `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

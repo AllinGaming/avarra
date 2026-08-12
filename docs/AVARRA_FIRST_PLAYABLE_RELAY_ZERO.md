@@ -1,6 +1,6 @@
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Product target; foundation gameplay started
+**Status:** Stage 11 next; editor foundation complete
 
 **Date:** 2026-08-12
 
@@ -57,6 +57,12 @@ recoverably save its editable source and Game can import, identify, persist,
 and restart a runtime export without rebuilding. The prototype requires assets
 to already exist in Game and reports all missing paths before cataloging it.
 
+Stage 10.2 completes the minimum authoring loop: the schema-driven Inspector
+edits transform and gameplay component fields, aggregated validation explains
+export blockers, bounded inverse-command batches provide undo/redo, and Forge
+previews the authored world through the shared Thermion viewport with stable-ID
+selection and a translation gizmo.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
@@ -64,8 +70,8 @@ cube assets while the gameplay contract is made reliable.
 
 1. **Complete:** Stage 10.1A shared playable validation and de-proof Game.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
-3. Complete only the Stage 10.2 editor capabilities needed to author Relay
-   Zero: component editing, validation, real viewport, selection, and transform.
+3. **Complete:** Stage 10.2 component editing, validation, real viewport,
+   selection, transform gizmo, and bounded history.
 4. Implement the Stage 11 gameplay loop in thin vertical slices:
    health/combat → guardian AI → item/core → objective gate → co-op authority.
 5. Replace proof geometry incrementally after the loop is fun and measurable.

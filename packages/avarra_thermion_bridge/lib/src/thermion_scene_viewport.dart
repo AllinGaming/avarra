@@ -25,6 +25,9 @@ final class AvarraThermionViewport extends StatefulWidget {
     this.occludedOpacity = 0.28,
     this.onPick,
     this.onZoom,
+    this.selectedEntityId,
+    this.enableTranslationGizmo = false,
+    this.onTransformCommitted,
     super.key,
   }) : occluderEntityIds = Set.unmodifiable(occluderEntityIds) {
     if (!occludedOpacity.isFinite ||
@@ -46,6 +49,9 @@ final class AvarraThermionViewport extends StatefulWidget {
   final double occludedOpacity;
   final ValueChanged<IsometricPickResult>? onPick;
   final ValueChanged<double>? onZoom;
+  final EntityId? selectedEntityId;
+  final bool enableTranslationGizmo;
+  final ValueChanged<PresentationTransform>? onTransformCommitted;
 
   @override
   State<AvarraThermionViewport> createState() {
@@ -75,10 +81,14 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   double _lastGestureScale = 1;
   int _pickSerial = 0;
   bool _ready = false;
+  TransformationGizmo? _translationGizmo;
+  Future<void> _gizmoPointerSequence = Future.value();
+  bool _gizmoDragging = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedEntityId = widget.selectedEntityId;
     _initialCameraPosition = _toThermionVector(widget.cameraRig.cameraPosition);
     _syncQueue = LatestAsyncValueQueue(_synchronizeSnapshot);
     _cameraQueue = LatestAsyncValueQueue(_configureCamera);
@@ -90,6 +100,9 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.snapshot != widget.snapshot && _bridge != null) {
       unawaited(_queueSynchronization(widget.snapshot));
+    }
+    if (oldWidget.selectedEntityId != widget.selectedEntityId) {
+      unawaited(_setSelectedEntity(widget.selectedEntityId));
     }
     if (oldWidget.cameraRig != widget.cameraRig) {
       unawaited(_queueCameraConfiguration());
@@ -117,6 +130,15 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
     _backend = backend;
     _bridge = SceneBridge<ThermionSceneObject>(backend: backend);
     await _queueSynchronization(widget.snapshot);
+    final initialSelection = _selectedEntityId;
+    _selectedEntityId = null;
+    await _setSelectedEntity(initialSelection);
+    if (widget.enableTranslationGizmo) {
+      final gizmo = TransformationGizmo(viewer);
+      await gizmo.create(type: TransformationGizmoType.translation);
+      _translationGizmo = gizmo;
+      await _updateGizmoAttachment();
+    }
     await _queueCameraConfiguration();
     _scheduleCameraConfiguration();
   }
@@ -132,6 +154,11 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
     }
     try {
       await bridge.synchronize(snapshot);
+      final selectedId = _selectedEntityId;
+      if (selectedId != null) {
+        await _backend?.setEntitySelected(selectedId, true);
+      }
+      await _updateGizmoAttachment();
       await _queueOcclusionUpdate(snapshot: snapshot);
       if (mounted) {
         setState(() {
@@ -357,12 +384,13 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
 
   Future<void> _setSelectedEntity(EntityId? entityId) async {
     final backend = _backend;
-    if (backend == null || entityId == _selectedEntityId) {
+    if (entityId == _selectedEntityId && backend != null) {
       return;
     }
 
     final previousId = _selectedEntityId;
     _selectedEntityId = entityId;
+    if (backend == null) return;
     try {
       if (previousId != null) {
         await backend.setEntitySelected(previousId, false);
@@ -370,6 +398,7 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
       if (entityId != null) {
         await backend.setEntitySelected(entityId, true);
       }
+      await _updateGizmoAttachment();
     } on Object catch (error, stack) {
       FlutterError.reportError(
         FlutterErrorDetails(
@@ -379,6 +408,87 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
         ),
       );
     }
+  }
+
+  Future<void> _updateGizmoAttachment() async {
+    final gizmo = _translationGizmo;
+    final backend = _backend;
+    final selectedId = _selectedEntityId;
+    if (gizmo == null || backend == null) return;
+    final object = selectedId == null
+        ? null
+        : backend.objectForEntity(selectedId);
+    if (object == null) {
+      await gizmo.detach();
+    } else {
+      await gizmo.attachTo(object.asset.entity);
+    }
+  }
+
+  void _queueGizmoPointer(Future<void> Function() operation) {
+    _gizmoPointerSequence = _gizmoPointerSequence
+        .then((_) => operation())
+        .catchError((Object error, StackTrace stack) {
+          _gizmoDragging = false;
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stack,
+              context: ErrorDescription('while manipulating a scene gizmo'),
+            ),
+          );
+        });
+  }
+
+  Future<(int, int)> _rendererCoordinates(Offset localPosition) async {
+    final viewport = await _viewer!.view.getViewport();
+    return (
+      (localPosition.dx * viewport.width / _viewportSize.width).round(),
+      (localPosition.dy * viewport.height / _viewportSize.height).round(),
+    );
+  }
+
+  Future<void> _handleGizmoPointerDown(PointerDownEvent event) async {
+    final gizmo = _translationGizmo;
+    if (gizmo == null || _viewer == null || _viewportSize.isEmpty) return;
+    final position = await _rendererCoordinates(event.localPosition);
+    _gizmoDragging = await gizmo.startDrag(position.$1, position.$2);
+  }
+
+  Future<void> _handleGizmoPointerMove(PointerMoveEvent event) async {
+    final gizmo = _translationGizmo;
+    if (!_gizmoDragging || gizmo == null) return;
+    final position = await _rendererCoordinates(event.localPosition);
+    await gizmo.updateDrag(position.$1, position.$2);
+  }
+
+  Future<void> _handleGizmoPointerUp() async {
+    final gizmo = _translationGizmo;
+    if (!_gizmoDragging || gizmo == null) return;
+    await gizmo.endDrag();
+    _gizmoDragging = false;
+    final matrix = gizmo.lastComputedWorldTransform;
+    if (matrix == null) return;
+    final translation = Vector3.zero();
+    final rotation = Quaternion.identity();
+    final scale = Vector3.zero();
+    matrix.decompose(translation, rotation, scale);
+    widget.onTransformCommitted?.call(
+      PresentationTransform(
+        position: PresentationVector3(
+          translation.x,
+          translation.y,
+          translation.z,
+        ),
+        rotation: PresentationQuaternion(
+          rotation.x,
+          rotation.y,
+          rotation.z,
+          rotation.w,
+        ),
+        scale: PresentationVector3(scale.x, scale.y, scale.z),
+      ),
+    );
   }
 
   void _handlePointerSignal(PointerSignalEvent event) {
@@ -408,6 +518,8 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   @override
   void dispose() {
     _cameraDebounce?.cancel();
+    final gizmo = _translationGizmo;
+    if (gizmo != null) unawaited(gizmo.dispose());
     super.dispose();
   }
 
@@ -417,6 +529,12 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
       builder: (context, constraints) {
         _updateViewportSize(constraints.biggest);
         return Listener(
+          onPointerDown: (event) =>
+              _queueGizmoPointer(() => _handleGizmoPointerDown(event)),
+          onPointerMove: (event) =>
+              _queueGizmoPointer(() => _handleGizmoPointerMove(event)),
+          onPointerUp: (_) => _queueGizmoPointer(_handleGizmoPointerUp),
+          onPointerCancel: (_) => _queueGizmoPointer(_handleGizmoPointerUp),
           onPointerSignal: _handlePointerSignal,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,

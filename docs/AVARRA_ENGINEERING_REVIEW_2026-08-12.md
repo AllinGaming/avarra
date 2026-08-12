@@ -1,6 +1,6 @@
 # AVARRA — Engineering Review and Next-Work Plan
 
-**Status:** Current implementation checkpoint
+**Status:** Historical baseline with current resolution updates
 
 **Date:** 2026-08-12
 
@@ -34,9 +34,18 @@ schema v4 provides a typed persistent interaction effect. Generated-ID
 interaction/save/reconstruction coverage passes. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
 
-The next implementation milestone is now Stage 10.1B. P0-03 and P0-04 remain
-open. Product work is anchored by `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`; AI/MCP
-expansion follows the first playable RPG slice.
+Stage 10.1B and Stage 10.2 were subsequently implemented on 2026-08-13. P0-03,
+P0-04, P1-01, P1-02, P1-03, P1-04 (Forge), P1-05, and P1-06 are resolved for
+their scoped gates. Forge now has recoverable source persistence, unchanged-Game
+runtime import, a metadata-driven Inspector, aggregate validation, bounded
+inverse-command batches, modular composition, and the shared Thermion viewport
+with stable-ID selection and a translation gizmo. See
+`AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-025, and ADR-026.
+
+The next implementation milestone is Stage 11 Relay Zero. P1-04 remains open
+for the oversized Game composition, and P1-07 plus the P2 backlog remain open.
+AI/MCP expansion follows the first playable RPG slice.
 
 ## What is working well
 
@@ -331,21 +340,21 @@ an adapter; no live LLM dependency belongs in CI.
 
 ## Immediate next coding slice
 
-Stage 10.1B is complete. Proceed with the minimum Stage 10.2 editor completion
-needed to author Relay Zero. Expected affected boundaries:
+Stage 10.2 is complete. Proceed with the first thin Stage 11 Relay Zero gameplay
+slice. Expected affected boundaries:
 
 ```text
-avarra_content / avarra_creator_api
-  schema field metadata and typed component mutation
+avarra_content / avarra_gameplay / avarra_persistence
+  authored health, damage, death/restart, and persistent adventure state
 
-avarra_forge
-  generic inspector, validation panel, bounded history
+avarra_game / avarra_server
+  player attack input and authoritative combat simulation
 
-avarra_scene_bridge / avarra_thermion_bridge
-  shared real editing viewport, selection, transform gizmos
+avarra_client / avarra_replication
+  combat presentation and replicated health/death state
 
 tests/fixtures
-  representative Relay Zero authoring and latency/history measurements
+  one player/guardian encounter with save/restart evidence
 ```
 
 ## Completion criteria for this review

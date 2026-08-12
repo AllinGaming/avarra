@@ -1,8 +1,8 @@
 # AVARRA — Documentation Architecture Review
 
 **Review date:** 2026-08-13
-**Reviewed baseline:** Stage 10.1B project/import gate
-**Result:** Coherent; Stage 10.2 and Relay Zero are the explicit next sequence
+**Reviewed baseline:** Stage 10.2 editor-completion gate
+**Result:** Coherent; Relay Zero Stage 11 is the explicit next product stage
 
 ---
 
@@ -94,7 +94,7 @@ audio backend
 built-in AI provider strategy
 MCP transport/auth details
 AI privacy/context policy
-Forge editable source-project format and lifecycle
+final Forge asset/source ownership and cooked package format
 ```
 
 These should not be interpreted as documentation gaps.
@@ -122,13 +122,18 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.2.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 11.
 
-The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract, proof-ID removal, recoverable Forge project lifecycle, and runtime Game import are complete. The minimum editor completion and Relay Zero playable slice are next.
+The handoff is **architecture-complete enough to continue implementation**, not
+feature-spec-complete for every eventual AVARRA system. The shared
+playable-world contract, proof-ID removal, recoverable Forge project lifecycle,
+runtime Game import, and minimum editor completion are complete. The Relay Zero
+playable slice is next.
 
 The evidence and sequence are recorded in
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 

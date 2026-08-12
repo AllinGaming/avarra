@@ -85,6 +85,14 @@ Stage 10.1A subsequently closed the playable-profile and proof-ID items. The
 build-time import, asset closure, and recoverable project lifecycle items remain
 Stage 10.1B. See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`.
 
+Stage 10.1B subsequently closed the recoverable-project and unchanged-Game
+runtime-import workflow. Stage 10.2 then replaced the schematic and
+transform-only editor with the shared Thermion viewport, schema-driven
+component editing, aggregate validation, and bounded inverse-command history.
+The historical limits below describe this initial foundation, not current
+Forge. See `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-025, and ADR-026.
+
 ## Honest limits
 
 - The viewport is an interactive isometric schematic; shared Thermion-backed 3D

@@ -495,12 +495,16 @@ also implemented: Forge owns a versioned, recoverable `.avarra-forge` source
 lifecycle and safe native export; Game owns runtime import, persistent catalog
 selection, save isolation, and structured packaged-asset diagnostics. The
 original export may move or disappear after import. The prototype still does
-not embed assets or close OD-019. Stage 10.2 next adds the schema-driven
-inspector, bounded history, and shared 3D editing viewport. Build the Relay Zero
-playable RPG slice after that gate and before AI/MCP expansion. See
+not embed assets or close OD-019. Stage 10.2 is now implemented: shared content
+metadata drives transform and non-transform Inspector fields; typed component
+commands use bounded inverse-command batches; validation aggregates actionable
+locations; and Forge uses the shared Thermion presentation bridge for stable-ID
+selection and translation gizmos. The next product stage is the Relay Zero
+playable RPG slice, before AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, and ADR-025.
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, and ADR-026.
 
 ---
 
@@ -787,8 +791,8 @@ Read `AVARRA_DOCUMENTATION_REVIEW.md` for what is covered, what is deliberately 
 # AVARRA — Documentation Architecture Review
 
 **Review date:** 2026-08-13
-**Reviewed baseline:** Stage 10.1B project/import gate
-**Result:** Coherent; Stage 10.2 and Relay Zero are the explicit next sequence
+**Reviewed baseline:** Stage 10.2 editor-completion gate
+**Result:** Coherent; Relay Zero Stage 11 is the explicit next product stage
 
 ---
 
@@ -880,7 +884,7 @@ audio backend
 built-in AI provider strategy
 MCP transport/auth details
 AI privacy/context policy
-Forge editable source-project format and lifecycle
+final Forge asset/source ownership and cooked package format
 ```
 
 These should not be interpreted as documentation gaps.
@@ -908,13 +912,18 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.2.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 11.
 
-The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract, proof-ID removal, recoverable Forge project lifecycle, and runtime Game import are complete. The minimum editor completion and Relay Zero playable slice are next.
+The handoff is **architecture-complete enough to continue implementation**, not
+feature-spec-complete for every eventual AVARRA system. The shared
+playable-world contract, proof-ID removal, recoverable Forge project lifecycle,
+runtime Game import, and minimum editor completion are complete. The Relay Zero
+playable slice is next.
 
 The evidence and sequence are recorded in
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
@@ -3914,6 +3923,14 @@ Stage 10.1A subsequently closed the playable-profile and proof-ID items. The
 build-time import, asset closure, and recoverable project lifecycle items remain
 Stage 10.1B. See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`.
 
+Stage 10.1B subsequently closed the recoverable-project and unchanged-Game
+runtime-import workflow. Stage 10.2 then replaced the schematic and
+transform-only editor with the shared Thermion viewport, schema-driven
+component editing, aggregate validation, and bounded inverse-command history.
+The historical limits below describe this initial foundation, not current
+Forge. See `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-025, and ADR-026.
+
 ## Honest limits
 
 - The viewport is an interactive isometric schematic; shared Thermion-backed 3D
@@ -4109,11 +4126,117 @@ See ADR-025, `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md -->
+
+# AVARRA — Stage 10.2 Editor Completion Validation
+
+**Status:** Implemented; automated gate passed
+**Date:** 2026-08-13
+
+## Scope
+
+Stage 10.2 closes the minimum editor workflow needed to author the first
+playable rather than expanding Forge into a general engine editor:
+
+```text
+open recoverable project
+  → select authored entity in hierarchy or real 3D viewport
+  → edit transform or non-transform schema field
+  → aggregate actionable validation
+  → commit through typed command/batch
+  → bounded undo/redo
+  → safe source save and runtime export
+  → unchanged Game import
+```
+
+## Implemented
+
+- Content schemas expose labels/help/order, defaults, bounds, stable-ID domains,
+  component dependencies, and dependency field requirements.
+- The generic Inspector renders number, string/enum, boolean, vector,
+  quaternion, stable-reference, and boolean-map fields from schema metadata.
+- Typed add/remove/replace/set-field commands and atomic command batches provide
+  inverses for undo/redo.
+- Creator history uses explicit entry/estimated-byte budgets rather than full
+  before/after world snapshots.
+- Creator validation aggregates stable codes, severity, precise location,
+  repair guidance, and export-blocking state in a persistent Forge panel.
+- Forge consumes renderer-neutral authored presentation snapshots through the
+  shared Thermion bridge. Hierarchy and viewport selection share stable IDs;
+  Thermion's translation gizmo commits one typed transform command on release.
+- Chunk-local authored transforms are globalized for preview and converted back
+  before command commit.
+- Forge now packages the same cube fixture used by Game so the starter project
+  previews with the real backend.
+- The former single large Forge composition file is split into bootstrap,
+  workspace, schema panels, viewport, file services, and sample content.
+
+## Measured fixture evidence
+
+The creator suite builds a deterministic 256-entity world whose canonical
+source is 45,734 bytes, then performs 80 edits under a 12-entry/5,000-byte
+history budget. It asserts both limits, verifies old-entry eviction, and keeps
+retained command history below one quarter of fixture source size.
+
+Additional tests cover:
+
+- metadata-derived defaults and typed field replacement;
+- atomic multi-command component creation and one-step undo/redo;
+- aggregate validation across independently invalid entities;
+- authored-to-presentation mapping including chunk offsets;
+- transform and non-transform Forge edits, validation, export, and project
+  recovery.
+
+## Automated gate
+
+Final consolidated evidence for this pass:
+
+- formatter: clean;
+- workspace analyzer: no issues;
+- 182 passing tests across all 18 package/application suites;
+- Stage 10.1B literal export/move/import/delete/restart pipeline: passed;
+- Server executable compilation: passed;
+- Forge Windows debug build: passed;
+- Game Windows debug build: passed;
+- Game Android debug APK build: passed; and
+- built Forge with the real Thermion viewport remained alive through a
+  10-second native Windows startup smoke, then was stopped by the harness.
+
+## Gate assessment
+
+The automated Stage 10.2 editor gate is closed. Forge can open and recover a
+project, edit transform and non-transform component values, show aggregated
+repair guidance, preview and select the real 3D scene, apply a translation
+gizmo through typed history, undo/redo, safely save, export, and feed the
+existing runtime import pipeline.
+
+The translation gizmo still requires a manual drag/commit interaction smoke on
+supported desktop hardware; the native renderer startup is automated, while
+Flutter widget tests use the explicit renderer-disabled harness. This does not
+replace the separate physical-Android gameplay/performance gate.
+
+## Honest limits
+
+- Text fields commit on submit rather than keeping a validated draft model.
+- Rotation and scale remain numeric Inspector edits; only translation has a 3D
+  gizmo in this slice.
+- Forge can preview assets already bundled with Forge. Source asset import,
+  copying/cooking, and the final self-contained `.avarra` archive remain OD-019.
+- Display names, multi-select, duplicate/reparent/chunk-move, keyboard command
+  routing, navigation validation, and mobile content budgets remain backlog.
+- Stage 11 Relay Zero gameplay—not broader AI/MCP infrastructure—is next.
+
+See ADR-026 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+<!-- END AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
 
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Product target; foundation gameplay started
+**Status:** Stage 11 next; editor foundation complete
 
 **Date:** 2026-08-12
 
@@ -4170,6 +4293,12 @@ recoverably save its editable source and Game can import, identify, persist,
 and restart a runtime export without rebuilding. The prototype requires assets
 to already exist in Game and reports all missing paths before cataloging it.
 
+Stage 10.2 completes the minimum authoring loop: the schema-driven Inspector
+edits transform and gameplay component fields, aggregated validation explains
+export blockers, bounded inverse-command batches provide undo/redo, and Forge
+previews the authored world through the shared Thermion viewport with stable-ID
+selection and a translation gizmo.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
@@ -4177,8 +4306,8 @@ cube assets while the gameplay contract is made reliable.
 
 1. **Complete:** Stage 10.1A shared playable validation and de-proof Game.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
-3. Complete only the Stage 10.2 editor capabilities needed to author Relay
-   Zero: component editing, validation, real viewport, selection, and transform.
+3. **Complete:** Stage 10.2 component editing, validation, real viewport,
+   selection, transform gizmo, and bounded history.
 4. Implement the Stage 11 gameplay loop in thin vertical slices:
    health/combat → guardian AI → item/core → objective gate → co-op authority.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
@@ -4206,7 +4335,7 @@ validation.
 
 # AVARRA — Engineering Review and Next-Work Plan
 
-**Status:** Current implementation checkpoint
+**Status:** Historical baseline with current resolution updates
 
 **Date:** 2026-08-12
 
@@ -4240,9 +4369,18 @@ schema v4 provides a typed persistent interaction effect. Generated-ID
 interaction/save/reconstruction coverage passes. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
 
-The next implementation milestone is now Stage 10.1B. P0-03 and P0-04 remain
-open. Product work is anchored by `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`; AI/MCP
-expansion follows the first playable RPG slice.
+Stage 10.1B and Stage 10.2 were subsequently implemented on 2026-08-13. P0-03,
+P0-04, P1-01, P1-02, P1-03, P1-04 (Forge), P1-05, and P1-06 are resolved for
+their scoped gates. Forge now has recoverable source persistence, unchanged-Game
+runtime import, a metadata-driven Inspector, aggregate validation, bounded
+inverse-command batches, modular composition, and the shared Thermion viewport
+with stable-ID selection and a translation gizmo. See
+`AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-025, and ADR-026.
+
+The next implementation milestone is Stage 11 Relay Zero. P1-04 remains open
+for the oversized Game composition, and P1-07 plus the P2 backlog remain open.
+AI/MCP expansion follows the first playable RPG slice.
 
 ## What is working well
 
@@ -4537,21 +4675,21 @@ an adapter; no live LLM dependency belongs in CI.
 
 ## Immediate next coding slice
 
-Stage 10.1B is complete. Proceed with the minimum Stage 10.2 editor completion
-needed to author Relay Zero. Expected affected boundaries:
+Stage 10.2 is complete. Proceed with the first thin Stage 11 Relay Zero gameplay
+slice. Expected affected boundaries:
 
 ```text
-avarra_content / avarra_creator_api
-  schema field metadata and typed component mutation
+avarra_content / avarra_gameplay / avarra_persistence
+  authored health, damage, death/restart, and persistent adventure state
 
-avarra_forge
-  generic inspector, validation panel, bounded history
+avarra_game / avarra_server
+  player attack input and authoritative combat simulation
 
-avarra_scene_bridge / avarra_thermion_bridge
-  shared real editing viewport, selection, transform gizmos
+avarra_client / avarra_replication
+  combat presentation and replicated health/death state
 
 tests/fixtures
-  representative Relay Zero authoring and latency/history measurements
+  one player/guardian encounter with save/restart evidence
 ```
 
 ## Completion criteria for this review
@@ -5170,7 +5308,7 @@ Network architecture is not considered robust until tested under degraded condit
 
 # AVARRA — Forge Architecture
 
-**Implementation status:** Stage 10.1B project/import gate implemented 2026-08-13
+**Implementation status:** Stage 10.2 editor-completion gate implemented 2026-08-13
 
 ---
 
@@ -5246,12 +5384,13 @@ agent/MCP tooling
 testing
 ```
 
-The initial `avarra_creator_api` implementation now supplies typed
-`world.create_entity`, `world.delete_entity`, `world.set_transform`, and
-`world.rename` commands. `CreatorWorldSession` holds immutable validated world
-snapshots and undo/redo history. The human Forge UI uses this boundary directly;
-Stage 10A will add staging transactions, permissions, and semantic diffs around
-the same command model.
+`avarra_creator_api` supplies typed create/delete/transform/rename plus
+component add/remove/replace/set-field commands. Every command produces its
+inverse; related mutations use one atomic batch. `CreatorWorldSession` retains
+forward/inverse command data under entry and estimated-byte budgets instead of
+retaining full before/after world pairs. The human Forge UI uses this boundary
+directly; Stage 10A will later add staging transactions, permissions, and
+semantic diffs around the same model.
 
 ---
 
@@ -5267,6 +5406,12 @@ debug metadata
 ```
 
 Complex domain editors can override generic inspectors.
+
+Stage 10.2 implements the generic path for number, string/enum, boolean,
+vector, quaternion, stable-reference, and boolean-map fields. The same metadata
+also declares labels/help/order, defaults, bounds, reference domains, component
+dependencies, and dependency field requirements. Typed decode is the mutation
+hook, so a field update cannot bypass component semantics.
 
 ---
 
@@ -5350,6 +5495,10 @@ The first gate reuses `WorldPackageCodec` for the same schema, stable-ID,
 component, reference, chunk-local transform, and package validation used by
 Game/Server. Export additionally requires exactly one player entry. The broader
 navigation and measured mobile-budget suites above remain future work.
+
+Forge now layers an aggregated creator report over the fail-fast runtime codec.
+Issues contain stable code, severity, entity/component/field location, repair
+guidance, and export-blocking state and remain visible beside the Inspector.
 
 ---
 
@@ -5445,17 +5594,18 @@ The required delivery order is:
    interaction/persistence;
 3. **Complete:** add recoverable Forge new/open/save/save-as and safe export;
 4. **Complete:** add runtime Game import and minimum asset diagnostics;
-5. extend schemas and typed commands for a generic inspector;
-6. bound/batch command history using measured creator fixtures;
-7. integrate the shared Thermion-backed editing viewport and gizmos;
+5. **Complete:** extend schemas and typed commands for a generic inspector;
+6. **Complete:** bound/batch command history using measured creator fixtures;
+7. **Complete:** integrate the shared Thermion-backed editing viewport and
+   translation gizmo;
 8. build the Relay Zero RPG slice;
 9. only then add Stage 10A transactions, permissions, semantic diff, and agent
    adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
 behavior without closing the final project/archive decisions. Detailed findings
-and gates are in `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md` and
-`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-026,
+and `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 <!-- END AVARRA_FORGE_ARCHITECTURE.md -->
 
@@ -8047,6 +8197,23 @@ Gate:
 > A creator opens, edits, validates, previews, safely saves, exports, imports,
 > and undoes a world containing transform and non-transform edits.
 
+Gate status (2026-08-13):
+
+- shared component metadata drives generic Inspector controls and typed field,
+  add, remove, and replace commands;
+- creator validation aggregates stable codes, locations, repair suggestions,
+  severity, and export-blocking state;
+- forward/inverse commands and atomic batches replace unbounded world-snapshot
+  history, with measured entry and byte caps;
+- Forge presents authored snapshots through the shared Thermion bridge with
+  stable-ID selection and a translation gizmo; and
+- the existing safe project/export/import/restart path remains intact.
+
+The automated gate is complete. See
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md` and ADR-026. A manual native
+Forge gizmo smoke remains part of platform acceptance, not a blocker for
+starting Stage 11.
+
 ---
 
 # Stage 11 — Relay Zero RPG Vertical Slice
@@ -10197,5 +10364,77 @@ worlds at runtime through Game's world library.
   real Relay Zero asset and streaming measurements exist.
 
 <!-- END adr/ADR-025-forge-project-and-runtime-world-library.md -->
+
+---
+
+<!-- BEGIN adr/ADR-026-schema-editor-inverse-history-and-shared-viewport.md -->
+
+# ADR-026 — Schema Editor, Inverse History, and Shared Viewport
+
+**Status:** Accepted for Stage 10.2
+**Date:** 2026-08-13
+
+## Context
+
+Forge's foundation proved safe project persistence and runtime import, but its
+inspector was transform-specific, validation surfaced one line, undo retained
+complete before/after worlds without a bound, and the viewport was a custom 2D
+schematic. Those choices did not scale to Relay Zero authoring or to later
+human/agent use of the same Creator API.
+
+## Decision
+
+`ComponentSchemaRegistry` is the machine-readable editor contract. Component
+and field metadata now includes labels, help, ordering, defaults, numeric and
+text bounds, stable-reference domains, component dependencies, and dependency
+field requirements. The registry creates typed defaults and re-decodes a
+complete component after a field change. Forge chooses controls only by field
+kind; component semantics stay in shared content metadata and validation.
+
+Creator mutations are typed commands with an `inverseFor` operation and an
+estimated retained-byte cost. Add, remove, replace, and set-field commands join
+create, delete, transform, and rename. `CreatorCommandBatch` applies and
+validates related changes as one undo boundary. `CreatorWorldSession` retains
+forward/inverse commands under explicit entry and byte limits, evicting the
+oldest undo entries when needed; it no longer retains a complete world pair per
+history entry.
+
+Forge layers aggregated creator validation over the fail-fast runtime codec.
+Each issue can carry a stable code, severity, entity/component/field location,
+repair suggestion, and export-blocking flag. Runtime decoding remains strict
+and fail-fast.
+
+Forge presents authored renderable entities as immutable
+`PresentationSnapshot` values. The existing Thermion scene bridge owns renderer
+objects, externally controlled stable-ID selection, and the translation gizmo.
+Gizmo completion emits a renderer-neutral transform that Forge commits through
+the same creator command session. Chunk entities are globalized only for
+presentation and converted back to chunk-local coordinates before authoring.
+
+## Consequences
+
+- Transform and non-transform editing share one command, validation, undo, and
+  export path usable by future automation.
+- A 256-entity, 45,734-byte authored fixture with 80 transform edits retains at
+  most 12 entries and 5,000 estimated bytes in its configured history budget.
+- Forge application composition is split into workspace, panels, and viewport
+  modules; `main.dart` is bootstrap only.
+- Game keeps using the same viewport adapter without enabling editor gizmos.
+- Thermion handles remain inside the Thermion bridge and never become creator
+  identity or serialized state.
+- Field-level draft/error UX, rotation/scale gizmos, multi-selection, asset
+  source ownership, and the final cooked package remain future work.
+
+## Rejected alternatives
+
+- Component-specific Forge forms would duplicate content knowledge and create a
+  second schema boundary.
+- Unbounded world snapshots make history cost scale with world size per edit.
+- A second Forge renderer would duplicate the already proven scene backend and
+  break Game/Forge preview parity.
+- Persisting live Thermion entities in creator state would confuse renderer
+  handles with stable authored identity.
+
+<!-- END adr/ADR-026-schema-editor-inverse-history-and-shared-viewport.md -->
 
 ---

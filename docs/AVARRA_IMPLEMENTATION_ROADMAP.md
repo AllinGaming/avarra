@@ -543,6 +543,23 @@ Gate:
 > A creator opens, edits, validates, previews, safely saves, exports, imports,
 > and undoes a world containing transform and non-transform edits.
 
+Gate status (2026-08-13):
+
+- shared component metadata drives generic Inspector controls and typed field,
+  add, remove, and replace commands;
+- creator validation aggregates stable codes, locations, repair suggestions,
+  severity, and export-blocking state;
+- forward/inverse commands and atomic batches replace unbounded world-snapshot
+  history, with measured entry and byte caps;
+- Forge presents authored snapshots through the shared Thermion bridge with
+  stable-ID selection and a translation gizmo; and
+- the existing safe project/export/import/restart path remains intact.
+
+The automated gate is complete. See
+`AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md` and ADR-026. A manual native
+Forge gizmo smoke remains part of platform acceptance, not a blocker for
+starting Stage 11.
+
 ---
 
 # Stage 11 — Relay Zero RPG Vertical Slice

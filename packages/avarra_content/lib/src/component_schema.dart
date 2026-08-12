@@ -14,6 +14,8 @@ enum ComponentFieldKind {
   booleanMap,
 }
 
+enum StableIdDomain { asset, entity, world, chunk }
+
 /// Machine-readable description of one serialized component field.
 final class ComponentFieldSchema {
   const ComponentFieldSchema({
@@ -21,12 +23,28 @@ final class ComponentFieldSchema {
     required this.kind,
     this.required = true,
     this.allowedStringValues,
+    this.editorLabel,
+    this.help,
+    this.defaultValue,
+    this.minimum,
+    this.maximum,
+    this.maximumLength,
+    this.stableIdDomain,
   });
 
   final String name;
   final ComponentFieldKind kind;
   final bool required;
   final Set<String>? allowedStringValues;
+  final String? editorLabel;
+  final String? help;
+  final Object? defaultValue;
+  final double? minimum;
+  final double? maximum;
+  final int? maximumLength;
+  final StableIdDomain? stableIdDomain;
+
+  String get label => editorLabel ?? name;
 }
 
 /// Machine-readable description of one serialized component.
@@ -36,12 +54,26 @@ final class ComponentSchema {
     required this.version,
     required Iterable<ComponentFieldSchema> fields,
     this.introducedInContentSchemaVersion = 1,
+    this.editorLabel,
+    this.help,
+    this.editorOrder = 100,
+    this.requiredComponentTypes = const {},
+    this.dependencyFieldValues = const {},
+    this.creatableWithoutContext = true,
   }) : fields = List.unmodifiable(fields);
 
   final String type;
   final int version;
   final List<ComponentFieldSchema> fields;
   final int introducedInContentSchemaVersion;
+  final String? editorLabel;
+  final String? help;
+  final int editorOrder;
+  final Set<String> requiredComponentTypes;
+  final Map<String, Map<String, Object?>> dependencyFieldValues;
+  final bool creatableWithoutContext;
+
+  String get label => editorLabel ?? type;
 
   void validate(Object? encoded) {
     if (encoded is! Map<String, dynamic>) {
@@ -91,6 +123,35 @@ final class ComponentSchema {
           context: {'field': field.name, 'kind': field.kind.name},
         );
       }
+      final value = data[field.name];
+      if (value is num &&
+          ((field.minimum != null && value < field.minimum!) ||
+              (field.maximum != null && value > field.maximum!))) {
+        _invalid(
+          'Component field is outside its supported range.',
+          context: {
+            'field': field.name,
+            if (field.minimum != null) 'minimum': field.minimum,
+            if (field.maximum != null) 'maximum': field.maximum,
+          },
+        );
+      }
+      if (value is String &&
+          field.maximumLength != null &&
+          value.length > field.maximumLength!) {
+        _invalid(
+          'Component field is longer than supported.',
+          context: {'field': field.name, 'maximumLength': field.maximumLength},
+        );
+      }
+      if (field.kind == ComponentFieldKind.stableId &&
+          value is String &&
+          !_isStableIdValid(field.stableIdDomain, value)) {
+        _invalid(
+          'Component field contains an invalid stable identifier.',
+          context: {'field': field.name, 'domain': field.stableIdDomain?.name},
+        );
+      }
       final allowedValues = field.allowedStringValues;
       if (allowedValues != null && !allowedValues.contains(data[field.name])) {
         _invalid(
@@ -111,11 +172,19 @@ final class ComponentSchema {
       ComponentFieldKind.boolean => value is bool,
       ComponentFieldKind.vector3 => _isFiniteNumberList(value, 3),
       ComponentFieldKind.quaternion => _isFiniteNumberList(value, 4),
-      ComponentFieldKind.stableId =>
-        value is String && AssetId.tryParse(value) != null,
+      ComponentFieldKind.stableId => value is String,
       ComponentFieldKind.booleanMap =>
         value is Map<String, dynamic> &&
             value.values.every((entry) => entry is bool),
+    };
+  }
+
+  bool _isStableIdValid(StableIdDomain? domain, String value) {
+    return switch (domain) {
+      StableIdDomain.asset || null => AssetId.tryParse(value) != null,
+      StableIdDomain.entity => EntityId.tryParse(value) != null,
+      StableIdDomain.world => WorldId.tryParse(value) != null,
+      StableIdDomain.chunk => ChunkId.tryParse(value) != null,
     };
   }
 
@@ -150,58 +219,88 @@ final class ComponentSchemaRegistry {
         ComponentSchema(
           type: AvarraComponentType.transform,
           version: 1,
+          editorLabel: 'Transform',
+          editorOrder: 0,
+          help: 'Position, rotation, and scale in world or chunk-local space.',
           fields: const [
             ComponentFieldSchema(
               name: 'position',
               kind: ComponentFieldKind.vector3,
+              editorLabel: 'Position',
+              defaultValue: [0.0, 0.0, 0.0],
             ),
             ComponentFieldSchema(
               name: 'rotation',
               kind: ComponentFieldKind.quaternion,
+              editorLabel: 'Rotation',
+              help: 'Quaternion components X, Y, Z, W.',
+              defaultValue: [0.0, 0.0, 0.0, 1.0],
             ),
             ComponentFieldSchema(
               name: 'scale',
               kind: ComponentFieldKind.vector3,
+              editorLabel: 'Scale',
+              defaultValue: [1.0, 1.0, 1.0],
             ),
           ],
         ),
         ComponentSchema(
           type: AvarraComponentType.renderableReference,
           version: 1,
+          editorLabel: 'Renderable',
+          editorOrder: 10,
+          help: 'The portable asset rendered for this entity.',
+          requiredComponentTypes: const {AvarraComponentType.transform},
+          creatableWithoutContext: false,
           fields: const [
             ComponentFieldSchema(
               name: 'assetId',
               kind: ComponentFieldKind.stableId,
+              editorLabel: 'Asset',
+              stableIdDomain: StableIdDomain.asset,
             ),
           ],
         ),
         ComponentSchema(
           type: AvarraComponentType.isometricOcclusionTarget,
           version: 1,
+          editorLabel: 'Occlusion Target',
+          help: 'Marks an entity that may be hidden behind occluders.',
           fields: const [],
         ),
         ComponentSchema(
           type: AvarraComponentType.isometricOccluder,
           version: 1,
+          editorLabel: 'Occluder',
+          help: 'Marks geometry that fades when it obscures a target.',
           fields: const [],
         ),
         ComponentSchema(
           type: AvarraComponentType.physicsCollider,
           version: 1,
           introducedInContentSchemaVersion: 2,
+          editorLabel: 'Physics Collider',
+          editorOrder: 20,
+          requiredComponentTypes: const {AvarraComponentType.transform},
           fields: const [
             ComponentFieldSchema(
               name: 'halfExtents',
               kind: ComponentFieldKind.vector3,
+              editorLabel: 'Half extents',
+              defaultValue: [0.5, 0.5, 0.5],
             ),
             ComponentFieldSchema(
               name: 'bodyKind',
               kind: ComponentFieldKind.string,
               allowedStringValues: {'static', 'character'},
+              editorLabel: 'Body kind',
+              defaultValue: 'static',
             ),
             ComponentFieldSchema(
               name: 'isSensor',
               kind: ComponentFieldKind.boolean,
+              editorLabel: 'Sensor',
+              defaultValue: false,
             ),
           ],
         ),
@@ -209,18 +308,36 @@ final class ComponentSchemaRegistry {
           type: AvarraComponentType.characterController,
           version: 1,
           introducedInContentSchemaVersion: 2,
+          editorLabel: 'Character Controller',
+          editorOrder: 30,
+          requiredComponentTypes: const {AvarraComponentType.physicsCollider},
+          dependencyFieldValues: const {
+            AvarraComponentType.physicsCollider: {
+              'bodyKind': 'character',
+              'isSensor': false,
+            },
+          },
           fields: const [
             ComponentFieldSchema(
               name: 'moveSpeed',
               kind: ComponentFieldKind.number,
+              editorLabel: 'Move speed',
+              defaultValue: 3.0,
+              minimum: 0.01,
             ),
             ComponentFieldSchema(
               name: 'skinWidth',
               kind: ComponentFieldKind.number,
+              editorLabel: 'Skin width',
+              defaultValue: 0.02,
+              minimum: 0,
             ),
             ComponentFieldSchema(
               name: 'arrivalTolerance',
               kind: ComponentFieldKind.number,
+              editorLabel: 'Arrival tolerance',
+              defaultValue: 0.1,
+              minimum: 0.001,
             ),
           ],
         ),
@@ -228,20 +345,51 @@ final class ComponentSchemaRegistry {
           type: AvarraComponentType.playerControlled,
           version: 1,
           introducedInContentSchemaVersion: 2,
+          editorLabel: 'Player Controlled',
+          editorOrder: 40,
+          requiredComponentTypes: const {
+            AvarraComponentType.transform,
+            AvarraComponentType.physicsCollider,
+            AvarraComponentType.characterController,
+          },
+          dependencyFieldValues: const {
+            AvarraComponentType.physicsCollider: {
+              'bodyKind': 'character',
+              'isSensor': false,
+            },
+          },
           fields: const [],
         ),
         ComponentSchema(
           type: AvarraComponentType.interactable,
           version: 1,
           introducedInContentSchemaVersion: 2,
+          editorLabel: 'Interactable',
+          editorOrder: 50,
+          requiredComponentTypes: const {
+            AvarraComponentType.transform,
+            AvarraComponentType.physicsCollider,
+          },
+          dependencyFieldValues: const {
+            AvarraComponentType.physicsCollider: {
+              'bodyKind': 'static',
+              'isSensor': false,
+            },
+          },
           fields: const [
             ComponentFieldSchema(
               name: 'label',
               kind: ComponentFieldKind.string,
+              editorLabel: 'Prompt label',
+              defaultValue: 'Interact',
+              maximumLength: 80,
             ),
             ComponentFieldSchema(
               name: 'range',
               kind: ComponentFieldKind.number,
+              editorLabel: 'Range',
+              defaultValue: 2.0,
+              minimum: 0.01,
             ),
           ],
         ),
@@ -249,14 +397,27 @@ final class ComponentSchemaRegistry {
           type: AvarraComponentType.setPersistentFlagOnInteract,
           version: 1,
           introducedInContentSchemaVersion: 4,
+          editorLabel: 'Set Flag on Interact',
+          editorOrder: 60,
+          requiredComponentTypes: const {
+            AvarraComponentType.interactable,
+            AvarraComponentType.persistentFlags,
+          },
           fields: const [
             ComponentFieldSchema(
               name: 'flagKey',
               kind: ComponentFieldKind.string,
+              editorLabel: 'Flag key',
+              help:
+                  'Lowercase key using letters, digits, dots, hyphens, or underscores.',
+              defaultValue: 'interaction.complete',
+              maximumLength: 64,
             ),
             ComponentFieldSchema(
               name: 'value',
               kind: ComponentFieldKind.boolean,
+              editorLabel: 'Value',
+              defaultValue: true,
             ),
           ],
         ),
@@ -264,10 +425,14 @@ final class ComponentSchemaRegistry {
           type: AvarraComponentType.persistentFlags,
           version: 1,
           introducedInContentSchemaVersion: 3,
+          editorLabel: 'Persistent Flags',
+          editorOrder: 70,
           fields: const [
             ComponentFieldSchema(
               name: 'flags',
               kind: ComponentFieldKind.booleanMap,
+              editorLabel: 'Flags',
+              defaultValue: <String, bool>{'interaction.complete': false},
             ),
           ],
         ),
@@ -285,6 +450,44 @@ final class ComponentSchemaRegistry {
   }
 
   ComponentSchema? schemaFor(String type) => _schemas[type];
+
+  ContentComponentDefinition createDefault(
+    String type, {
+    Map<String, Object?> fieldValues = const {},
+  }) {
+    final schema = _schemas[type];
+    if (schema == null ||
+        (!schema.creatableWithoutContext && fieldValues.isEmpty)) {
+      throw AvarraException(
+        code: ContentErrorCodes.invalidComponentData,
+        message:
+            'The component requires creator context before it can be added.',
+        context: {'componentType': type},
+      );
+    }
+    return decode(type, {
+      'schemaVersion': schema.version,
+      for (final field in schema.fields) field.name: field.defaultValue,
+      ...fieldValues,
+    });
+  }
+
+  ContentComponentDefinition replaceField(
+    ContentComponentDefinition component,
+    String fieldName,
+    Object? value,
+  ) {
+    final schema = _schemas[component.type];
+    if (schema == null ||
+        !schema.fields.any((field) => field.name == fieldName)) {
+      throw AvarraException(
+        code: ContentErrorCodes.invalidComponentData,
+        message: 'The component field is not declared by its schema.',
+        context: {'componentType': component.type, 'field': fieldName},
+      );
+    }
+    return decode(component.type, {...component.toJson(), fieldName: value});
+  }
 
   void requireContentSchemaVersion(int actualVersion) {
     if (actualVersion < 1 || actualVersion > contentSchemaVersion) {
