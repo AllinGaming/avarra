@@ -489,6 +489,8 @@ See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
 
 ## Stage 10.1B — Recoverable Project and Runtime Import
 
+**Status:** Implemented as a complete prototype gate on 2026-08-13
+
 Build:
 
 ```text
@@ -505,6 +507,23 @@ Gate:
 > An unchanged Game release imports a Forge export selected at runtime,
 > identifies its authored world, survives restart, and Forge cannot silently
 > overwrite or lose the editable project.
+
+Gate status:
+
+- `.avarra-forge` is a strict versioned editable source envelope distinct from
+  runtime `.avarra`;
+- Forge provides native new/open/save/save-as/export, overwrite confirmation,
+  atomic replacement, recovery snapshots, and dirty-action protection;
+- independently created starter projects receive generated world/entity IDs;
+- Game imports at runtime into an application-owned catalog, persists
+  selection, and isolates saves by `WorldId`;
+- import enforces a 16 MiB boundary, shared playable validation, and complete
+  missing packaged-asset diagnostics;
+- export → move → import → delete original → catalog restart → identify/load is
+  covered automatically; and
+- OD-019 remains open because the prototype does not embed/cook assets.
+
+See `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md` and ADR-025.
 
 ## Stage 10.2 — Editor Completion
 

@@ -61,5 +61,14 @@ void main() {
         ),
       ),
     );
+    expect(
+      saveIdForWorldPackageSource(
+        configuredFilePath: '',
+        worldId: firstWorld,
+        bundledSaveId: bundled,
+        isRuntimeImport: true,
+      ).value,
+      firstWorld.value,
+    );
   });
 }

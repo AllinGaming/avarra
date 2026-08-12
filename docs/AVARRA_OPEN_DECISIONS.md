@@ -360,10 +360,13 @@ chunk-local entity definitions. It still decodes the complete JSON document
 before asynchronous in-memory chunk activation, so it does not decide the
 future random-access container or cooked chunk encoding.
 
-Stage 10 exposes canonical JSON export only as a local Forge-to-Game foundation
-gate. The proof file still references assets packaged by Game and has no archive,
-cooking, trust, or distribution semantics. This evidence exercises the creator
-command/validation boundary without closing the container decision.
+Stage 10.1B adds runtime import for canonical JSON exports, with a 16 MiB input
+boundary and complete dependency checks against assets already packaged by the
+unchanged Game build. Game copies accepted source into its own catalog, so a
+moved/deleted original remains playable after restart. The file still has no
+asset archive, cooking, trust, or distribution semantics. This is the accepted
+minimum dependency behavior from ADR-025 and does not close the container
+decision.
 
 Before creator import/export and distribution, decide from measured product
 requirements:
@@ -385,17 +388,20 @@ Do not treat the Stage 4 JSON proof as the permanent hot runtime format.
 
 ## OD-020 — Forge Editable Source Project
 
-Stage 10 edits one in-memory `WorldDefinition` and exports runtime-oriented
-prototype JSON. That is not yet a durable editable Forge project.
+Stage 10.1B accepts an initial source-project representation under ADR-025: a
+strict versioned single-file `.avarra-forge` JSON envelope containing one
+canonical world. Native project save uses serialized same-directory atomic
+replacement and a separate recovery snapshot. Editable project save state is
+distinct from runtime `.avarra` export state.
 
-Decide before exposing creator project save:
+**Status:** initial prototype decision accepted 2026-08-13; richer project
+shape remains open.
+
+Still decide from actual creator projects:
 
 ```text
-project directory vs project container
 editor-only stable metadata and display names
 source asset ownership and relative paths
-autosave/recovery journal
-atomic save and migration boundary
 project/world multiplicity
 future collaboration/version-control friendliness
 ```
@@ -407,3 +413,6 @@ Constraints:
 - project text/assets are untrusted creator data;
 - the choice must not force the final OD-019 cooked/archive representation;
 - AI and human edits continue through the same typed command boundary.
+
+The v1 envelope is a migration boundary, not a promise that the final project
+remains one JSON file. See ADR-025.

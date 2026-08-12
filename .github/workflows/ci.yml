@@ -104,6 +104,10 @@ jobs:
         working-directory: apps/avarra_forge
         run: flutter test
 
+      - name: Test Forge export to Game restart pipeline
+        shell: powershell
+        run: ./tool/test_stage_10_1b_pipeline.ps1
+
       - name: Prepare build output
         shell: powershell
         run: New-Item -ItemType Directory -Force build | Out-Null

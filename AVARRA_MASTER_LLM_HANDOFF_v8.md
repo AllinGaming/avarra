@@ -10,7 +10,7 @@ single-file handoff. Edit the individual source documents, then regenerate it.
 # AVARRA — Canonical LLM Handoff
 
 **Status:** Current source of truth  
-**Date:** 2026-08-12
+**Date:** 2026-08-13
 **Audience:** Coding LLMs, engineers, architects
 
 ---
@@ -490,13 +490,17 @@ The 2026-08-12 engineering review classifies the initial result as a foundation
 proof rather than a closed creator-facing gate. Stage 10.1A is now implemented:
 Forge, Game, and Server share a Game-ready profile; Game has no proof-ID
 interaction/persistence behavior; and content schema v4 supplies a typed
-persistent interaction effect used by `Relay Zero Prototype`. Stage 10.1B must
-add recoverable Forge project persistence, safe export, runtime import, and
-explicit asset dependency handling. Stage 10.2 then adds the schema-driven
+persistent interaction effect used by `Relay Zero Prototype`. Stage 10.1B is
+also implemented: Forge owns a versioned, recoverable `.avarra-forge` source
+lifecycle and safe native export; Game owns runtime import, persistent catalog
+selection, save isolation, and structured packaged-asset diagnostics. The
+original export may move or disappear after import. The prototype still does
+not embed assets or close OD-019. Stage 10.2 next adds the schema-driven
 inspector, bounded history, and shared 3D editing viewport. Build the Relay Zero
-playable RPG slice after those gates and before AI/MCP expansion. See
+playable RPG slice after that gate and before AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and ADR-024.
+`AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, and ADR-025.
 
 ---
 
@@ -782,9 +786,9 @@ Read `AVARRA_DOCUMENTATION_REVIEW.md` for what is covered, what is deliberately 
 
 # AVARRA — Documentation Architecture Review
 
-**Review date:** 2026-08-12
-**Reviewed baseline:** Stage 10.1A playable contract
-**Result:** Coherent; the post-foundation repair order is now explicit
+**Review date:** 2026-08-13
+**Reviewed baseline:** Stage 10.1B project/import gate
+**Result:** Coherent; Stage 10.2 and Relay Zero are the explicit next sequence
 
 ---
 
@@ -904,12 +908,13 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1B.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.2.
 
-The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract and proof-ID removal are complete. Recoverable Forge project lifecycle and runtime Game import are the next gate, followed by the minimum editor completion and Relay Zero playable slice.
+The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract, proof-ID removal, recoverable Forge project lifecycle, and runtime Game import are complete. The minimum editor completion and Relay Zero playable slice are next.
 
 The evidence and sequence are recorded in
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
@@ -924,7 +929,7 @@ Future detailed specs should be written as each roadmap stage begins, using impl
 # AVARRA — Game App vs Forge Maker Boundaries
 
 **Status:** Reviewed source of truth  
-**Date:** 2026-08-10
+**Date:** 2026-08-13
 
 ---
 
@@ -1106,16 +1111,23 @@ Server → Forge
 Forge edits:
 
 ```text
-WorldDefinition / CreatorProject
+ForgeProject (.avarra-forge)
+  └── canonical WorldDefinition
 ```
 
 Game loads:
 
 ```text
-Cooked WorldDefinition
+validated runtime .avarra
       ↓
 RuntimeWorld
 ```
+
+Stage 10.1B keeps these formats and ownership separate. Forge performs
+recoverable project writes and validated export. Game never opens Forge source;
+it validates a chosen runtime export, checks dependencies against its packaged
+assets, copies canonical source into its application-owned catalog, and
+persists the selected `WorldId`. See ADR-025.
 
 Server owns:
 
@@ -3995,6 +4007,108 @@ eventual Relay Zero release gate, not a blocker for this server-safe contract.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md -->
+
+# AVARRA — Stage 10.1B Project and Import Validation
+
+**Status:** Implemented; automated gate passes
+**Date:** 2026-08-13
+
+## Outcome
+
+Stage 10.1B closes the recoverable creator-project and runtime-import findings
+from the 2026-08-12 engineering review. Forge now preserves editable source in
+a versioned `.avarra-forge` document, while Game imports validated runtime
+`.avarra` worlds into an application-owned catalog without rebuilding.
+
+This is a reliable prototype creator-to-player loop. It is not a final cooked,
+self-contained, signed, or distributable package format.
+
+## Implemented contract
+
+Forge provides:
+
+- independently generated starter world/entity identities;
+- native new/open/save/save-as and export destinations;
+- strict project format/version decoding;
+- overwrite confirmation and required extensions;
+- serialized atomic replacement with backup recovery;
+- recovery snapshots and dirty-destructive-action protection;
+- playable validation before canonical runtime export; and
+- a source-save state separate from export state.
+
+Game provides:
+
+- runtime file import and a persistent world-selection dialog;
+- a 16 MiB prototype input boundary;
+- strict decode plus the shared playable-world validator;
+- complete missing-asset-path diagnostics against packaged assets;
+- canonical application-owned catalog copies keyed by `WorldId`;
+- per-imported-world save isolation; and
+- built-in-world recovery when a catalog entry is corrupt.
+
+## Automated evidence
+
+The Stage 10.1B coverage includes:
+
+- canonical source-project round trip and strict malformed/version failures;
+- atomic write, target protection, interrupted-write recovery, and recovery
+  cleanup;
+- Forge edit/export remaining dirty independently of source save;
+- source save, automatic recovery snapshot, discard confirmation, reopen, and
+  recovered project state;
+- export → move → runtime import → delete original → fresh catalog instance →
+  identify/load selected world;
+- missing asset aggregation, source-size rejection, corrupt-catalog isolation,
+  and runtime-import save identity; and
+- Game bootstrap of the selected imported world after library restart.
+
+Final repository evidence:
+
+- formatting and whole-workspace static analysis pass with no issues;
+- 175 automated tests pass across all 18 suites;
+- Game Windows release builds;
+- Game Android debug APK builds;
+- Forge Windows release builds; and
+- the headless server compiles AOT.
+
+CI additionally invokes the literal cross-application headless chain in fresh
+processes through `tool/test_stage_10_1b_pipeline.ps1`.
+
+The Android build retains the already documented upstream Thermion Kotlin/C
+linkage warnings; they do not fail packaging and are not introduced by the
+Stage 10.1B file-selection path.
+
+## Boundary retained
+
+The importable prototype references assets already packaged by Game. This is
+the minimum dependency behavior accepted by ADR-025; it deliberately leaves
+archive layout, asset inclusion, content hashes, trust/signatures, compression,
+and cooked random-access storage open under OD-019.
+
+`AVARRA_WORLD_PATH` remains available only as a developer/test override. It is
+not the player import workflow.
+
+## Next stage
+
+Proceed to Stage 10.2's minimum Relay Zero editor completion:
+
+1. schema-driven component field metadata and typed mutation commands;
+2. an aggregated, actionable validation panel;
+3. bounded/batched undo history measured with representative projects;
+4. the shared Thermion-backed editing viewport and transform gizmos; and
+5. a Forge-authored Relay Zero fixture using non-transform gameplay components.
+
+After that gate, implement the Stage 11 Relay Zero combat/AI/item/objective
+vertical slices before broad AI/MCP creator automation.
+
+See ADR-025, `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+
+<!-- END AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
 
 # AVARRA — First Playable: Relay Zero
@@ -4051,14 +4165,18 @@ interaction can set a declared persistent flag, and Game derives a compact
 objective status from that data. The bundled world is now named **Relay Zero
 Prototype** and asks the player to restore its first relay control.
 
+Stage 10.1B makes that contract usable as a creator/player workflow: Forge can
+recoverably save its editable source and Game can import, identify, persist,
+and restart a runtime export without rebuilding. The prototype requires assets
+to already exist in Game and reports all missing paths before cataloging it.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
 ## Delivery sequence
 
-1. Finish Stage 10.1A shared playable validation and de-proof Game behavior.
-2. Finish Stage 10.1B so the same world can be safely saved in Forge and
-   imported into an unchanged Game build.
+1. **Complete:** Stage 10.1A shared playable validation and de-proof Game.
+2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. Complete only the Stage 10.2 editor capabilities needed to author Relay
    Zero: component editing, validation, real viewport, selection, and transform.
 4. Implement the Stage 11 gameplay loop in thin vertical slices:
@@ -4222,6 +4340,12 @@ Required repair:
 
 ### P0-03 — `AVARRA_WORLD_PATH` is a build hook, not a product import flow
 
+**Resolution update (2026-08-13):** Stage 10.1B adds a native runtime import
+dialog and application-owned catalog with persistent selection, shared playable
+validation, a 16 MiB boundary, complete missing packaged-asset diagnostics,
+and export → move → import → restart coverage. `AVARRA_WORLD_PATH` remains a
+developer/test override. Final self-contained packaging remains OD-019.
+
 Evidence:
 
 - The path is a compile-time `String.fromEnvironment` value; changing worlds
@@ -4250,6 +4374,12 @@ Required repair:
   already-built Game, renders/identifies the authored world, and restarts it.
 
 ### P0-04 — Forge has no recoverable source-project lifecycle
+
+**Resolution update (2026-08-13):** ADR-025 accepts the initial strict
+`.avarra-forge` source envelope. Forge now provides new/open/save/save-as,
+native safe export destinations, same-directory atomic recovery, recovery
+snapshots, extensions/overwrite confirmation, and dirty destructive-action
+protection while keeping runtime export separate.
 
 Evidence:
 
@@ -4407,20 +4537,21 @@ an adapter; no live LLM dependency belongs in CI.
 
 ## Immediate next coding slice
 
-Start with Stage 10.1B. Expected affected boundaries:
+Stage 10.1B is complete. Proceed with the minimum Stage 10.2 editor completion
+needed to author Relay Zero. Expected affected boundaries:
 
 ```text
+avarra_content / avarra_creator_api
+  schema field metadata and typed component mutation
+
 avarra_forge
-  source-project new/open/save/save-as and recovery
+  generic inspector, validation panel, bounded history
 
-avarra_game
-  runtime import/catalog selection and diagnostics
+avarra_scene_bridge / avarra_thermion_bridge
+  shared real editing viewport, selection, transform gizmos
 
-avarra_world / avarra_tooling
-  minimum asset dependency/closure checks
-
-tests/docs/CI
-  export, move, import, identify, restart proof
+tests/fixtures
+  representative Relay Zero authoring and latency/history measurements
 ```
 
 ## Completion criteria for this review
@@ -5039,7 +5170,7 @@ Network architecture is not considered robust until tested under degraded condit
 
 # AVARRA — Forge Architecture
 
-**Implementation status:** Stage 10 foundation implemented 2026-08-12
+**Implementation status:** Stage 10.1B project/import gate implemented 2026-08-13
 
 ---
 
@@ -5157,10 +5288,11 @@ validated/cooked world package
 
 Do not ship the entire editor source project to players.
 
-Stage 10 currently edits a `WorldDefinition` in memory and exports canonical
-prototype `.avarra` JSON. A richer source-project format, editor-only metadata,
-asset cooking, and the final archive container remain open and must not be
-inferred from this proof.
+Stage 10.1B saves a strict versioned single-world `.avarra-forge` JSON envelope
+with recoverable atomic replacement, while export remains canonical prototype
+`.avarra` JSON. Editor-only metadata, source asset ownership, multi-world
+projects, asset cooking, and the final archive container remain open and must
+not be inferred from this decision. See ADR-025.
 
 ---
 
@@ -5305,15 +5437,14 @@ See `AVARRA_AI_CREATOR_ARCHITECTURE.md`.
 
 # 13. Current Repair Order
 
-The Stage 10 foundation is not yet a creator-safe project loop. The required
-order is:
+The required delivery order is:
 
 1. **Complete:** share one playable-world profile between Forge export, Game,
    and Server;
 2. **Complete:** remove proof console/player stable IDs from Game
    interaction/persistence;
-3. add recoverable Forge new/open/save/save-as and safe export destinations;
-4. add runtime Game import and minimum asset dependency/closure diagnostics;
+3. **Complete:** add recoverable Forge new/open/save/save-as and safe export;
+4. **Complete:** add runtime Game import and minimum asset diagnostics;
 5. extend schemas and typed commands for a generic inspector;
 6. bound/batch command history using measured creator fixtures;
 7. integrate the shared Thermion-backed editing viewport and gizmos;
@@ -5321,8 +5452,9 @@ order is:
 9. only then add Stage 10A transactions, permissions, semantic diff, and agent
    adapters.
 
-The source-project representation is tracked by OD-020. The runtime package and
-asset-closure decision remains OD-019. Detailed findings and gates are in
+ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
+behavior without closing the final project/archive decisions. Detailed findings
+and gates are in `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md` and
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 <!-- END AVARRA_FORGE_ARCHITECTURE.md -->
@@ -7861,6 +7993,8 @@ See `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md` and ADR-024.
 
 ## Stage 10.1B — Recoverable Project and Runtime Import
 
+**Status:** Implemented as a complete prototype gate on 2026-08-13
+
 Build:
 
 ```text
@@ -7877,6 +8011,23 @@ Gate:
 > An unchanged Game release imports a Forge export selected at runtime,
 > identifies its authored world, survives restart, and Forge cannot silently
 > overwrite or lose the editable project.
+
+Gate status:
+
+- `.avarra-forge` is a strict versioned editable source envelope distinct from
+  runtime `.avarra`;
+- Forge provides native new/open/save/save-as/export, overwrite confirmation,
+  atomic replacement, recovery snapshots, and dirty-action protection;
+- independently created starter projects receive generated world/entity IDs;
+- Game imports at runtime into an application-owned catalog, persists
+  selection, and isolates saves by `WorldId`;
+- import enforces a 16 MiB boundary, shared playable validation, and complete
+  missing packaged-asset diagnostics;
+- export → move → import → delete original → catalog restart → identify/load is
+  covered automatically; and
+- OD-019 remains open because the prototype does not embed/cook assets.
+
+See `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md` and ADR-025.
 
 ## Stage 10.2 — Editor Completion
 
@@ -8346,10 +8497,13 @@ chunk-local entity definitions. It still decodes the complete JSON document
 before asynchronous in-memory chunk activation, so it does not decide the
 future random-access container or cooked chunk encoding.
 
-Stage 10 exposes canonical JSON export only as a local Forge-to-Game foundation
-gate. The proof file still references assets packaged by Game and has no archive,
-cooking, trust, or distribution semantics. This evidence exercises the creator
-command/validation boundary without closing the container decision.
+Stage 10.1B adds runtime import for canonical JSON exports, with a 16 MiB input
+boundary and complete dependency checks against assets already packaged by the
+unchanged Game build. Game copies accepted source into its own catalog, so a
+moved/deleted original remains playable after restart. The file still has no
+asset archive, cooking, trust, or distribution semantics. This is the accepted
+minimum dependency behavior from ADR-025 and does not close the container
+decision.
 
 Before creator import/export and distribution, decide from measured product
 requirements:
@@ -8371,17 +8525,20 @@ Do not treat the Stage 4 JSON proof as the permanent hot runtime format.
 
 ## OD-020 — Forge Editable Source Project
 
-Stage 10 edits one in-memory `WorldDefinition` and exports runtime-oriented
-prototype JSON. That is not yet a durable editable Forge project.
+Stage 10.1B accepts an initial source-project representation under ADR-025: a
+strict versioned single-file `.avarra-forge` JSON envelope containing one
+canonical world. Native project save uses serialized same-directory atomic
+replacement and a separate recovery snapshot. Editable project save state is
+distinct from runtime `.avarra` export state.
 
-Decide before exposing creator project save:
+**Status:** initial prototype decision accepted 2026-08-13; richer project
+shape remains open.
+
+Still decide from actual creator projects:
 
 ```text
-project directory vs project container
 editor-only stable metadata and display names
 source asset ownership and relative paths
-autosave/recovery journal
-atomic save and migration boundary
 project/world multiplicity
 future collaboration/version-control friendliness
 ```
@@ -8393,6 +8550,9 @@ Constraints:
 - project text/assets are untrusted creator data;
 - the choice must not force the final OD-019 cooked/archive representation;
 - AI and human edits continue through the same typed command boundary.
+
+The v1 envelope is a migration boundary, not a promise that the final project
+remains one JSON file. See ADR-025.
 
 <!-- END AVARRA_OPEN_DECISIONS.md -->
 
@@ -9949,5 +10109,93 @@ interaction behavior nor persistence policy uses proof entity/player IDs.
   execute this application-level effect.
 
 <!-- END adr/ADR-024-playable-world-profile-and-interaction-effect.md -->
+
+---
+
+<!-- BEGIN adr/ADR-025-forge-project-and-runtime-world-library.md -->
+
+# ADR-025 — Forge Project and Runtime World Library
+
+**Status:** Accepted for the Stage 10.1B prototype
+**Date:** 2026-08-13
+
+## Context
+
+The Stage 10 foundation could edit and export one in-memory world, but Forge
+could not preserve editable work and Game could only load a machine-local path
+selected at build time. Editable creator state must remain distinct from a
+runtime world, failures must be recoverable, and this milestone must not
+prematurely decide the final cooked/archive format tracked by OD-019.
+
+## Decision
+
+The first Forge source document is a strict, versioned, single-file JSON
+envelope with extension `.avarra-forge`:
+
+```json
+{
+  "format": "avarra.forge_project",
+  "projectFormatVersion": 1,
+  "world": {}
+}
+```
+
+`world` contains the canonical `avarra.world` object. Unknown root fields,
+malformed JSON, and unsupported format versions fail with stable creator error
+codes. The representation is deliberately single-world and contains no
+editor-only metadata yet; its envelope establishes a migration boundary for
+those additions.
+
+Forge uses native platform file dialogs for new/open/save/save-as and runtime
+export. Source writes and recovery snapshots use serialized, same-directory
+`.pending`/`.backup` replacement. Each atomic recovery envelope records its
+exact saved-project base so a stale snapshot cannot roll back a newer save. Existing
+save-as/export targets require an
+explicit replacement decision. A dirty project protects destructive open/new
+and application close. Runtime `.avarra` export validates the playable profile
+and does not mark editable source changes as saved.
+
+Game owns an application-support world library. Runtime import:
+
+1. limits source input to 16 MiB;
+2. strictly decodes and validates the shared playable-world profile;
+3. verifies every manifest asset path is present in the unchanged Game build;
+4. copies canonical source into the library under its `WorldId`;
+5. persists the selected world independently of the source file location; and
+6. derives imported save identity from `WorldId`.
+
+The minimum Stage 10.1B asset rule is dependency validation, not asset
+packaging: a prototype export is importable only when every referenced asset is
+already shipped by Game. Missing paths are returned together in a structured
+`GAME_WORLD_IMPORT_ASSET_UNAVAILABLE` error. This does not close OD-019 or make
+the JSON file a distributable/self-contained package.
+
+`AVARRA_WORLD_PATH` remains a developer/test override. Ordinary players choose
+worlds at runtime through Game's world library.
+
+## Consequences
+
+- Forge source and runtime export cannot be confused by extension or format.
+- A moved or deleted original export does not invalidate an imported catalog
+  entry, and selection survives process restart.
+- Reimporting the same `WorldId` updates that catalog identity; independently
+  generated Forge projects receive new world/entity IDs.
+- Corrupt non-selected catalog entries do not block choosing the built-in world
+  or importing a replacement. Directly loading a corrupt selection still
+  produces a structured failure.
+- Source assets, editor metadata, multi-world projects, recent-project UX,
+  final archives, hashing/signatures, and cooked chunk storage remain future
+  decisions.
+
+## Rejected alternatives
+
+- Saving runtime `.avarra` as the editable project would erase the source/export
+  boundary and constrain future editor metadata.
+- Keeping an absolute import path would fail after moving the export and would
+  not provide a stable mobile lifecycle.
+- Embedding assets now would prematurely choose the OD-019 container before
+  real Relay Zero asset and streaming measurements exist.
+
+<!-- END adr/ADR-025-forge-project-and-runtime-world-library.md -->
 
 ---

@@ -1,7 +1,7 @@
 # AVARRA — Canonical LLM Handoff
 
 **Status:** Current source of truth  
-**Date:** 2026-08-12
+**Date:** 2026-08-13
 **Audience:** Coding LLMs, engineers, architects
 
 ---
@@ -481,13 +481,17 @@ The 2026-08-12 engineering review classifies the initial result as a foundation
 proof rather than a closed creator-facing gate. Stage 10.1A is now implemented:
 Forge, Game, and Server share a Game-ready profile; Game has no proof-ID
 interaction/persistence behavior; and content schema v4 supplies a typed
-persistent interaction effect used by `Relay Zero Prototype`. Stage 10.1B must
-add recoverable Forge project persistence, safe export, runtime import, and
-explicit asset dependency handling. Stage 10.2 then adds the schema-driven
+persistent interaction effect used by `Relay Zero Prototype`. Stage 10.1B is
+also implemented: Forge owns a versioned, recoverable `.avarra-forge` source
+lifecycle and safe native export; Game owns runtime import, persistent catalog
+selection, save isolation, and structured packaged-asset diagnostics. The
+original export may move or disappear after import. The prototype still does
+not embed assets or close OD-019. Stage 10.2 next adds the schema-driven
 inspector, bounded history, and shared 3D editing viewport. Build the Relay Zero
-playable RPG slice after those gates and before AI/MCP expansion. See
+playable RPG slice after that gate and before AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and ADR-024.
+`AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, and ADR-025.
 
 ---
 

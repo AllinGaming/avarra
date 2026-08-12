@@ -20,8 +20,9 @@ SaveId saveIdForWorldPackageSource({
   required String configuredFilePath,
   required WorldId worldId,
   required SaveId bundledSaveId,
+  bool isRuntimeImport = false,
 }) {
-  return configuredFilePath.isEmpty
+  return configuredFilePath.isEmpty && !isRuntimeImport
       ? bundledSaveId
       : SaveId.parse(worldId.value);
 }

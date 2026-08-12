@@ -134,6 +134,12 @@ Required repair:
 
 ### P0-03 — `AVARRA_WORLD_PATH` is a build hook, not a product import flow
 
+**Resolution update (2026-08-13):** Stage 10.1B adds a native runtime import
+dialog and application-owned catalog with persistent selection, shared playable
+validation, a 16 MiB boundary, complete missing packaged-asset diagnostics,
+and export → move → import → restart coverage. `AVARRA_WORLD_PATH` remains a
+developer/test override. Final self-contained packaging remains OD-019.
+
 Evidence:
 
 - The path is a compile-time `String.fromEnvironment` value; changing worlds
@@ -162,6 +168,12 @@ Required repair:
   already-built Game, renders/identifies the authored world, and restarts it.
 
 ### P0-04 — Forge has no recoverable source-project lifecycle
+
+**Resolution update (2026-08-13):** ADR-025 accepts the initial strict
+`.avarra-forge` source envelope. Forge now provides new/open/save/save-as,
+native safe export destinations, same-directory atomic recovery, recovery
+snapshots, extensions/overwrite confirmation, and dirty destructive-action
+protection while keeping runtime export separate.
 
 Evidence:
 
@@ -319,20 +331,21 @@ an adapter; no live LLM dependency belongs in CI.
 
 ## Immediate next coding slice
 
-Start with Stage 10.1B. Expected affected boundaries:
+Stage 10.1B is complete. Proceed with the minimum Stage 10.2 editor completion
+needed to author Relay Zero. Expected affected boundaries:
 
 ```text
+avarra_content / avarra_creator_api
+  schema field metadata and typed component mutation
+
 avarra_forge
-  source-project new/open/save/save-as and recovery
+  generic inspector, validation panel, bounded history
 
-avarra_game
-  runtime import/catalog selection and diagnostics
+avarra_scene_bridge / avarra_thermion_bridge
+  shared real editing viewport, selection, transform gizmos
 
-avarra_world / avarra_tooling
-  minimum asset dependency/closure checks
-
-tests/docs/CI
-  export, move, import, identify, restart proof
+tests/fixtures
+  representative Relay Zero authoring and latency/history measurements
 ```
 
 ## Completion criteria for this review

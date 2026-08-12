@@ -52,14 +52,18 @@ interaction can set a declared persistent flag, and Game derives a compact
 objective status from that data. The bundled world is now named **Relay Zero
 Prototype** and asks the player to restore its first relay control.
 
+Stage 10.1B makes that contract usable as a creator/player workflow: Forge can
+recoverably save its editable source and Game can import, identify, persist,
+and restart a runtime export without rebuilding. The prototype requires assets
+to already exist in Game and reports all missing paths before cataloging it.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
 ## Delivery sequence
 
-1. Finish Stage 10.1A shared playable validation and de-proof Game behavior.
-2. Finish Stage 10.1B so the same world can be safely saved in Forge and
-   imported into an unchanged Game build.
+1. **Complete:** Stage 10.1A shared playable validation and de-proof Game.
+2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. Complete only the Stage 10.2 editor capabilities needed to author Relay
    Zero: component editing, validation, real viewport, selection, and transform.
 4. Implement the Stage 11 gameplay loop in thin vertical slices:

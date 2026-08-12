@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:avarra_content/avarra_content.dart';
@@ -7,9 +7,8 @@ import 'package:avarra_creator_api/avarra_creator_api.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 
+import 'src/forge_file_services.dart';
 import 'src/forge_sample_world.dart';
-
-typedef ForgeWorldWriter = Future<void> Function(String path, String source);
 
 void main() {
   runApp(const AvarraForgeApp());
@@ -18,12 +17,14 @@ void main() {
 class AvarraForgeApp extends StatelessWidget {
   const AvarraForgeApp({
     this.initialWorld,
-    this.worldWriter = _writeWorldFile,
+    this.projectStorage,
+    this.fileDialogs = const PlatformForgeFileDialogs(),
     super.key,
   });
 
   final WorldDefinition? initialWorld;
-  final ForgeWorldWriter worldWriter;
+  final ForgeProjectStorage? projectStorage;
+  final ForgeFileDialogs fileDialogs;
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +43,9 @@ class AvarraForgeApp extends StatelessWidget {
         ),
       ),
       home: ForgeWorkspaceScreen(
-        initialWorld: initialWorld ?? createForgeSampleWorld(),
-        worldWriter: worldWriter,
+        initialWorld: initialWorld ?? createForgeStarterWorld(),
+        projectStorage: projectStorage ?? ForgeProjectFileStorage(),
+        fileDialogs: fileDialogs,
       ),
     );
   }
@@ -52,24 +54,29 @@ class AvarraForgeApp extends StatelessWidget {
 class ForgeWorkspaceScreen extends StatefulWidget {
   const ForgeWorkspaceScreen({
     required this.initialWorld,
-    required this.worldWriter,
+    required this.projectStorage,
+    required this.fileDialogs,
     super.key,
   });
 
   final WorldDefinition initialWorld;
-  final ForgeWorldWriter worldWriter;
+  final ForgeProjectStorage projectStorage;
+  final ForgeFileDialogs fileDialogs;
 
   @override
   State<ForgeWorkspaceScreen> createState() => _ForgeWorkspaceScreenState();
 }
 
 class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
-  late final CreatorWorldSession _session = CreatorWorldSession(
-    initialWorld: widget.initialWorld,
-  );
+  final ForgeProjectCodec _projectCodec = ForgeProjectCodec();
+  final WorldPackageCodec _worldCodec = WorldPackageCodec();
+  late CreatorWorldSession _session;
   EntityId? _selectedEntityId;
+  String? _projectPath;
   String _status = 'Ready · canonical world is valid';
-  bool _exporting = false;
+  bool _busy = false;
+  bool _allowPop = false;
+  Timer? _recoveryTimer;
 
   WorldDefinition get _world => _session.world;
 
@@ -83,10 +90,245 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
         .firstOrNull;
   }
 
+  Future<bool> _confirmDiscardChanges() async {
+    if (!_session.isDirty) {
+      return true;
+    }
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Discard unsaved changes?'),
+            content: const Text(
+              'The editable Forge project has changes that have not been saved.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Keep editing'),
+              ),
+              FilledButton(
+                key: const Key('confirm_discard'),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Discard'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<bool> _confirmOverwrite(String path) async {
+    if (!await widget.projectStorage.exists(path) || !mounted) {
+      return true;
+    }
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Replace existing file?'),
+            content: Text(path),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                key: const Key('confirm_overwrite'),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Replace'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  void _replaceProject(
+    WorldDefinition world, {
+    required String? path,
+    WorldDefinition? savedWorld,
+  }) {
+    _recoveryTimer?.cancel();
+    _session = CreatorWorldSession(initialWorld: world);
+    if (savedWorld != null) {
+      _session.markSaved(
+        exportedSource: _worldCodec.encodeCanonical(savedWorld),
+      );
+    }
+    _projectPath = path;
+    _selectedEntityId = world.allEntities.firstOrNull?.id;
+  }
+
+  Future<void> _newProject() async {
+    if (!await _confirmDiscardChanges() || !mounted) {
+      return;
+    }
+    setState(() {
+      _replaceProject(createForgeStarterWorld(), path: null);
+      _status = 'New unsaved Relay Zero starter project';
+    });
+  }
+
+  Future<void> _openProject() async {
+    if (!await _confirmDiscardChanges()) {
+      return;
+    }
+    final path = await widget.fileDialogs.openProjectPath();
+    if (path == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _status = 'Opening project…';
+    });
+    try {
+      final loaded = await widget.projectStorage.readProject(path);
+      final primary = _projectCodec.decode(loaded.source);
+      var selected = primary;
+      var recovered = false;
+      final recoverySource = loaded.recoverySource;
+      if (recoverySource != null &&
+          loaded.recoveryIsApplicable &&
+          recoverySource != loaded.source &&
+          mounted) {
+        final useRecovery =
+            await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Recover unsaved project changes?'),
+                content: const Text(
+                  'Forge found a newer recovery snapshot beside this project.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Use saved project'),
+                  ),
+                  FilledButton(
+                    key: const Key('confirm_recovery'),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Recover'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+        if (useRecovery) {
+          selected = _projectCodec.decode(recoverySource);
+          recovered = true;
+        } else {
+          await widget.projectStorage.clearRecovery(path);
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _replaceProject(
+            selected.world,
+            path: path,
+            savedWorld: recovered ? primary.world : null,
+          );
+          _status = recovered
+              ? 'Recovered unsaved changes from $path'
+              : 'Opened $path';
+        });
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _status = 'Open failed: $error';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveProject({bool saveAs = false}) async {
+    var path = saveAs ? null : _projectPath;
+    if (path == null) {
+      path = await widget.fileDialogs.chooseSavePath(
+        kind: ForgeSaveKind.project,
+        suggestedName: '${_safeFileName(_world.name)}.avarra-forge',
+      );
+      if (path == null || !mounted) {
+        return;
+      }
+      path = ensureForgeFileExtension(path, ForgeSaveKind.project);
+      if (!await _confirmOverwrite(path)) {
+        return;
+      }
+    }
+    setState(() {
+      _busy = true;
+      _status = 'Saving project…';
+    });
+    try {
+      final source = _projectCodec.encodeCanonical(ForgeProject(world: _world));
+      await widget.projectStorage.writeAtomic(path, source, overwrite: true);
+      await widget.projectStorage.clearRecovery(path);
+      _session.markSaved();
+      if (mounted) {
+        setState(() {
+          _projectPath = path;
+          _status = 'Saved project to $path';
+        });
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _status = 'Save failed: $error';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
+    }
+  }
+
+  void _scheduleRecovery() {
+    final path = _projectPath;
+    if (path == null || !_session.isDirty) {
+      return;
+    }
+    _recoveryTimer?.cancel();
+    _recoveryTimer = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final source = _projectCodec.encodeCanonical(
+          ForgeProject(world: _world),
+        );
+        await widget.projectStorage.writeRecovery(path, source);
+        if (mounted) {
+          setState(() {
+            _status = 'Recovery snapshot updated';
+          });
+        }
+      } on Object catch (error) {
+        if (mounted) {
+          setState(() {
+            _status = 'Recovery snapshot failed: $error';
+          });
+        }
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _session = CreatorWorldSession(initialWorld: widget.initialWorld);
     _selectedEntityId = _world.allEntities.firstOrNull?.id;
+  }
+
+  @override
+  void dispose() {
+    _recoveryTimer?.cancel();
+    super.dispose();
   }
 
   void _execute(CreatorCommand command, {EntityId? select}) {
@@ -96,6 +338,7 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
         _selectedEntityId = select ?? _selectedEntityId;
         _status = '${command.description} · revision ${_session.revision}';
       });
+      _scheduleRecovery();
     } on AvarraException catch (error) {
       setState(() {
         _status = '${error.code.value}: ${error.message}';
@@ -149,6 +392,7 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
       }
       _status = 'Undo · revision ${_session.revision}';
     });
+    _scheduleRecovery();
   }
 
   void _redo() {
@@ -158,6 +402,7 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     setState(() {
       _status = 'Redo · revision ${_session.revision}';
     });
+    _scheduleRecovery();
   }
 
   void _validate() {
@@ -171,44 +416,24 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
   }
 
   Future<void> _export() async {
-    var outputPath = 'avarra_forge_tiny_world.avarra';
-    final path = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Game-compatible world'),
-        content: TextFormField(
-          key: const Key('export_path'),
-          initialValue: outputPath,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Output path'),
-          onChanged: (value) {
-            outputPath = value;
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('confirm_export'),
-            onPressed: () => Navigator.pop(context, outputPath.trim()),
-            child: const Text('Export'),
-          ),
-        ],
-      ),
+    var path = await widget.fileDialogs.chooseSavePath(
+      kind: ForgeSaveKind.worldExport,
+      suggestedName: '${_safeFileName(_world.name)}.avarra',
     );
-    if (path == null || path.isEmpty || !mounted) {
+    if (path == null || !mounted) {
+      return;
+    }
+    path = ensureForgeFileExtension(path, ForgeSaveKind.worldExport);
+    if (!await _confirmOverwrite(path) || !mounted) {
       return;
     }
     setState(() {
-      _exporting = true;
+      _busy = true;
       _status = 'Exporting…';
     });
     try {
       final source = _session.exportCanonical();
-      await widget.worldWriter(path, source);
-      _session.markSaved(exportedSource: source);
+      await widget.projectStorage.writeAtomic(path, source, overwrite: true);
       if (mounted) {
         setState(() {
           _status = 'Exported ${source.length} bytes to $path';
@@ -223,9 +448,21 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _exporting = false;
+          _busy = false;
         });
       }
+    }
+  }
+
+  Future<void> _handlePop(bool didPop) async {
+    if (didPop || _allowPop || !mounted) {
+      return;
+    }
+    if (await _confirmDiscardChanges() && mounted) {
+      setState(() {
+        _allowPop = true;
+      });
+      Navigator.of(context).pop();
     }
   }
 
@@ -242,32 +479,57 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
   @override
   Widget build(BuildContext context) {
     final dirtyMarker = _session.isDirty ? ' •' : '';
-    return Scaffold(
+    final location = _projectPath == null ? 'Unsaved project' : _projectPath!;
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: Text('Avarra Forge — ${_world.name}$dirtyMarker'),
         actions: [
           IconButton(
+            key: const Key('new_project'),
+            tooltip: 'New project',
+            onPressed: _busy ? null : _newProject,
+            icon: const Icon(Icons.note_add_outlined),
+          ),
+          IconButton(
+            key: const Key('open_project'),
+            tooltip: 'Open project',
+            onPressed: _busy ? null : _openProject,
+            icon: const Icon(Icons.folder_open_outlined),
+          ),
+          IconButton(
+            key: const Key('save_project'),
+            tooltip: 'Save project',
+            onPressed: _busy ? null : _saveProject,
+            icon: const Icon(Icons.save_outlined),
+          ),
+          IconButton(
+            key: const Key('save_project_as'),
+            tooltip: 'Save project as',
+            onPressed: _busy ? null : () => _saveProject(saveAs: true),
+            icon: const Icon(Icons.save_as_outlined),
+          ),
+          IconButton(
             key: const Key('undo'),
             tooltip: 'Undo',
-            onPressed: _session.canUndo ? _undo : null,
+            onPressed: _session.canUndo && !_busy ? _undo : null,
             icon: const Icon(Icons.undo),
           ),
           IconButton(
             key: const Key('redo'),
             tooltip: 'Redo',
-            onPressed: _session.canRedo ? _redo : null,
+            onPressed: _session.canRedo && !_busy ? _redo : null,
             icon: const Icon(Icons.redo),
           ),
           TextButton.icon(
             key: const Key('validate'),
-            onPressed: _validate,
+            onPressed: _busy ? null : _validate,
             icon: const Icon(Icons.fact_check_outlined),
             label: const Text('Validate'),
           ),
           const SizedBox(width: 8),
           FilledButton.icon(
             key: const Key('export'),
-            onPressed: _exporting ? null : _export,
+            onPressed: _busy ? null : _export,
             icon: const Icon(Icons.ios_share),
             label: const Text('Export'),
           ),
@@ -321,13 +583,19 @@ class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             color: Theme.of(context).colorScheme.surfaceContainer,
             child: Text(
-              'Stage 10 · ${_world.allEntities.length} entities · $_status',
+              'Stage 10.1B · ${_world.allEntities.length} entities · '
+              '$location · $_status',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
+    );
+    return PopScope(
+      canPop: _allowPop || !_session.isDirty,
+      onPopInvokedWithResult: (didPop, _) => _handlePop(didPop),
+      child: scaffold,
     );
   }
 }
@@ -852,6 +1120,10 @@ String _formatNumber(double value) {
       : value.toStringAsFixed(3).replaceFirst(RegExp(r'0+$'), '');
 }
 
-Future<void> _writeWorldFile(String path, String source) {
-  return File(path).writeAsString(source, flush: true);
+String _safeFileName(String value) {
+  final sanitized = value
+      .trim()
+      .replaceAll(RegExp(r'[^a-zA-Z0-9._-]+'), '_')
+      .replaceAll(RegExp(r'^_+|_+$'), '');
+  return sanitized.isEmpty ? 'avarra_project' : sanitized;
 }

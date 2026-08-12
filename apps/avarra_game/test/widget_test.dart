@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_game/main.dart';
 import 'package:avarra_game/src/host_device_metrics.dart';
+import 'package:avarra_game/src/runtime_world_library.dart';
+import 'package:avarra_game/src/world_library_ui.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_replication/avarra_replication.dart';
@@ -13,17 +15,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('loads the bundled world into the Game shell', (tester) async {
+    final bundledSource = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
     await tester.pumpWidget(
       AvarraGameApp(
         enableRenderer: false,
         saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => bundledSource!,
       ),
     );
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 10.1 · Authored World Runtime'), findsOneWidget);
+    expect(find.text('Stage 10.1B · Authored World Runtime'), findsOneWidget);
     expect(find.text('Relay Zero Prototype'), findsOneWidget);
+    expect(find.byKey(const Key('world_source_status')), findsOneWidget);
+    expect(find.byKey(const Key('open_world_library')), findsOneWidget);
     expect(find.text('4 ECS entities bound to the scene'), findsOneWidget);
     expect(
       find.text('Tap ground to move · WASD/arrow keys for direct movement'),
@@ -97,6 +105,80 @@ void main() {
 
     expect(find.byKey(const Key('world_load_error')), findsOneWidget);
     expect(find.textContaining('WORLD_PACKAGE_MALFORMED'), findsOneWidget);
+  });
+
+  testWidgets('keeps world-library failures visible and recoverable', (
+    tester,
+  ) async {
+    final bundledSource = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => bundledSource!,
+        worldLibraryOpener: (_) async => throw AvarraException(
+          code: RuntimeWorldLibraryErrorCodes.assetUnavailable,
+          message: 'Missing imported asset.',
+        ),
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+
+    await tester.tap(find.byKey(const Key('open_world_library')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('World library error'), findsOneWidget);
+    expect(
+      find.textContaining('GAME_WORLD_IMPORT_ASSET_UNAVAILABLE'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('boots the selected imported world after a library restart', (
+    tester,
+  ) async {
+    final directory = await tester.runAsync(
+      () => Directory.systemTemp.createTemp('avarra-game-widget-library-'),
+    );
+    addTearDown(() => directory!.delete(recursive: true));
+    final source = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    final json = jsonDecode(source!) as Map<String, dynamic>;
+    final world = json['world']! as Map<String, dynamic>;
+    world['id'] = '01890f47-e8b8-7a68-8000-000000000790';
+    world['name'] = 'Imported Relay Test';
+
+    final firstLibrary = RuntimeWorldLibrary(
+      directory: directory!,
+      assetAvailability: (_) async => true,
+    );
+    await tester.runAsync(() => firstLibrary.importSource(jsonEncode(json)));
+
+    final restartedLibrary = RuntimeWorldLibrary(
+      directory: directory,
+      assetAvailability: (_) async => true,
+    );
+    final restartedSelection = await tester.runAsync(
+      restartedLibrary.loadSelected,
+    );
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldSelectionLoader: () async => RuntimeWorldSelection(
+          source: restartedSelection!.source,
+          label: restartedSelection.name,
+          isImported: true,
+        ),
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+
+    expect(find.text('Imported Relay Test'), findsOneWidget);
+    expect(find.text('World source: Imported Relay Test'), findsOneWidget);
   });
 
   testWidgets('rejects a decoded world outside the playable profile', (
@@ -207,7 +289,7 @@ final class _FakeHostDeviceMetricsSampler implements HostDeviceMetricsSampler {
 }
 
 Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
-  for (var attempt = 0; attempt < 100; attempt += 1) {
+  for (var attempt = 0; attempt < 250; attempt += 1) {
     await tester.pump(const Duration(milliseconds: 20));
     if (find.byKey(const Key('save_status')).evaluate().isNotEmpty) {
       return;
@@ -218,5 +300,5 @@ Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
       fail('Game bootstrap failed: $errorText');
     }
   }
-  fail('Game bootstrap did not expose Stage 9 status.');
+  fail('Game bootstrap did not expose Stage 10.1B status.');
 }

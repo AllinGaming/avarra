@@ -24,6 +24,7 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'src/authored_interaction_effects.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
+import 'src/world_library_ui.dart';
 import 'src/world_package_source_loader.dart';
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
@@ -67,6 +68,8 @@ class AvarraGameApp extends StatelessWidget {
   const AvarraGameApp({
     this.enableRenderer = true,
     this.worldPackageSourceLoader,
+    this.worldSelectionLoader,
+    this.worldLibraryOpener,
     this.saveStoreLoader,
     this.multiplayerClientConnector,
     this.multiplayerHostStarter,
@@ -76,6 +79,8 @@ class AvarraGameApp extends StatelessWidget {
 
   final bool enableRenderer;
   final WorldPackageSourceLoader? worldPackageSourceLoader;
+  final RuntimeWorldSelectionLoader? worldSelectionLoader;
+  final RuntimeWorldLibraryOpener? worldLibraryOpener;
   final SaveStoreLoader? saveStoreLoader;
   final MultiplayerClientConnector? multiplayerClientConnector;
   final MultiplayerHostStarter? multiplayerHostStarter;
@@ -95,7 +100,16 @@ class AvarraGameApp extends StatelessWidget {
       ),
       home: _WorldBootstrapScreen(
         enableRenderer: enableRenderer,
-        sourceLoader: worldPackageSourceLoader ?? _loadBundledProofWorld,
+        selectionLoader:
+            worldSelectionLoader ??
+            (worldPackageSourceLoader == null
+                ? _loadDefaultWorldSelection
+                : () async => RuntimeWorldSelection(
+                    source: await worldPackageSourceLoader!(),
+                    label: 'Injected world source',
+                    isImported: _configuredWorldPath.isNotEmpty,
+                  )),
+        worldLibraryOpener: worldLibraryOpener ?? _openDefaultWorldLibrary,
         saveStoreLoader: saveStoreLoader ?? _loadDefaultSaveStore,
         multiplayerClientConnector:
             multiplayerClientConnector ?? _connectConfiguredMultiplayer,
@@ -110,7 +124,8 @@ class AvarraGameApp extends StatelessWidget {
 class _WorldBootstrapScreen extends StatefulWidget {
   const _WorldBootstrapScreen({
     required this.enableRenderer,
-    required this.sourceLoader,
+    required this.selectionLoader,
+    required this.worldLibraryOpener,
     required this.saveStoreLoader,
     required this.multiplayerClientConnector,
     required this.multiplayerHostStarter,
@@ -118,7 +133,8 @@ class _WorldBootstrapScreen extends StatefulWidget {
   });
 
   final bool enableRenderer;
-  final WorldPackageSourceLoader sourceLoader;
+  final RuntimeWorldSelectionLoader selectionLoader;
+  final RuntimeWorldLibraryOpener worldLibraryOpener;
   final SaveStoreLoader saveStoreLoader;
   final MultiplayerClientConnector multiplayerClientConnector;
   final MultiplayerHostStarter multiplayerHostStarter;
@@ -129,7 +145,38 @@ class _WorldBootstrapScreen extends StatefulWidget {
 }
 
 class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
-  late final Future<_LoadedWorld> _loadedWorld = _loadWorld();
+  late Future<_LoadedWorld> _loadedWorld = _loadWorld();
+  RuntimeWorldSelection? _selectionOverride;
+
+  Future<void> _openWorldLibrary() async {
+    try {
+      final selection = await widget.worldLibraryOpener(context);
+      if (selection == null || !mounted) {
+        return;
+      }
+      setState(() {
+        _selectionOverride = selection;
+        _loadedWorld = _loadWorld();
+      });
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('World library error'),
+          content: Text('$error', key: const Key('world_library_error')),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,10 +186,22 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
         if (snapshot.hasError) {
           return Scaffold(
             body: Center(
-              child: Text(
-                'World load failed\n${snapshot.error}',
-                key: const Key('world_load_error'),
-                textAlign: TextAlign.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'World load failed\n${snapshot.error}',
+                    key: const Key('world_load_error'),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    key: const Key('open_world_library_after_error'),
+                    onPressed: _openWorldLibrary,
+                    icon: const Icon(Icons.public),
+                    label: const Text('Open world library'),
+                  ),
+                ],
               ),
             ),
           );
@@ -165,6 +224,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           multiplayerHost: loadedWorld.multiplayerHost,
           multiplayerStatus: loadedWorld.multiplayerStatus,
           localPlayerId: loadedWorld.localPlayerId,
+          sourceLabel: loadedWorld.sourceLabel,
+          onOpenWorldLibrary: _openWorldLibrary,
           hostDeviceMetricsSampler: widget.hostDeviceMetricsSampler,
         );
       },
@@ -172,7 +233,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
   }
 
   Future<_LoadedWorld> _loadWorld() async {
-    final source = await widget.sourceLoader();
+    final selection = _selectionOverride ?? await widget.selectionLoader();
+    final source = selection.source;
     final configuredPlayerId = PlayerId.parse(_configuredPlayerId);
     final definition = WorldPackageCodec().decode(source);
     const PlayableWorldValidator().validate(definition).throwIfInvalid();
@@ -186,6 +248,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
         configuredFilePath: _configuredWorldPath,
         worldId: definition.id,
         bundledSaveId: _proofSaveId,
+        isRuntimeImport: selection.isImported,
       ),
       worldId: definition.id,
       sourceWorldFormatVersion: definition.worldFormatVersion,
@@ -256,6 +319,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       multiplayerHost: multiplayerHost,
       multiplayerStatus: multiplayerStatus,
       localPlayerId: configuredPlayerId,
+      sourceLabel: selection.label,
     );
   }
 }
@@ -270,6 +334,7 @@ final class _LoadedWorld {
     required this.multiplayerHost,
     required this.multiplayerStatus,
     required this.localPlayerId,
+    required this.sourceLabel,
   });
 
   final RuntimeWorld runtimeWorld;
@@ -280,6 +345,7 @@ final class _LoadedWorld {
   final MultiplayerProofHost? multiplayerHost;
   final String multiplayerStatus;
   final PlayerId localPlayerId;
+  final String sourceLabel;
 }
 
 class _PresentationBoundaryScreen extends StatefulWidget {
@@ -293,6 +359,8 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.multiplayerHost,
     required this.multiplayerStatus,
     required this.localPlayerId,
+    required this.sourceLabel,
+    required this.onOpenWorldLibrary,
     required this.hostDeviceMetricsSampler,
   });
 
@@ -305,6 +373,8 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final MultiplayerProofHost? multiplayerHost;
   final String multiplayerStatus;
   final PlayerId localPlayerId;
+  final String sourceLabel;
+  final Future<void> Function() onOpenWorldLibrary;
   final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
@@ -471,8 +541,18 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 10.1 · Authored World Runtime'),
+        const Text('Stage 10.1B · Authored World Runtime'),
         Text(widget.runtimeWorld.definition.name),
+        Text(
+          'World source: ${widget.sourceLabel}',
+          key: const Key('world_source_status'),
+        ),
+        TextButton.icon(
+          key: const Key('open_world_library'),
+          onPressed: widget.onOpenWorldLibrary,
+          icon: const Icon(Icons.public, size: 18),
+          label: const Text('World library'),
+        ),
         Text('${_presentation.length} ECS entities bound to the scene'),
         Text(
           'World v${widget.runtimeWorld.definition.worldFormatVersion} · '
@@ -1451,9 +1531,16 @@ final _movementKeys = {
   LogicalKeyboardKey.arrowRight,
 };
 
-Future<String> _loadBundledProofWorld() {
-  return loadWorldPackageSource(
+Future<RuntimeWorldSelection> _loadDefaultWorldSelection() {
+  return loadDefaultRuntimeWorldSelection(
     configuredFilePath: _configuredWorldPath,
+    bundledAssetPath: _proofWorldAssetPath,
+  );
+}
+
+Future<RuntimeWorldSelection?> _openDefaultWorldLibrary(BuildContext context) {
+  return openDefaultRuntimeWorldLibrary(
+    context,
     bundledAssetPath: _proofWorldAssetPath,
   );
 }

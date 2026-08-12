@@ -1,7 +1,7 @@
 # AVARRA — Game App vs Forge Maker Boundaries
 
 **Status:** Reviewed source of truth  
-**Date:** 2026-08-10
+**Date:** 2026-08-13
 
 ---
 
@@ -183,16 +183,23 @@ Server → Forge
 Forge edits:
 
 ```text
-WorldDefinition / CreatorProject
+ForgeProject (.avarra-forge)
+  └── canonical WorldDefinition
 ```
 
 Game loads:
 
 ```text
-Cooked WorldDefinition
+validated runtime .avarra
       ↓
 RuntimeWorld
 ```
+
+Stage 10.1B keeps these formats and ownership separate. Forge performs
+recoverable project writes and validated export. Game never opens Forge source;
+it validates a chosen runtime export, checks dependencies against its packaged
+assets, copies canonical source into its application-owned catalog, and
+persists the selected `WorldId`. See ADR-025.
 
 Server owns:
 

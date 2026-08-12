@@ -26,14 +26,17 @@ two-second acknowledgment-stall pause, replays prediction through the same
 collision system used by authority, and interpolates remote player avatars
 across one host snapshot interval.
 
-The current `.avarra` JSON file is a prototype definition container. User
-import/export, cooked archive packaging, hashing, and package resource budgets
-remain later milestones.
+The current `.avarra` JSON file is a prototype definition container. Stage
+10.1B adds a runtime world-library dialog that imports a chosen file into
+application support storage, persists selection across restart, isolates saves
+by authored `WorldId`, and reports every referenced asset absent from the Game
+bundle. The import limit is 16 MiB. Cooked archive packaging, embedded assets,
+hashing/trust, and final package resource budgets remain later milestones.
 
-Desktop builds can load a validated Forge export instead of the bundled proof
-world with `--dart-define=AVARRA_WORLD_PATH=<path>`. The imported definition
-still uses Game-packaged asset paths; the prototype file is not yet a
-self-contained asset archive.
+Desktop builds can still use `--dart-define=AVARRA_WORLD_PATH=<path>` as a
+developer/test override. Ordinary runtime import no longer requires a rebuild.
+Imported definitions still use Game-packaged asset paths; the prototype file is
+not yet a self-contained asset archive.
 
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.

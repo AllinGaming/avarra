@@ -1,8 +1,8 @@
 # AVARRA — Documentation Architecture Review
 
-**Review date:** 2026-08-12
-**Reviewed baseline:** Stage 10.1A playable contract
-**Result:** Coherent; the post-foundation repair order is now explicit
+**Review date:** 2026-08-13
+**Reviewed baseline:** Stage 10.1B project/import gate
+**Result:** Coherent; Stage 10.2 and Relay Zero are the explicit next sequence
 
 ---
 
@@ -122,12 +122,13 @@ publishing marketplace/economy
 
 # 6. Implementation Handoff Status
 
-The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.1B.
+The documentation is sufficiently detailed to give another LLM or engineer the architecture and continue with Stage 10.2.
 
-The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract and proof-ID removal are complete. Recoverable Forge project lifecycle and runtime Game import are the next gate, followed by the minimum editor completion and Relay Zero playable slice.
+The handoff is **architecture-complete enough to continue implementation**, not feature-spec-complete for every eventual AVARRA system. The shared playable-world contract, proof-ID removal, recoverable Forge project lifecycle, and runtime Game import are complete. The minimum editor completion and Relay Zero playable slice are next.
 
 The evidence and sequence are recorded in
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
+`AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`, and
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 

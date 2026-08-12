@@ -1,6 +1,6 @@
 # AVARRA — Forge Architecture
 
-**Implementation status:** Stage 10 foundation implemented 2026-08-12
+**Implementation status:** Stage 10.1B project/import gate implemented 2026-08-13
 
 ---
 
@@ -118,10 +118,11 @@ validated/cooked world package
 
 Do not ship the entire editor source project to players.
 
-Stage 10 currently edits a `WorldDefinition` in memory and exports canonical
-prototype `.avarra` JSON. A richer source-project format, editor-only metadata,
-asset cooking, and the final archive container remain open and must not be
-inferred from this proof.
+Stage 10.1B saves a strict versioned single-world `.avarra-forge` JSON envelope
+with recoverable atomic replacement, while export remains canonical prototype
+`.avarra` JSON. Editor-only metadata, source asset ownership, multi-world
+projects, asset cooking, and the final archive container remain open and must
+not be inferred from this decision. See ADR-025.
 
 ---
 
@@ -266,15 +267,14 @@ See `AVARRA_AI_CREATOR_ARCHITECTURE.md`.
 
 # 13. Current Repair Order
 
-The Stage 10 foundation is not yet a creator-safe project loop. The required
-order is:
+The required delivery order is:
 
 1. **Complete:** share one playable-world profile between Forge export, Game,
    and Server;
 2. **Complete:** remove proof console/player stable IDs from Game
    interaction/persistence;
-3. add recoverable Forge new/open/save/save-as and safe export destinations;
-4. add runtime Game import and minimum asset dependency/closure diagnostics;
+3. **Complete:** add recoverable Forge new/open/save/save-as and safe export;
+4. **Complete:** add runtime Game import and minimum asset diagnostics;
 5. extend schemas and typed commands for a generic inspector;
 6. bound/batch command history using measured creator fixtures;
 7. integrate the shared Thermion-backed editing viewport and gizmos;
@@ -282,6 +282,7 @@ order is:
 9. only then add Stage 10A transactions, permissions, semantic diff, and agent
    adapters.
 
-The source-project representation is tracked by OD-020. The runtime package and
-asset-closure decision remains OD-019. Detailed findings and gates are in
+ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
+behavior without closing the final project/archive decisions. Detailed findings
+and gates are in `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md` and
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
