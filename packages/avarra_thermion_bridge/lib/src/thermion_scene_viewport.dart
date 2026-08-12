@@ -61,14 +61,23 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   SceneBridge<ThermionSceneObject>? _bridge;
   ThermionSceneBackend? _backend;
   ThermionViewer? _viewer;
-  Future<void> _syncTail = Future<void>.value();
-  Future<void> _cameraTail = Future<void>.value();
-  Future<void> _occlusionTail = Future<void>.value();
+  PresentationSnapshot? _pendingSnapshot;
+  Completer<void>? _syncIdle;
+  bool _syncRunning = false;
+  _CameraConfiguration? _pendingCameraConfiguration;
+  Completer<void>? _cameraIdle;
+  bool _cameraRunning = false;
+  _OcclusionUpdate? _pendingOcclusionUpdate;
+  Completer<void>? _occlusionIdle;
+  bool _occlusionRunning = false;
   Set<EntityId> _managedOccluderEntityIds = {};
+  final Map<EntityId, double> _opacityByEntityId = {};
   Timer? _cameraDebounce;
   Object? _error;
   EntityId? _selectedEntityId;
   Size _viewportSize = Size.zero;
+  Size _projectedViewportSize = Size.zero;
+  double? _projectedVerticalSpan;
   double _lastGestureScale = 1;
   int _pickSerial = 0;
   bool _ready = false;
@@ -116,10 +125,25 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   }
 
   Future<void> _queueSynchronization(PresentationSnapshot snapshot) {
-    _syncTail = _syncTail.then((_) async {
+    _pendingSnapshot = snapshot;
+    final idle = _syncIdle ??= Completer<void>();
+    if (!_syncRunning) {
+      unawaited(_drainSynchronizations());
+    }
+    return idle.future;
+  }
+
+  Future<void> _drainSynchronizations() async {
+    _syncRunning = true;
+    while (true) {
+      final snapshot = _pendingSnapshot;
+      if (snapshot == null) {
+        break;
+      }
+      _pendingSnapshot = null;
       final bridge = _bridge;
       if (bridge == null) {
-        return;
+        continue;
       }
       try {
         await bridge.synchronize(snapshot);
@@ -138,36 +162,62 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
           });
         }
       }
-    });
-    return _syncTail;
+    }
+    _syncRunning = false;
+    final idle = _syncIdle;
+    _syncIdle = null;
+    if (idle != null && !idle.isCompleted) {
+      idle.complete();
+    }
   }
 
   Future<void> _queueCameraConfiguration() {
-    final rig = widget.cameraRig;
-    final viewportSize = _viewportSize;
-    _cameraTail = _cameraTail.then((_) async {
+    _pendingCameraConfiguration = _CameraConfiguration(
+      rig: widget.cameraRig,
+      viewportSize: _viewportSize,
+    );
+    final idle = _cameraIdle ??= Completer<void>();
+    if (!_cameraRunning) {
+      unawaited(_drainCameraConfigurations());
+    }
+    return idle.future;
+  }
+
+  Future<void> _drainCameraConfigurations() async {
+    _cameraRunning = true;
+    while (true) {
+      final configuration = _pendingCameraConfiguration;
+      if (configuration == null) {
+        break;
+      }
+      _pendingCameraConfiguration = null;
       final viewer = _viewer;
-      if (viewer == null || viewportSize.isEmpty) {
-        return;
+      if (viewer == null || configuration.viewportSize.isEmpty) {
+        continue;
       }
       try {
         final camera = await viewer.getActiveCamera();
         await camera.lookAt(
-          _toThermionVector(rig.cameraPosition),
-          focus: _toThermionVector(rig.target),
+          _toThermionVector(configuration.rig.cameraPosition),
+          focus: _toThermionVector(configuration.rig.target),
         );
-        final halfHeight = rig.verticalSpan / 2;
-        final halfWidth = halfHeight * viewportSize.aspectRatio;
-        await camera.setProjection(
-          Projection.Orthographic,
-          -halfWidth,
-          halfWidth,
-          -halfHeight,
-          halfHeight,
-          0.1,
-          100,
-        );
-        await _queueOcclusionUpdate(rig: rig);
+        if (_projectedViewportSize != configuration.viewportSize ||
+            _projectedVerticalSpan != configuration.rig.verticalSpan) {
+          final halfHeight = configuration.rig.verticalSpan / 2;
+          final halfWidth = halfHeight * configuration.viewportSize.aspectRatio;
+          await camera.setProjection(
+            Projection.Orthographic,
+            -halfWidth,
+            halfWidth,
+            -halfHeight,
+            halfHeight,
+            0.1,
+            100,
+          );
+          _projectedViewportSize = configuration.viewportSize;
+          _projectedVerticalSpan = configuration.rig.verticalSpan;
+        }
+        await _queueOcclusionUpdate(rig: configuration.rig);
       } on Object catch (error) {
         if (mounted) {
           setState(() {
@@ -176,76 +226,113 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
           });
         }
       }
-    });
-    return _cameraTail;
+    }
+    _cameraRunning = false;
+    final idle = _cameraIdle;
+    _cameraIdle = null;
+    if (idle != null && !idle.isCompleted) {
+      idle.complete();
+    }
   }
 
   Future<void> _queueOcclusionUpdate({
     PresentationSnapshot? snapshot,
     IsometricCameraRig? rig,
   }) {
-    final capturedSnapshot = snapshot ?? widget.snapshot;
-    final capturedRig = rig ?? widget.cameraRig;
-    final targetEntityId = widget.occlusionTargetEntityId;
-    final occluderEntityIds = widget.occluderEntityIds;
-    final occludedOpacity = widget.occludedOpacity;
-    _occlusionTail = _occlusionTail
-        .then((_) async {
-          final backend = _backend;
-          if (backend == null) {
-            return;
-          }
+    _pendingOcclusionUpdate = _OcclusionUpdate(
+      snapshot: snapshot ?? widget.snapshot,
+      rig: rig ?? widget.cameraRig,
+      targetEntityId: widget.occlusionTargetEntityId,
+      occluderEntityIds: Set.of(widget.occluderEntityIds),
+      occludedOpacity: widget.occludedOpacity,
+    );
+    final idle = _occlusionIdle ??= Completer<void>();
+    if (!_occlusionRunning) {
+      unawaited(_drainOcclusionUpdates());
+    }
+    return idle.future;
+  }
 
-          final entitiesById = {
-            for (final entity in capturedSnapshot.entities)
-              entity.entityId: entity,
-          };
-          final target = targetEntityId == null
-              ? null
-              : entitiesById[targetEntityId];
-          final occludedEntityIds = target == null
-              ? const <EntityId>{}
-              : const IsometricOcclusionResolver().resolve(
-                  cameraPosition: capturedRig.cameraPosition,
-                  targetPosition: _toVector(target.transform.position),
-                  occluders: [
-                    for (final entityId in occluderEntityIds)
-                      if (entitiesById[entityId] case final entity?)
-                        IsometricOccluder(
-                          entityId: entityId,
-                          center: _toVector(entity.transform.position),
-                          halfExtents: _positiveHalfExtents(
-                            entity.transform.scale,
-                          ),
+  Future<void> _drainOcclusionUpdates() async {
+    _occlusionRunning = true;
+    while (true) {
+      final update = _pendingOcclusionUpdate;
+      if (update == null) {
+        break;
+      }
+      _pendingOcclusionUpdate = null;
+      final backend = _backend;
+      if (backend == null) {
+        continue;
+      }
+      try {
+        final capturedSnapshot = update.snapshot;
+        final capturedRig = update.rig;
+        final targetEntityId = update.targetEntityId;
+        final occluderEntityIds = update.occluderEntityIds;
+        final occludedOpacity = update.occludedOpacity;
+
+        final entitiesById = {
+          for (final entity in capturedSnapshot.entities)
+            entity.entityId: entity,
+        };
+        final target = targetEntityId == null
+            ? null
+            : entitiesById[targetEntityId];
+        final occludedEntityIds = target == null
+            ? const <EntityId>{}
+            : const IsometricOcclusionResolver().resolve(
+                cameraPosition: capturedRig.cameraPosition,
+                targetPosition: _toVector(target.transform.position),
+                occluders: [
+                  for (final entityId in occluderEntityIds)
+                    if (entitiesById[entityId] case final entity?)
+                      IsometricOccluder(
+                        entityId: entityId,
+                        center: _toVector(entity.transform.position),
+                        halfExtents: _positiveHalfExtents(
+                          entity.transform.scale,
                         ),
-                  ],
-                );
+                      ),
+                ],
+              );
 
-          final managedEntityIds = {
-            ..._managedOccluderEntityIds,
-            ...occluderEntityIds,
-          };
-          for (final entityId in managedEntityIds) {
-            await backend.setEntityOpacity(
-              entityId,
+        final managedEntityIds = {
+          ..._managedOccluderEntityIds,
+          ...occluderEntityIds,
+        };
+        for (final entityId in managedEntityIds) {
+          final opacity =
               occluderEntityIds.contains(entityId) &&
-                      occludedEntityIds.contains(entityId)
-                  ? occludedOpacity
-                  : 1,
-            );
+                  occludedEntityIds.contains(entityId)
+              ? occludedOpacity
+              : 1.0;
+          if (_opacityByEntityId[entityId] == opacity) {
+            continue;
           }
-          _managedOccluderEntityIds = Set.of(occluderEntityIds);
-        })
-        .onError((Object error, StackTrace stack) {
-          FlutterError.reportError(
-            FlutterErrorDetails(
-              exception: error,
-              stack: stack,
-              context: ErrorDescription('while updating isometric occluders'),
-            ),
-          );
-        });
-    return _occlusionTail;
+          await backend.setEntityOpacity(entityId, opacity);
+          _opacityByEntityId[entityId] = opacity;
+        }
+        _managedOccluderEntityIds = Set.of(occluderEntityIds);
+        _opacityByEntityId.removeWhere(
+          (entityId, _) => !managedEntityIds.contains(entityId),
+        );
+      } on Object catch (error, stack) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            context: ErrorDescription('while updating isometric occluders'),
+          ),
+        );
+      }
+    }
+    _occlusionRunning = false;
+    final idle = _occlusionIdle;
+    _occlusionIdle = null;
+    if (idle != null && !idle.isCompleted) {
+      idle.complete();
+    }
   }
 
   void _updateViewportSize(Size size) {
@@ -447,6 +534,29 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
       },
     );
   }
+}
+
+final class _CameraConfiguration {
+  const _CameraConfiguration({required this.rig, required this.viewportSize});
+
+  final IsometricCameraRig rig;
+  final Size viewportSize;
+}
+
+final class _OcclusionUpdate {
+  const _OcclusionUpdate({
+    required this.snapshot,
+    required this.rig,
+    required this.targetEntityId,
+    required this.occluderEntityIds,
+    required this.occludedOpacity,
+  });
+
+  final PresentationSnapshot snapshot;
+  final IsometricCameraRig rig;
+  final EntityId? targetEntityId;
+  final Set<EntityId> occluderEntityIds;
+  final double occludedOpacity;
 }
 
 Vector3 _toThermionVector(Vector3 vector) => Vector3.copy(vector);

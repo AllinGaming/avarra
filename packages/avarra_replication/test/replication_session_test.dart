@@ -108,7 +108,13 @@ void main() {
       server.registerEntity(_globalId, alwaysRelevant: true);
       final connected = await _connect(server);
 
-      await connected.client.sendMovementIntent(directionX: 1, directionZ: 0);
+      expect(connected.client.tickRateHz, 30);
+      final firstSubmission = connected.client.submitMovementIntent(
+        directionX: 1,
+        directionZ: 0,
+      );
+      expect(firstSubmission.sequence, 0);
+      await firstSubmission.sent;
       final newestSequence = await connected.client.sendMovementIntent(
         directionX: 0,
         directionZ: -1,

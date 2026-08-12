@@ -79,6 +79,17 @@ final class PresentationEntity {
   final EntityId entityId;
   final AssetId renderAssetId;
   final PresentationTransform transform;
+
+  @override
+  bool operator ==(Object other) {
+    return other is PresentationEntity &&
+        entityId == other.entityId &&
+        renderAssetId == other.renderAssetId &&
+        transform == other.transform;
+  }
+
+  @override
+  int get hashCode => Object.hash(entityId, renderAssetId, transform);
 }
 
 /// Deterministically ordered, immutable presentation state for one frame.

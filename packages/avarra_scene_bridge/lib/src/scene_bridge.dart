@@ -27,6 +27,7 @@ final class SceneBridge<THandle extends Object> {
 
   final SceneBackend<THandle> _backend;
   final Map<EntityId, THandle> _handlesByEntityId = {};
+  final Map<EntityId, PresentationEntity> _entitiesById = {};
   bool _isSynchronizing = false;
 
   int get boundEntityCount => _handlesByEntityId.length;
@@ -50,6 +51,7 @@ final class SceneBridge<THandle extends Object> {
         final handle = _handlesByEntityId[entityId]!;
         await _backend.destroy(handle);
         _handlesByEntityId.remove(entityId);
+        _entitiesById.remove(entityId);
         destroyed += 1;
       }
 
@@ -58,9 +60,11 @@ final class SceneBridge<THandle extends Object> {
         if (existingHandle == null) {
           final handle = await _backend.create(entity);
           _handlesByEntityId[entity.entityId] = handle;
+          _entitiesById[entity.entityId] = entity;
           created += 1;
-        } else {
+        } else if (_entitiesById[entity.entityId] != entity) {
           await _backend.update(existingHandle, entity);
+          _entitiesById[entity.entityId] = entity;
           updated += 1;
         }
       }
@@ -83,6 +87,7 @@ final class SceneBridge<THandle extends Object> {
       for (final entry in entries) {
         await _backend.destroy(entry.value);
         _handlesByEntityId.remove(entry.key);
+        _entitiesById.remove(entry.key);
       }
     } finally {
       _isSynchronizing = false;

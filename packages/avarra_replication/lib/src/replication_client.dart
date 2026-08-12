@@ -62,6 +62,13 @@ final class ReplicationSnapshotApplied extends ReplicationClientEvent {
   final int? acknowledgedInputSequence;
 }
 
+final class MovementIntentSubmission {
+  const MovementIntentSubmission({required this.sequence, required this.sent});
+
+  final int sequence;
+  final Future<void> sent;
+}
+
 /// Client-side mirror. It never becomes authoritative simulation state.
 final class ReplicationClient {
   ReplicationClient._({
@@ -113,6 +120,7 @@ final class ReplicationClient {
   late final StreamSubscription<NetworkMessage> _subscription;
   NetworkConnectionId? _connectionId;
   EntityId? _controlledEntityId;
+  int? _tickRateHz;
   TickId? _latestTickId;
   int? _acknowledgedInputSequence;
   int _nextInputSequence = 0;
@@ -120,6 +128,7 @@ final class ReplicationClient {
 
   NetworkConnectionId? get connectionId => _connectionId;
   EntityId? get controlledEntityId => _controlledEntityId;
+  int? get tickRateHz => _tickRateHz;
   bool get isJoined => _connectionId != null;
   TickId? get latestTickId => _latestTickId;
   int? get acknowledgedInputSequence => _acknowledgedInputSequence;
@@ -156,6 +165,18 @@ final class ReplicationClient {
     required double directionX,
     required double directionZ,
   }) async {
+    final submission = submitMovementIntent(
+      directionX: directionX,
+      directionZ: directionZ,
+    );
+    await submission.sent;
+    return submission.sequence;
+  }
+
+  MovementIntentSubmission submitMovementIntent({
+    required double directionX,
+    required double directionZ,
+  }) {
     if (!isJoined) {
       throw AvarraException(
         code: ReplicationErrorCodes.protocolViolation,
@@ -163,14 +184,16 @@ final class ReplicationClient {
       );
     }
     final sequence = _nextInputSequence++;
-    await _channel.send(
-      MovementIntentMessage(
-        sequence: sequence,
-        directionX: directionX,
-        directionZ: directionZ,
+    return MovementIntentSubmission(
+      sequence: sequence,
+      sent: _channel.send(
+        MovementIntentMessage(
+          sequence: sequence,
+          directionX: directionX,
+          directionZ: directionZ,
+        ),
       ),
     );
-    return sequence;
   }
 
   Future<void> close() async {
@@ -192,6 +215,7 @@ final class ReplicationClient {
         case JoinAcceptedMessage():
           _connectionId = message.connectionId;
           _controlledEntityId = message.controlledEntityId;
+          _tickRateHz = message.tickRateHz;
           if (!_joined.isCompleted) {
             _joined.complete(message.connectionId);
           }

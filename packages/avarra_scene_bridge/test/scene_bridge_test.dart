@@ -18,6 +18,9 @@ void main() {
     final changedResult = await bridge.synchronize(
       PresentationSnapshot([_entity(1, x: 2), second]),
     );
+    final unchangedResult = await bridge.synchronize(
+      PresentationSnapshot([_entity(1, x: 2), second]),
+    );
     final removalResult = await bridge.synchronize(
       PresentationSnapshot([second]),
     );
@@ -26,6 +29,9 @@ void main() {
     expect(initialResult.updated, 0);
     expect(changedResult.created, 1);
     expect(changedResult.updated, 1);
+    expect(unchangedResult.updated, 0);
+    expect(unchangedResult.created, 0);
+    expect(unchangedResult.destroyed, 0);
     expect(removalResult.destroyed, 1);
     expect(bridge.boundEntityCount, 1);
     expect(backend.entitiesByHandle.values.single.entityId, second.entityId);

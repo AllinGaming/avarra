@@ -21,6 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
+import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
@@ -313,6 +314,9 @@ class _PresentationBoundaryScreenState
   late final EntityId _playerEntityId;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
+  final Map<int, Vector3> _touchMovementByPointer = {};
+  final Map<int, Vector3> _pendingMovementInputs = {};
+  final Stopwatch _movementClock = Stopwatch()..start();
   late IsometricCameraRig _cameraRig;
   EntityId? _selectedEntityId;
   SetGroundTargetIntent? _groundTarget;
@@ -332,6 +336,7 @@ class _PresentationBoundaryScreenState
   int _totalFrameMicroseconds = 0;
   int _maximumFrameMicroseconds = 0;
   bool _hostEnding = false;
+  int _nextNetworkInputMicroseconds = 0;
   String _interactionStatus = 'Select the console, then interact';
 
   @override
@@ -571,36 +576,44 @@ class _PresentationBoundaryScreenState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
+          HoldDirectionButton(
             key: const Key('move_forward'),
-            tooltip: 'Move forward (W)',
-            onPressed: () =>
-                _dispatchIntent(MoveCharacterIntent(Vector3(0, 0, -1))),
+            label: 'Move forward (W)',
+            direction: Vector3(0, 0, -1),
             icon: const Icon(Icons.keyboard_arrow_up),
+            onPointerDown: _beginTouchMovement,
+            onPointerEnd: _endTouchMovement,
+            onSemanticTap: _pulseTouchMovement,
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
+              HoldDirectionButton(
                 key: const Key('move_left'),
-                tooltip: 'Move left (A)',
-                onPressed: () =>
-                    _dispatchIntent(MoveCharacterIntent(Vector3(-1, 0, 0))),
+                label: 'Move left (A)',
+                direction: Vector3(-1, 0, 0),
                 icon: const Icon(Icons.keyboard_arrow_left),
+                onPointerDown: _beginTouchMovement,
+                onPointerEnd: _endTouchMovement,
+                onSemanticTap: _pulseTouchMovement,
               ),
-              IconButton(
+              HoldDirectionButton(
                 key: const Key('move_back'),
-                tooltip: 'Move back (S)',
-                onPressed: () =>
-                    _dispatchIntent(MoveCharacterIntent(Vector3(0, 0, 1))),
+                label: 'Move back (S)',
+                direction: Vector3(0, 0, 1),
                 icon: const Icon(Icons.keyboard_arrow_down),
+                onPointerDown: _beginTouchMovement,
+                onPointerEnd: _endTouchMovement,
+                onSemanticTap: _pulseTouchMovement,
               ),
-              IconButton(
+              HoldDirectionButton(
                 key: const Key('move_right'),
-                tooltip: 'Move right (D)',
-                onPressed: () =>
-                    _dispatchIntent(MoveCharacterIntent(Vector3(1, 0, 0))),
+                label: 'Move right (D)',
+                direction: Vector3(1, 0, 0),
                 icon: const Icon(Icons.keyboard_arrow_right),
+                onPointerDown: _beginTouchMovement,
+                onPointerEnd: _endTouchMovement,
+                onSemanticTap: _pulseTouchMovement,
               ),
             ],
           ),
@@ -753,6 +766,28 @@ class _PresentationBoundaryScreenState
   }
 
   void _dispatchIntent(IsometricInputIntent intent) {
+    if (intent case MoveCharacterIntent(:final direction)) {
+      final multiplayerClient = widget.multiplayerClient;
+      if (multiplayerClient != null) {
+        setState(() {
+          _groundTarget = null;
+          _interactionStatus = 'Direct movement';
+        });
+        _sendMultiplayerMovement(multiplayerClient, direction);
+        return;
+      }
+      setState(() {
+        _groundTarget = null;
+        _applyMovement(
+          _movementSystem.moveDirection(
+            entityId: _playerEntityId,
+            direction: direction,
+            deltaSeconds: 1 / 15,
+          ),
+        );
+      });
+      return;
+    }
     setState(() {
       switch (intent) {
         case SelectEntityIntent(:final entityId):
@@ -761,19 +796,8 @@ class _PresentationBoundaryScreenState
           _selectedEntityId = null;
           _groundTarget = intent;
           _interactionStatus = 'Moving to ground target';
-        case MoveCharacterIntent(:final direction):
-          _groundTarget = null;
-          if (widget.multiplayerClient case final client?) {
-            _sendMultiplayerMovement(client, direction);
-          } else {
-            _applyMovement(
-              _movementSystem.moveDirection(
-                entityId: _playerEntityId,
-                direction: direction,
-                deltaSeconds: 1 / 15,
-              ),
-            );
-          }
+        case MoveCharacterIntent():
+          throw StateError('Movement intents are handled before this switch.');
         case InteractEntityIntent(:final entityId):
           if (widget.multiplayerClient != null) {
             _interactionStatus =
@@ -821,13 +845,30 @@ class _PresentationBoundaryScreenState
     }
   }
 
+  void _beginTouchMovement(int pointer, Vector3 direction) {
+    _touchMovementByPointer[pointer] = direction;
+    setState(() {
+      _groundTarget = null;
+      _interactionStatus = 'Direct movement';
+    });
+    _tickMovement();
+  }
+
+  void _endTouchMovement(int pointer) {
+    _touchMovementByPointer.remove(pointer);
+  }
+
+  void _pulseTouchMovement(Vector3 direction) {
+    _dispatchIntent(MoveCharacterIntent(direction));
+  }
+
   void _tickMovement() {
     if (!mounted) {
       return;
     }
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
-      var direction = _keyboardDirection;
+      var direction = _directMovementDirection;
       final groundTarget = _groundTarget;
       if (direction.length <= 1e-9 && groundTarget != null) {
         direction = groundTarget.position - _playerPosition;
@@ -846,7 +887,7 @@ class _PresentationBoundaryScreenState
       return;
     }
     CharacterMovementResult? result;
-    final direction = _keyboardDirection;
+    final direction = _directMovementDirection;
     if (direction.length > 1e-9) {
       result = _movementSystem.moveDirection(
         entityId: _playerEntityId,
@@ -887,22 +928,65 @@ class _PresentationBoundaryScreenState
   }
 
   void _sendMultiplayerMovement(ReplicationClient client, Vector3 direction) {
+    final now = _movementClock.elapsedMicroseconds;
+    final minimumInterval =
+        Duration.microsecondsPerSecond ~/ (client.tickRateHz ?? 30);
+    if (now < _nextNetworkInputMicroseconds) {
+      return;
+    }
+    final lateness = now - _nextNetworkInputMicroseconds;
+    _nextNetworkInputMicroseconds = lateness > minimumInterval
+        ? now + minimumInterval
+        : _nextNetworkInputMicroseconds + minimumInterval;
     final planar = Vector3(direction.x, 0, direction.z);
     if (planar.length > 1) {
       planar.normalize();
     }
-    unawaited(
-      client
-          .sendMovementIntent(directionX: planar.x, directionZ: planar.z)
-          .catchError((Object error) {
-            if (mounted) {
-              setState(() {
-                _multiplayerStatus = 'Input failed: $error';
-              });
-            }
-            return -1;
-          }),
+    final submission = client.submitMovementIntent(
+      directionX: planar.x,
+      directionZ: planar.z,
     );
+    _pendingMovementInputs[submission.sequence] = planar.clone();
+    _applyPredictedMovement(planar, client.tickRateHz ?? 30);
+    unawaited(
+      submission.sent.catchError((Object error) {
+        _pendingMovementInputs.remove(submission.sequence);
+        if (mounted) {
+          setState(() {
+            _multiplayerStatus = 'Input failed: $error';
+          });
+        }
+      }),
+    );
+  }
+
+  void _applyPredictedMovement(Vector3 direction, int tickRateHz) {
+    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId);
+    if (handle == null) {
+      return;
+    }
+    final transform = widget.runtimeWorld.ecs.component<TransformComponent>(
+      handle,
+    );
+    final position =
+        transform.position + (direction * (_playerMoveSpeed / tickRateHz));
+    final rotation = direction.length2 <= 1e-12
+        ? transform.rotation
+        : Quaternion.axisAngle(
+            Vector3(0, 1, 0),
+            math.atan2(direction.x, direction.z),
+          );
+    widget.runtimeWorld.ecs.replaceComponent(
+      handle,
+      transform.copyWith(position: position, rotation: rotation),
+    );
+    setState(() {
+      _presentation = const PresentationExtractor().extract(
+        widget.runtimeWorld.ecs,
+      );
+      _cameraRig = _cameraRig.copyWith(target: position);
+    });
+    _scheduleStreamingRefresh();
   }
 
   void _handleReplicationEvent(ReplicationClientEvent event) {
@@ -911,6 +995,18 @@ class _PresentationBoundaryScreenState
     }
     final client = widget.multiplayerClient!;
     final chunkBefore = _currentChunkCoordinate;
+    if (event case ReplicationSnapshotApplied(
+      :final acknowledgedInputSequence,
+    )) {
+      if (acknowledgedInputSequence != null) {
+        _pendingMovementInputs.removeWhere(
+          (sequence, _) => sequence <= acknowledgedInputSequence,
+        );
+      }
+    } else if (event is ReplicationClientDisconnected) {
+      _pendingMovementInputs.clear();
+      _touchMovementByPointer.clear();
+    }
     if (event case ReplicationEntityDespawned(:final entity)) {
       _removeReplicatedAvatar(entity);
     }
@@ -948,20 +1044,38 @@ class _PresentationBoundaryScreenState
         continue;
       }
       final value = entity.transform;
+      var position = Vector3(
+        value.position[0],
+        value.position[1],
+        value.position[2],
+      );
+      var rotation = Quaternion(
+        value.rotation[0],
+        value.rotation[1],
+        value.rotation[2],
+        value.rotation[3],
+      );
+      if (entity.entityId == _playerEntityId &&
+          _pendingMovementInputs.isNotEmpty) {
+        final tickRateHz = client.tickRateHz ?? 30;
+        final pending = _pendingMovementInputs.entries.toList()
+          ..sort((left, right) => left.key.compareTo(right.key));
+        for (final entry in pending) {
+          final direction = entry.value;
+          position += direction * (_playerMoveSpeed / tickRateHz);
+          if (direction.length2 > 1e-12) {
+            rotation = Quaternion.axisAngle(
+              Vector3(0, 1, 0),
+              math.atan2(direction.x, direction.z),
+            );
+          }
+        }
+      }
       widget.runtimeWorld.ecs.replaceComponent(
         handle,
         TransformComponent(
-          position: Vector3(
-            value.position[0],
-            value.position[1],
-            value.position[2],
-          ),
-          rotation: Quaternion(
-            value.rotation[0],
-            value.rotation[1],
-            value.rotation[2],
-            value.rotation[3],
-          ),
+          position: position,
+          rotation: rotation,
           scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
         ),
       );
@@ -1202,6 +1316,26 @@ class _PresentationBoundaryScreenState
       z += 1;
     }
     return Vector3(x, 0, z);
+  }
+
+  Vector3 get _directMovementDirection {
+    final direction = _keyboardDirection;
+    for (final touchDirection in _touchMovementByPointer.values) {
+      direction.add(touchDirection);
+    }
+    if (direction.length > 1) {
+      direction.normalize();
+    }
+    return direction;
+  }
+
+  double get _playerMoveSpeed {
+    final authoredPlayer = widget.runtimeWorld.ecs
+        .query<PlayerControlledComponent>()
+        .single;
+    return widget.runtimeWorld.ecs
+        .component<CharacterControllerComponent>(authoredPlayer.handle)
+        .moveSpeed;
   }
 }
 
