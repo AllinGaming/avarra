@@ -187,17 +187,19 @@ proof. Stage 10.1A shares the playable-world contract and removes proof-ID
 behavior. Stage 10.1B adds a versioned recoverable `.avarra-forge` project,
 native safe export, and an unchanged-Game runtime catalog that persists
 validated imports and reports missing packaged assets. Stage 10.2 completes the
-minimum editor. Content schemas v5–v6 and Stages 11.1–11.2 add authored health,
+minimum editor. Content schemas v5–v7 and Stages 11.1–11.3 add authored health,
 a basic attack, damage, death/restart, and autonomous guardian perception,
 pursuit, attack, leash, return, and defeat to the bundled `Relay Zero
-Prototype`. Persistent stabilizers and their objective gate are next; the
-playable RPG slice still comes before AI/MCP expansion. See
+Prototype`. Three world-wide persistent stabilizers now open an authored solid
+gate to the streamed guardian chamber. The relay-core item and final completion
+are next; the playable RPG slice still comes before AI/MCP expansion. See
 `docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
+`docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

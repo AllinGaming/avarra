@@ -7,8 +7,10 @@ versioned world/content schemas, instantiates stable-ID ECS entities, extracts
 an immutable presentation snapshot, and renders it through the provisional
 Thermion/Filament bridge. The scene, manifest asset reference, transforms, and
 isometric occlusion roles are authored data rather than hard-coded Game state.
-It streams three authored chunks, persists player position and console state as
-separate runtime overlays, and restores them before initial chunk activation.
+It streams three authored chunks, persists player position and stabilizer state
+as separate runtime overlays, and restores them before initial chunk activation.
+Three world-wide stabilizers open a derived solid gate to the streamed guardian
+chamber; tap and held movement share the same camera-relative control path.
 
 Game remains offline/local by default. `AVARRA_MULTIPLAYER_ROLE` selects
 `offline`, `host`, or `client`; host/port and a canonical `AVARRA_PLAYER_ID`

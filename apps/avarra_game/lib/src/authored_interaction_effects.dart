@@ -2,6 +2,7 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
+import 'package:avarra_world/avarra_world.dart';
 
 final class AuthoredInteractionEffectResult {
   const AuthoredInteractionEffectResult.none()
@@ -51,32 +52,11 @@ final class AuthoredInteractionEffectExecutor {
   }
 }
 
-/// Compact data-driven objective summary for the current active world state.
+/// Compact data-driven objective summary across the complete authored world.
 String authoredInteractionObjectiveStatus(
-  EcsWorld ecs,
+  WorldDefinition definition,
   WorldSaveSession persistence,
 ) {
-  final objectives = ecs
-      .query2<InteractableComponent, SetPersistentFlagOnInteractComponent>();
-  if (objectives.isEmpty) {
-    return 'Objective · Explore the authored world';
-  }
-  var completed = 0;
-  String? nextLabel;
-  for (final objective in objectives) {
-    final current = persistence.flagValue(
-      objective.entityId,
-      objective.second.flagKey,
-    );
-    if (current == objective.second.value) {
-      completed += 1;
-    } else {
-      nextLabel ??= objective.first.label;
-    }
-  }
-  if (completed == objectives.length) {
-    return 'Objectives · $completed/${objectives.length} complete';
-  }
-  return 'Objectives · $completed/${objectives.length} complete · '
-      'Next: $nextLabel';
+  final progress = authoredObjectiveProgress(definition, persistence);
+  return progress.status(definition);
 }

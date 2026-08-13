@@ -167,6 +167,10 @@ final class RuntimeEntityLoader {
               value: component.value,
             ),
           );
+        case ObjectiveDefinition() || ObjectiveGateDefinition():
+          // Objective grouping and gates remain authored definition state.
+          // Their runtime result is derived from persisted objective progress.
+          break;
         case PersistentFlagsDefinition():
           ecs.addComponent(handle, PersistentFlagsComponent(component.flags));
       }

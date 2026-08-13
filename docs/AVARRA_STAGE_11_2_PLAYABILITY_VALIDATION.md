@@ -11,7 +11,8 @@ black/loading frame, the diagnostic panel covered most of a portrait display,
 camera rotation changed the apparent meaning of the D-pad, and a held direction
 could leave the sparse authored chunk set and unload the encounter.
 
-Stage 11.3 is intentionally paused until this baseline is usable.
+Stage 11.3 remained paused until this baseline became usable and now builds on
+the corrected movement/device gate.
 
 ## Implemented corrections
 
@@ -135,11 +136,11 @@ Physical Android profiling remains a separate release gate.
 - Relay Zero still uses sparse cube-based proof art, not production level art.
 - Debug-mode timing remains materially worse than profile/release timing and is
   not a performance acceptance signal.
-- The world is only three chunks and one combat encounter; Stage 11.3 must add
-  the stabilizer objective sequence before this is a meaningful game session.
+- The world remains only three chunks and one combat encounter. Stage 11.3 now
+  adds the stabilizer sequence and gate; item/core/final completion remain.
 - Host-authoritative combat/guardian AI remains deferred to the co-op slice.
 
 ## Next
 
-After this pass holds its device gate, resume Stage 11.3: three persistent
-stabilizers and an authored objective gate.
+Stage 11.3 subsequently adds three persistent stabilizers and an authored
+objective gate. Continue with the relay-core item and minimal inventory.

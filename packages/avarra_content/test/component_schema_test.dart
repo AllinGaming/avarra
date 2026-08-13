@@ -20,6 +20,8 @@ void main() {
           AvarraComponentType.setPersistentFlagOnInteract,
           AvarraComponentType.isometricOccluder,
           AvarraComponentType.isometricOcclusionTarget,
+          AvarraComponentType.objective,
+          AvarraComponentType.objectiveGate,
           AvarraComponentType.persistentFlags,
           AvarraComponentType.physicsCollider,
           AvarraComponentType.playerControlled,
@@ -250,6 +252,39 @@ void main() {
         'perceptionRange': 4,
         'leashRange': 6,
       }, contentSchemaVersion: 5),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes authored objective groups and gates in content v7', () {
+    final objective = registry.decode(AvarraComponentType.objective, {
+      'schemaVersion': 1,
+      'group': 'relay.stabilizers',
+    });
+    final gate = registry.decode(AvarraComponentType.objectiveGate, {
+      'schemaVersion': 1,
+      'label': 'Core chamber gate',
+      'group': 'relay.stabilizers',
+      'requiredCount': 3,
+    });
+
+    expect((objective as ObjectiveDefinition).group, 'relay.stabilizers');
+    expect((gate as ObjectiveGateDefinition).requiredCount, 3);
+    expect(gate.label, 'Core chamber gate');
+    expect(
+      () => registry.decode(AvarraComponentType.objectiveGate, {
+        'schemaVersion': 1,
+        'label': 'Core chamber gate',
+        'group': 'Invalid Group',
+        'requiredCount': 2.5,
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.objective, {
+        'schemaVersion': 1,
+        'group': 'relay.stabilizers',
+      }, contentSchemaVersion: 6),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

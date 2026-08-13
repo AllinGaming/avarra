@@ -265,6 +265,65 @@ void main() {
     );
   });
 
+  test('validates authored objective groups and gate counts', () {
+    final json = _validWorldJson();
+    final entities = json['entities']! as List<dynamic>;
+    final objectiveComponents =
+        (entities.first as Map<String, dynamic>)['components']!
+            as Map<String, dynamic>;
+    objectiveComponents
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.4, 0.4, 0.4],
+        'bodyKind': 'static',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.interactable] = {
+        'schemaVersion': 1,
+        'label': 'Stabilize relay',
+        'range': 2.4,
+      }
+      ..[AvarraComponentType.persistentFlags] = {
+        'schemaVersion': 1,
+        'flags': {'activated': false},
+      }
+      ..[AvarraComponentType.setPersistentFlagOnInteract] = {
+        'schemaVersion': 1,
+        'flagKey': 'activated',
+        'value': true,
+      }
+      ..[AvarraComponentType.objective] = {
+        'schemaVersion': 1,
+        'group': 'relay.stabilizers',
+      };
+    final gateComponents =
+        (entities.last as Map<String, dynamic>)['components']!
+            as Map<String, dynamic>;
+    gateComponents
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.4, 1, 1],
+        'bodyKind': 'static',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.objectiveGate] = {
+        'schemaVersion': 1,
+        'label': 'Core gate',
+        'group': 'relay.stabilizers',
+        'requiredCount': 1,
+      };
+
+    expect(() => WorldPackageCodec().decode(jsonEncode(json)), returnsNormally);
+
+    (gateComponents[AvarraComponentType.objectiveGate]!
+            as Map<String, dynamic>)['requiredCount'] =
+        2;
+    expect(
+      () => WorldPackageCodec().decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
+
   test('rejects duplicate stable IDs', () {
     final json = _validWorldJson();
     final entities = json['entities']! as List<dynamic>;

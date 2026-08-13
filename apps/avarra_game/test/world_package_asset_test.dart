@@ -1,10 +1,10 @@
 import 'dart:io';
 
+import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
-import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_world/avarra_world.dart';
@@ -46,11 +46,11 @@ void main() {
 
       expect(definition.name, 'Relay Zero Prototype');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 6);
+      expect(definition.contentSchemaVersion, 7);
       expect(definition.chunkSize, 8);
       expect(definition.chunks, hasLength(3));
-      expect(definition.allEntities, hasLength(9));
-      expect(runtime.ecs.entityCount, 5);
+      expect(definition.allEntities, hasLength(13));
+      expect(runtime.ecs.entityCount, 8);
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
       expect(streaming.activeOccluderEntityIds, hasLength(1));
@@ -65,9 +65,37 @@ void main() {
         runtime.ecs.component<BasicAttackComponent>(playerHandle).cooldown,
         const Duration(milliseconds: 450),
       );
-      final guardianHandle = runtime.ecs.handleFor(
-        EntityId.parse('01890f47-e8b8-7a68-8000-000000000009'),
-      )!;
+      final guardianId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000009');
+      expect(
+        runtime.ecs.handleFor(guardianId),
+        isNull,
+        reason: 'The guardian must remain streamed behind the objective gate.',
+      );
+      final objectives = definition.allEntities
+          .where((entity) => entity.component<ObjectiveDefinition>() != null)
+          .toList();
+      expect(objectives, hasLength(3));
+      expect(
+        objectives.map(
+          (entity) => entity.component<ObjectiveDefinition>()!.group,
+        ),
+        everyElement('relay.stabilizers'),
+      );
+      final gate = definition.allEntities
+          .map((entity) => entity.component<ObjectiveGateDefinition>())
+          .whereType<ObjectiveGateDefinition>()
+          .single;
+      expect(gate.label, 'Core chamber gate');
+      expect(gate.requiredCount, 3);
+
+      streaming.reconcile([
+        ChunkStreamingRequest(
+          coordinate: const WorldChunkCoordinate(1, 0),
+          source: ChunkInterestSource.localPlayer,
+        ),
+      ]);
+      await streaming.pumpUntilStable();
+      final guardianHandle = runtime.ecs.handleFor(guardianId)!;
       expect(
         runtime.ecs.component<HealthComponent>(guardianHandle).currentHealth,
         60,
@@ -84,35 +112,16 @@ void main() {
             .phase,
         GuardianBehaviorPhase.idle,
       );
+      runtime.ecs
+          .component<TransformComponent>(playerHandle)
+          .position
+          .setValues(8.5, 0.4, 4);
       final guardianBehavior = GuardianBehaviorSystem(
         ecs: runtime.ecs,
         collisionWorld: DeterministicPhysicsCollisionWorld.fromEcs(runtime.ecs),
       );
-      for (var step = 1; step <= 120; step++) {
-        final results = guardianBehavior.tickAll(
-          targetId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
-          simulationTime: Duration(milliseconds: step * 16),
-          deltaSeconds: 0.016,
-        );
-        expect(
-          results.any((result) => result.attack?.accepted ?? false),
-          isFalse,
-          reason: 'The authored entry point must begin outside guardian aggro.',
-        );
-      }
-      expect(
-        runtime.ecs
-            .component<GuardianBehaviorStateComponent>(guardianHandle)
-            .phase,
-        GuardianBehaviorPhase.idle,
-      );
-
-      runtime.ecs
-          .component<TransformComponent>(playerHandle)
-          .position
-          .setValues(4.5, 0.4, 5.5);
       var acceptedGuardianAttack = false;
-      for (var step = 121; step <= 480; step++) {
+      for (var step = 1; step <= 360; step++) {
         final results = guardianBehavior.tickAll(
           targetId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
           simulationTime: Duration(milliseconds: step * 16),
@@ -131,15 +140,6 @@ void main() {
       expect(
         runtime.ecs.component<HealthComponent>(playerHandle).currentHealth,
         90,
-      );
-      final consoleHandle = runtime.ecs.handleFor(
-        EntityId.parse('01890f47-e8b8-7a68-8000-000000000004'),
-      )!;
-      expect(
-        runtime.ecs
-            .component<PersistentFlagsComponent>(consoleHandle)
-            .flags['activated'],
-        isFalse,
       );
       for (final entry in runtime.assetPaths.entries) {
         expect(entry.key, isA<AssetId>());

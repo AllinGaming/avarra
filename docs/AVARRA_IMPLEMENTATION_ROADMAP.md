@@ -573,9 +573,9 @@ Build in thin vertical slices:
 player/enemy health and damage                    COMPLETE (Stage 11.1)
 one basic attack and death/restart                COMPLETE (Stage 11.1)
 one pursuing/attacking guardian                   COMPLETE (Stage 11.2)
-three persistent relay stabilizer objectives
+three persistent relay stabilizer objectives         COMPLETE (Stage 11.3)
 one relay-core item and minimal inventory
-objective gate and completion state
+objective gate and completion state                  PARTIAL (gate complete)
 authoritative co-op combat/objective commands
 save/resume across the full adventure
 ```
@@ -615,9 +615,18 @@ Stage 11.2 playability follow-up (implemented 2026-08-13):
 - authored chunk bounds stop movement into empty space while legacy invalid
   saves recover to the authored spawn.
 
-Next: Stage 11.3 three persistent stabilizers and an authored objective gate.
-See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
-`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`, and ADR-028.
+Stage 11.3 status (implemented 2026-08-13):
+
+- content schema v7 groups persistent interactions as authored objectives and
+  defines count-based solid gates without product entity-ID rules;
+- objective progress evaluates active and inactive chunks from authored
+  defaults plus save overlays;
+- three Relay Zero stabilizers open the physical core-chamber gate in any
+  order; and
+- the guardian now streams from the chamber beyond that gate.
+
+Next: Stage 11.4 relay-core item, minimal inventory, and return-console
+completion. See `AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md` and ADR-029.
 
 Gate:
 

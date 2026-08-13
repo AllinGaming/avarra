@@ -115,10 +115,12 @@ final class WorldPackageCodec {
         ? _decodeChunks(root['chunks'], contentVersion, chunkSize!)
         : <WorldChunkDefinition>[];
     _validateEntityIds(entities, chunks);
-    _validateReferences(assets, [
+    final allEntities = [
       ...entities,
       for (final chunk in chunks) ...chunk.entities,
-    ]);
+    ];
+    _validateReferences(assets, allEntities);
+    _validateObjectiveGroups(allEntities);
 
     return WorldDefinition(
       id: worldId,
@@ -384,6 +386,58 @@ final class WorldPackageCodec {
           'A persistent interaction effect requires an interactable and a '
               'declared persistent flag.',
           context: {'entityId': entityId.value, 'flagKey': effect.flagKey},
+        );
+      }
+    }
+    if (types.contains(AvarraComponentType.objective) &&
+        !types.contains(AvarraComponentType.setPersistentFlagOnInteract)) {
+      _invalid(
+        '$path.components',
+        'An objective requires a persistent interaction effect.',
+        context: {'entityId': entityId.value},
+      );
+    }
+    if (types.contains(AvarraComponentType.objectiveGate) &&
+        (!types.contains(AvarraComponentType.transform) ||
+            !types.contains(AvarraComponentType.renderableReference) ||
+            collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||
+            collider?.isSensor == true)) {
+      _invalid(
+        '$path.components',
+        'An objective gate requires renderable, non-sensor static geometry.',
+        context: {'entityId': entityId.value},
+      );
+    }
+  }
+
+  void _validateObjectiveGroups(List<WorldEntityDefinition> entities) {
+    final objectiveCounts = <String, int>{};
+    for (final entity in entities) {
+      final objective = entity.component<ObjectiveDefinition>();
+      if (objective != null) {
+        objectiveCounts.update(
+          objective.group,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
+      }
+    }
+    for (final entity in entities) {
+      final gate = entity.component<ObjectiveGateDefinition>();
+      if (gate == null) {
+        continue;
+      }
+      final available = objectiveCounts[gate.group] ?? 0;
+      if (gate.requiredCount > available) {
+        _invalid(
+          r'$.entities|$.chunks[*].entities',
+          'An objective gate requires more objectives than its group defines.',
+          context: {
+            'entityId': entity.id.value,
+            'objectiveGroup': gate.group,
+            'requiredCount': gate.requiredCount,
+            'availableCount': available,
+          },
         );
       }
     }

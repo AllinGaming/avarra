@@ -88,9 +88,9 @@ Neither warning blocks the current artifacts.
 
 ## Next slice
 
-Stage 11.3 expands Relay Zero into a real objective sequence: author three
-persistent stabilizers and a gate that opens from authored objective state.
-The relay-core item and minimal inventory follow that objective foundation.
+Stage 11.3 subsequently expands Relay Zero with three persistent stabilizers
+and a gate opened from authored world-wide objective state. The relay-core item
+and minimal inventory now follow that completed objective foundation.
 
 See ADR-028 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 

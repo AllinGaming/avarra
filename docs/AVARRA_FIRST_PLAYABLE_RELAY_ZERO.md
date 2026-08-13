@@ -76,6 +76,13 @@ perception, pursuit, attack scheduling, leash, return, and defeat while reusing
 the existing movement and combat authorities. Offline Game runs the behavior;
 connected clients continue to wait for the later host-authoritative slice.
 
+Stage 11.3 replaces the one-console objective summary with content schema v7's
+authored objective groups and derived gates. Relay Zero now has three
+persistent stabilizers across streamed chunks. Completing all three removes a
+solid core-chamber gate from both collision and presentation; the guardian is
+streamed from the chamber beyond it. World-wide progress includes inactive
+saved chunks and contains no Game-side entity-ID rules.
+
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
 
@@ -86,9 +93,9 @@ cube assets while the gameplay contract is made reliable.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
 4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
-   slices. Health/basic attack/death/restart and guardian AI are complete; next
-   is three persistent stabilizers and their objective gate, then item/core →
-   co-op authority → full save/resume.
+   slices. Health/basic attack/death/restart, guardian AI, three persistent
+   stabilizers, and their objective gate are complete; next is item/core →
+   final completion → co-op authority → full save/resume.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.

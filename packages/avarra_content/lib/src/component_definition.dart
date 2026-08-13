@@ -342,6 +342,52 @@ final class SetPersistentFlagOnInteractDefinition
   };
 }
 
+/// Marks one persistent interaction as a member of an authored objective group.
+final class ObjectiveDefinition extends ContentComponentDefinition {
+  const ObjectiveDefinition({required this.group});
+
+  final String group;
+
+  @override
+  String get type => AvarraComponentType.objective;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'group': group,
+  };
+}
+
+/// A solid authored barrier opened by completed objectives in one group.
+final class ObjectiveGateDefinition extends ContentComponentDefinition {
+  const ObjectiveGateDefinition({
+    required this.label,
+    required this.group,
+    required this.requiredCount,
+  });
+
+  final String label;
+  final String group;
+  final int requiredCount;
+
+  @override
+  String get type => AvarraComponentType.objectiveGate;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'label': label,
+    'group': group,
+    'requiredCount': requiredCount,
+  };
+}
+
 final class PersistentFlagsDefinition extends ContentComponentDefinition {
   PersistentFlagsDefinition(Map<String, bool> flags)
     : flags = Map.unmodifiable(SplayTreeMap.of(flags));

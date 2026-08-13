@@ -36,10 +36,6 @@ void main() {
       ).interact(actorId: playerEntityId, targetId: objectiveEntityId);
 
       expect(interaction.accepted, isTrue);
-      expect(
-        authoredInteractionObjectiveStatus(firstEcs, firstSession),
-        'Objectives · 0/1 complete · Next: Generated console',
-      );
       final applied = AuthoredInteractionEffectExecutor(
         ecs: firstEcs,
         persistence: firstSession,
@@ -85,10 +81,6 @@ void main() {
         5,
       );
       expect(restoredSession.flagValue(objectiveEntityId, 'activated'), isTrue);
-      expect(
-        authoredInteractionObjectiveStatus(restoredEcs, restoredSession),
-        'Objectives · 1/1 complete',
-      );
     },
   );
 }

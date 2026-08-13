@@ -203,7 +203,7 @@ final class ComponentSchema {
   }
 }
 
-/// Registry and decoder for the component schemas accepted through Stage 5.
+/// Registry and decoder for the built-in AVARRA content component schemas.
 final class ComponentSchemaRegistry {
   ComponentSchemaRegistry({
     required this.contentSchemaVersion,
@@ -511,6 +511,73 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.objective,
+          version: 1,
+          introducedInContentSchemaVersion: 7,
+          editorLabel: 'Objective',
+          editorOrder: 65,
+          help: 'Groups a persistent interaction into world-wide progress.',
+          requiredComponentTypes: const {
+            AvarraComponentType.interactable,
+            AvarraComponentType.setPersistentFlagOnInteract,
+            AvarraComponentType.persistentFlags,
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'group',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Objective group',
+              help:
+                  'Lowercase group key using letters, digits, dots, hyphens, or underscores.',
+              defaultValue: 'relay.stabilizers',
+              maximumLength: 64,
+            ),
+          ],
+        ),
+        ComponentSchema(
+          type: AvarraComponentType.objectiveGate,
+          version: 1,
+          introducedInContentSchemaVersion: 7,
+          editorLabel: 'Objective Gate',
+          editorOrder: 66,
+          help: 'Opens this solid barrier when its objective count is met.',
+          requiredComponentTypes: const {
+            AvarraComponentType.transform,
+            AvarraComponentType.renderableReference,
+            AvarraComponentType.physicsCollider,
+          },
+          dependencyFieldValues: const {
+            AvarraComponentType.physicsCollider: {
+              'bodyKind': 'static',
+              'isSensor': false,
+            },
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'label',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Gate label',
+              defaultValue: 'Relay gate',
+              maximumLength: 80,
+            ),
+            ComponentFieldSchema(
+              name: 'group',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Objective group',
+              defaultValue: 'relay.stabilizers',
+              maximumLength: 64,
+            ),
+            ComponentFieldSchema(
+              name: 'requiredCount',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Required objectives',
+              defaultValue: 3,
+              minimum: 1,
+              maximum: 64,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.persistentFlags,
           version: 1,
           introducedInContentSchemaVersion: 3,
@@ -628,6 +695,8 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.interactable => _decodeInteractable(data),
       AvarraComponentType.setPersistentFlagOnInteract =>
         _decodeSetPersistentFlagOnInteract(data),
+      AvarraComponentType.objective => _decodeObjective(data),
+      AvarraComponentType.objectiveGate => _decodeObjectiveGate(data),
       AvarraComponentType.persistentFlags => _decodePersistentFlags(data),
       _ => throw StateError('Validated component type has no decoder: $type'),
     };
@@ -739,6 +808,40 @@ final class ComponentSchemaRegistry {
       flagKey: flagKey,
       value: data['value']! as bool,
     );
+  }
+
+  ObjectiveDefinition _decodeObjective(Map<String, Object?> data) {
+    final group = data['group']! as String;
+    _validateObjectiveGroup(group, AvarraComponentType.objective);
+    return ObjectiveDefinition(group: group);
+  }
+
+  ObjectiveGateDefinition _decodeObjectiveGate(Map<String, Object?> data) {
+    final label = data['label']! as String;
+    final group = data['group']! as String;
+    final requiredCountValue = data['requiredCount']! as num;
+    _validateObjectiveGroup(group, AvarraComponentType.objectiveGate);
+    if (label.trim().isEmpty ||
+        label.length > 80 ||
+        requiredCountValue != requiredCountValue.roundToDouble() ||
+        requiredCountValue < 1 ||
+        requiredCountValue > 64) {
+      _invalidComponent(
+        AvarraComponentType.objectiveGate,
+        'Objective-gate label or required count is invalid.',
+      );
+    }
+    return ObjectiveGateDefinition(
+      label: label,
+      group: group,
+      requiredCount: requiredCountValue.toInt(),
+    );
+  }
+
+  void _validateObjectiveGroup(String group, String componentType) {
+    if (!RegExp(r'^[a-z][a-z0-9_.-]{0,63}$').hasMatch(group)) {
+      _invalidComponent(componentType, 'Objective group key is invalid.');
+    }
   }
 
   PersistentFlagsDefinition _decodePersistentFlags(Map<String, Object?> data) {

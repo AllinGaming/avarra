@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 6,
+  "contentSchemaVersion": 7,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero Prototype",
@@ -103,6 +103,48 @@
           }
         },
         {
+          "id": "01890f47-e8b8-7a68-8000-000000000012",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [7.65, 0.7, 1.3],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.25, 0.7, 1.3]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.25, 0.7, 1.3],
+              "bodyKind": "static",
+              "isSensor": false
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000013",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [7.65, 0.7, 6.7],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.25, 0.7, 1.3]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.25, 0.7, 1.3],
+              "bodyKind": "static",
+              "isSensor": false
+            }
+          }
+        },
+        {
           "id": "01890f47-e8b8-7a68-8000-000000000004",
           "components": {
             "avarra.transform": {
@@ -123,13 +165,17 @@
             },
             "avarra.interactable": {
               "schemaVersion": 1,
-              "label": "Restore the ancient relay",
+              "label": "Stabilize relay Alpha",
               "range": 2.8
             },
             "avarra.interaction.set_persistent_flag": {
               "schemaVersion": 1,
               "flagKey": "activated",
               "value": true
+            },
+            "avarra.objective": {
+              "schemaVersion": 1,
+              "group": "relay.stabilizers"
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,
@@ -138,13 +184,13 @@
           }
         },
         {
-          "id": "01890f47-e8b8-7a68-8000-000000000009",
+          "id": "01890f47-e8b8-7a68-8000-000000000010",
           "components": {
             "avarra.transform": {
               "schemaVersion": 1,
-              "position": [4.5, 0.45, 7.5],
+              "position": [6.2, 0.35, 1.5],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.45, 0.45, 0.45]
+              "scale": [0.35, 0.35, 0.35]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -152,30 +198,54 @@
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
-              "halfExtents": [0.38, 0.42, 0.38],
-              "bodyKind": "character",
+              "halfExtents": [0.35, 0.35, 0.35],
+              "bodyKind": "static",
               "isSensor": false
             },
-            "avarra.character_controller": {
+            "avarra.interactable": {
               "schemaVersion": 1,
-              "moveSpeed": 1,
-              "skinWidth": 0.03,
-              "arrivalTolerance": 0.08
+              "label": "Stabilize relay Beta",
+              "range": 2.8
             },
-            "avarra.health": {
+            "avarra.interaction.set_persistent_flag": {
               "schemaVersion": 1,
-              "maximumHealth": 60
+              "flagKey": "activated",
+              "value": true
             },
-            "avarra.combat.basic_attack": {
+            "avarra.objective": {
               "schemaVersion": 1,
-              "damage": 10,
-              "range": 1,
-              "cooldownSeconds": 1.1
+              "group": "relay.stabilizers"
             },
-            "avarra.ai.guardian_behavior": {
+            "avarra.persistence.flags": {
               "schemaVersion": 1,
-              "perceptionRange": 3.5,
-              "leashRange": 5
+              "flags": {"activated": false}
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000011",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [7.65, 0.7, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.25, 0.7, 1.4]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.25, 0.7, 1.4],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.objective.gate": {
+              "schemaVersion": 1,
+              "label": "Core chamber gate",
+              "group": "relay.stabilizers",
+              "requiredCount": 3
             }
           }
         }
@@ -203,6 +273,24 @@
               "halfExtents": [0.5, 0.5, 0.5],
               "bodyKind": "static",
               "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Stabilize relay Gamma",
+              "range": 2.8
+            },
+            "avarra.interaction.set_persistent_flag": {
+              "schemaVersion": 1,
+              "flagKey": "activated",
+              "value": true
+            },
+            "avarra.objective": {
+              "schemaVersion": 1,
+              "group": "relay.stabilizers"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"activated": false}
             }
           }
         },
@@ -268,6 +356,48 @@
               "isSensor": false
             },
             "avarra.isometric.occluder": {"schemaVersion": 1}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000009",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [3, 0.45, 6],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.45, 0.45, 0.45]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.38, 0.42, 0.38],
+              "bodyKind": "character",
+              "isSensor": false
+            },
+            "avarra.character_controller": {
+              "schemaVersion": 1,
+              "moveSpeed": 1,
+              "skinWidth": 0.03,
+              "arrivalTolerance": 0.08
+            },
+            "avarra.health": {
+              "schemaVersion": 1,
+              "maximumHealth": 60
+            },
+            "avarra.combat.basic_attack": {
+              "schemaVersion": 1,
+              "damage": 10,
+              "range": 1,
+              "cooldownSeconds": 1.1
+            },
+            "avarra.ai.guardian_behavior": {
+              "schemaVersion": 1,
+              "perceptionRange": 3.5,
+              "leashRange": 5
+            }
           }
         }
       ]

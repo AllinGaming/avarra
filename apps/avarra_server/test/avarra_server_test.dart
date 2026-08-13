@@ -76,7 +76,13 @@ void main() {
       content: host.content,
     );
 
-    await _waitUntil(() => client.entities.length == 5);
+    await _waitUntil(
+      () =>
+          client.entities.length >= 5 &&
+          client.entities.values.any(
+            (entity) => entity.entityId == _playerEntityId,
+          ),
+    );
     final playerId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
     final initialZ = client.entities.values
         .singleWhere((entity) => entity.entityId == playerId)

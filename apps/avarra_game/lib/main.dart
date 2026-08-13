@@ -50,10 +50,10 @@ const _configuredPlayerId = String.fromEnvironment(
   'AVARRA_PLAYER_ID',
   defaultValue: '01890f47-e8b8-7a68-8000-000000000402',
 );
-// The arena rebalance changes authored chunk scale and spawn coordinates, so
-// it intentionally starts a new bundled-world slot. The prior proof save is
-// left untouched instead of decoding its local coordinates against new data.
-final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000411');
+// Stage 11.3 replaces the single relay flag with a three-objective graph and
+// physical gate, so it intentionally starts a new bundled-world save slot.
+// Earlier proof and arena saves remain untouched.
+final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000421');
 
 typedef WorldPackageSourceLoader = Future<String> Function();
 typedef SaveStoreLoader = Future<SaveStore> Function();
@@ -486,7 +486,7 @@ class _PresentationBoundaryScreenState
     _presentation = _extractPresentation();
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
-      excludedEntityIds: _deadEntityIds,
+      excludedEntityIds: {..._deadEntityIds, ..._openObjectiveGateEntityIds},
     );
     _movementSystem = CharacterMovementSystem(
       ecs: widget.runtimeWorld.ecs,
@@ -606,7 +606,7 @@ class _PresentationBoundaryScreenState
             children: [
               Text(avarraProductName, style: textTheme.headlineMedium),
               const SizedBox(height: 4),
-              const Text('Stage 11.2 · Relay Zero Guardian'),
+              const Text('Stage 11.3 · Relay Stabilizers'),
               Text(widget.runtimeWorld.definition.name),
               Text(
                 'World source: ${widget.sourceLabel}',
@@ -646,7 +646,7 @@ class _PresentationBoundaryScreenState
               ],
               Text(
                 authoredInteractionObjectiveStatus(
-                  widget.runtimeWorld.ecs,
+                  widget.runtimeWorld.definition,
                   widget.persistence,
                 ),
                 key: const Key('authored_objective_status'),
@@ -737,7 +737,7 @@ class _PresentationBoundaryScreenState
         : 'HP ${_formatHealth(health.currentHealth)}/'
               '${_formatHealth(health.maximumHealth)}';
     final objective = authoredInteractionObjectiveStatus(
-      widget.runtimeWorld.ecs,
+      widget.runtimeWorld.definition,
       widget.persistence,
     );
     return Card(
@@ -1068,7 +1068,9 @@ class _PresentationBoundaryScreenState
         : activeOpponents.any((entry) => entry.component.isDead)
         ? 'Guardian defeated · relay path secured'
         : _authoredCombatantEntityIds.isNotEmpty
-        ? 'Guardian outside the active area · return to the relay'
+        ? _hasLockedObjectiveGate
+              ? 'Complete objectives to open the guardian path'
+              : 'Guardian outside the active area · enter the open gate'
         : 'No authored guardian in this world';
     return 'Health ${_formatHealth(health.currentHealth)}/'
         '${_formatHealth(health.maximumHealth)} · $objective';
@@ -1080,7 +1082,9 @@ class _PresentationBoundaryScreenState
     if (guardians.isEmpty) {
       return _authoredCombatantEntityIds.isEmpty
           ? 'Guardian: not authored'
-          : 'Guardian: outside the active area';
+          : _hasLockedObjectiveGate
+          ? 'Guardian: beyond locked gate'
+          : 'Guardian: beyond the open gate';
     }
     final state = guardians.first.component;
     final health = _healthFor(guardians.first.entityId);
@@ -1096,7 +1100,11 @@ class _PresentationBoundaryScreenState
     final guardians = widget.runtimeWorld.ecs
         .query<GuardianBehaviorStateComponent>();
     if (guardians.isEmpty) {
-      return _authoredCombatantEntityIds.isEmpty ? 'No guardian' : 'Guardian —';
+      return _authoredCombatantEntityIds.isEmpty
+          ? 'No guardian'
+          : _hasLockedObjectiveGate
+          ? 'gate locked'
+          : 'gate open';
     }
     final guardian = guardians.first;
     final health = _healthFor(guardian.entityId);
@@ -1249,6 +1257,19 @@ class _PresentationBoundaryScreenState
       if (entry.component.isDead) entry.entityId,
   };
 
+  AuthoredObjectiveProgress get _objectiveProgress => authoredObjectiveProgress(
+    widget.runtimeWorld.definition,
+    widget.persistence,
+  );
+
+  Set<EntityId> get _openObjectiveGateEntityIds =>
+      _objectiveProgress.openedGateEntityIds(widget.runtimeWorld.definition);
+
+  bool get _hasLockedObjectiveGate => widget.runtimeWorld.definition.allEntities
+      .map((entity) => entity.component<ObjectiveGateDefinition>())
+      .whereType<ObjectiveGateDefinition>()
+      .any((gate) => !_objectiveProgress.opens(gate));
+
   Set<EntityId> get _authoredCombatantEntityIds => {
     for (final entity in widget.runtimeWorld.definition.allEntities)
       if (entity.id != _playerEntityId &&
@@ -1290,12 +1311,15 @@ class _PresentationBoundaryScreenState
 
   PresentationSnapshot _extractPresentation() {
     final deadEntityIds = _deadEntityIds;
+    final openGateEntityIds = _openObjectiveGateEntityIds;
     final extracted = const PresentationExtractor().extract(
       widget.runtimeWorld.ecs,
     );
     return PresentationSnapshot(
       extracted.entities.where(
-        (entity) => !deadEntityIds.contains(entity.entityId),
+        (entity) =>
+            !deadEntityIds.contains(entity.entityId) &&
+            !openGateEntityIds.contains(entity.entityId),
       ),
     );
   }
@@ -1474,12 +1498,34 @@ class _PresentationBoundaryScreenState
               ? 'Interacted: ${result.label}'
               : 'Cannot interact: ${result.rejection!.name}';
           if (result.accepted) {
+            final openGatesBefore = _openObjectiveGateEntityIds;
             final effect = _interactionEffects.apply(entityId);
             if (effect.handled) {
               _interactionStatus = effect.changed
                   ? '${result.label}: objective updated and queued for save'
                   : '${result.label}: objective already complete';
               if (effect.changed) {
+                final openGatesAfter = _openObjectiveGateEntityIds;
+                final newlyOpenedGateIds = openGatesAfter.difference(
+                  openGatesBefore,
+                );
+                _rebuildGameplayQueries();
+                _presentation = _extractPresentation();
+                if (newlyOpenedGateIds.isNotEmpty) {
+                  final gate = widget.runtimeWorld.definition.allEntities
+                      .firstWhere(
+                        (entity) => newlyOpenedGateIds.contains(entity.id),
+                      )
+                      .component<ObjectiveGateDefinition>()!;
+                  _selectedEntityId = null;
+                  _interactionStatus =
+                      '${result.label}: online · ${gate.label} opened';
+                } else {
+                  final progress = _objectiveProgress;
+                  _interactionStatus =
+                      '${result.label}: online · '
+                      '${progress.completedCount}/${progress.totalCount} complete';
+                }
                 _scheduleSave();
               }
             }
@@ -2091,7 +2137,7 @@ class _PresentationBoundaryScreenState
     final previousCollisionWorld = _collisionWorld;
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
-      excludedEntityIds: _deadEntityIds,
+      excludedEntityIds: {..._deadEntityIds, ..._openObjectiveGateEntityIds},
     );
     _movementSystem = CharacterMovementSystem(
       ecs: widget.runtimeWorld.ecs,

@@ -503,16 +503,20 @@ orthographic renderer readiness, uses a bounded vsync-aligned 60 Hz fixed step,
 pools repeated glTF instances, coalesces save/streaming work, makes controls
 camera-relative, contains movement to authored chunks, repairs legacy invalid
 saves, and replaces the portrait diagnostic wall with a compact HUD. Relay
-Zero now uses an 8×8 centered arena and a survivable guardian balance. Next is
-three persistent stabilizers and an authored objective gate before item,
-co-op, persistence, or AI/MCP expansion. See
+Zero now uses an 8×8 centered arena and a survivable guardian balance. Content
+schema v7 and Stage 11.3 add three persistent stabilizers evaluated world-wide
+from authored defaults plus save overlays. Their authored group opens a derived
+solid gate without product entity-ID rules, and the guardian now streams from
+the chamber beyond it. Next is the relay-core item, minimal inventory, and
+final completion before co-op authority or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
 `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
 `AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-028.
+`AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-029.
 
 ---
 
