@@ -39,6 +39,65 @@ void main() {
 
     await gesture.up();
     expect(active, isEmpty);
+    expect(semanticTaps, 0);
+  });
+
+  testWidgets('turns a short physical tap into a visible movement pulse', (
+    tester,
+  ) async {
+    final active = <int, Vector3>{};
+    var movementPulses = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: HoldDirectionButton(
+            label: 'Move forward',
+            direction: Vector3(0, 0, -1),
+            icon: const Icon(Icons.keyboard_arrow_up),
+            onPointerDown: (pointer, direction) {
+              active[pointer] = direction;
+            },
+            onPointerEnd: active.remove,
+            onSemanticTap: (_) => movementPulses += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(HoldDirectionButton));
+
+    expect(active, isEmpty);
+    expect(movementPulses, 1);
+  });
+
+  testWidgets('disabled movement controls reject pointer input', (
+    tester,
+  ) async {
+    var pointerDowns = 0;
+    var pointerEnds = 0;
+    var movementPulses = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: HoldDirectionButton(
+            label: 'Move forward',
+            direction: Vector3(0, 0, -1),
+            icon: const Icon(Icons.keyboard_arrow_up),
+            enabled: false,
+            onPointerDown: (_, _) => pointerDowns += 1,
+            onPointerEnd: (_) => pointerEnds += 1,
+            onSemanticTap: (_) => movementPulses += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(HoldDirectionButton));
+    await tester.pump();
+
+    expect(pointerDowns, 0);
+    expect(pointerEnds, 0);
+    expect(movementPulses, 0);
   });
 
   testWidgets('tracks simultaneous directional pointers independently', (

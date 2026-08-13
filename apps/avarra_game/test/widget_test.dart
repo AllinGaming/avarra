@@ -34,7 +34,9 @@ void main() {
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);
     expect(find.text('5 ECS entities bound to the scene'), findsOneWidget);
     expect(
-      find.text('Tap ground to move · WASD/arrow keys for direct movement'),
+      find.text(
+        'Tap ground or use the movement pad · WASD/arrow keys supported',
+      ),
       findsOneWidget,
     );
     expect(find.text('Select a world object, then interact'), findsOneWidget);

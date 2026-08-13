@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
@@ -87,8 +88,31 @@ void main() {
         ecs: runtime.ecs,
         collisionWorld: DeterministicPhysicsCollisionWorld.fromEcs(runtime.ecs),
       );
+      for (var step = 1; step <= 120; step++) {
+        final results = guardianBehavior.tickAll(
+          targetId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
+          simulationTime: Duration(milliseconds: step * 16),
+          deltaSeconds: 0.016,
+        );
+        expect(
+          results.any((result) => result.attack?.accepted ?? false),
+          isFalse,
+          reason: 'The authored entry point must begin outside guardian aggro.',
+        );
+      }
+      expect(
+        runtime.ecs
+            .component<GuardianBehaviorStateComponent>(guardianHandle)
+            .phase,
+        GuardianBehaviorPhase.idle,
+      );
+
+      runtime.ecs
+          .component<TransformComponent>(playerHandle)
+          .position
+          .setValues(4.5, 0.4, 5.5);
       var acceptedGuardianAttack = false;
-      for (var step = 1; step <= 360; step++) {
+      for (var step = 121; step <= 480; step++) {
         final results = guardianBehavior.tickAll(
           targetId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
           simulationTime: Duration(milliseconds: step * 16),

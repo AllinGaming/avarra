@@ -853,11 +853,34 @@ class _PresentationBoundaryScreenState
 
   Widget get _actionControls {
     if (_isPlayerDead) {
-      return FilledButton.icon(
-        key: const Key('restart_combat'),
-        onPressed: _restartPlayer,
-        icon: const Icon(Icons.restart_alt),
-        label: const Text('Restart'),
+      return Semantics(
+        liveRegion: true,
+        child: Card(
+          key: const Key('defeat_prompt'),
+          color: Theme.of(context).colorScheme.errorContainer,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'YOU WERE DEFEATED',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const Text('Restart to unlock movement'),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  key: const Key('restart_combat'),
+                  onPressed: _restartPlayer,
+                  icon: const Icon(Icons.restart_alt),
+                  label: const Text('Restart'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
     final compactLayout = MediaQuery.sizeOf(context).width < 700;
@@ -887,63 +910,81 @@ class _PresentationBoundaryScreenState
     );
   }
 
-  Widget get _movementControls => Card(
-    margin: EdgeInsets.all(MediaQuery.sizeOf(context).width < 700 ? 10 : 16),
-    color: Colors.black.withValues(alpha: 0.72),
-    child: Padding(
-      padding: const EdgeInsets.all(6),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          HoldDirectionButton(
-            key: const Key('move_forward'),
-            label: 'Move forward (W)',
-            showTooltip: MediaQuery.sizeOf(context).width >= 700,
-            direction: Vector3(0, 0, -1),
-            icon: const Icon(Icons.keyboard_arrow_up),
-            onPointerDown: _beginTouchMovement,
-            onPointerEnd: _endTouchMovement,
-            onSemanticTap: _pulseTouchMovement,
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              HoldDirectionButton(
-                key: const Key('move_left'),
-                label: 'Move left (A)',
-                showTooltip: MediaQuery.sizeOf(context).width >= 700,
-                direction: Vector3(-1, 0, 0),
-                icon: const Icon(Icons.keyboard_arrow_left),
-                onPointerDown: _beginTouchMovement,
-                onPointerEnd: _endTouchMovement,
-                onSemanticTap: _pulseTouchMovement,
-              ),
-              HoldDirectionButton(
-                key: const Key('move_back'),
-                label: 'Move back (S)',
-                showTooltip: MediaQuery.sizeOf(context).width >= 700,
-                direction: Vector3(0, 0, 1),
-                icon: const Icon(Icons.keyboard_arrow_down),
-                onPointerDown: _beginTouchMovement,
-                onPointerEnd: _endTouchMovement,
-                onSemanticTap: _pulseTouchMovement,
-              ),
-              HoldDirectionButton(
-                key: const Key('move_right'),
-                label: 'Move right (D)',
-                showTooltip: MediaQuery.sizeOf(context).width >= 700,
-                direction: Vector3(1, 0, 0),
-                icon: const Icon(Icons.keyboard_arrow_right),
-                onPointerDown: _beginTouchMovement,
-                onPointerEnd: _endTouchMovement,
-                onSemanticTap: _pulseTouchMovement,
-              ),
-            ],
-          ),
-        ],
+  Widget get _movementControls {
+    final compactLayout = MediaQuery.sizeOf(context).width < 700;
+    final movementEnabled = _rendererReady && !_isPlayerDead;
+    final movementLabel = !_rendererReady
+        ? 'PREPARING CONTROLS'
+        : _isPlayerDead
+        ? 'MOVEMENT LOCKED · RESTART'
+        : 'TAP OR HOLD TO MOVE';
+    return Card(
+      margin: EdgeInsets.all(compactLayout ? 10 : 16),
+      color: Colors.black.withValues(alpha: 0.72),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              movementLabel,
+              key: const Key('movement_control_status'),
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+            HoldDirectionButton(
+              key: const Key('move_forward'),
+              label: 'Move forward (W)',
+              showTooltip: !compactLayout,
+              enabled: movementEnabled,
+              direction: Vector3(0, 0, -1),
+              icon: const Icon(Icons.keyboard_arrow_up),
+              onPointerDown: _beginTouchMovement,
+              onPointerEnd: _endTouchMovement,
+              onSemanticTap: _pulseTouchMovement,
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HoldDirectionButton(
+                  key: const Key('move_left'),
+                  label: 'Move left (A)',
+                  showTooltip: !compactLayout,
+                  enabled: movementEnabled,
+                  direction: Vector3(-1, 0, 0),
+                  icon: const Icon(Icons.keyboard_arrow_left),
+                  onPointerDown: _beginTouchMovement,
+                  onPointerEnd: _endTouchMovement,
+                  onSemanticTap: _pulseTouchMovement,
+                ),
+                HoldDirectionButton(
+                  key: const Key('move_back'),
+                  label: 'Move back (S)',
+                  showTooltip: !compactLayout,
+                  enabled: movementEnabled,
+                  direction: Vector3(0, 0, 1),
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  onPointerDown: _beginTouchMovement,
+                  onPointerEnd: _endTouchMovement,
+                  onSemanticTap: _pulseTouchMovement,
+                ),
+                HoldDirectionButton(
+                  key: const Key('move_right'),
+                  label: 'Move right (D)',
+                  showTooltip: !compactLayout,
+                  enabled: movementEnabled,
+                  direction: Vector3(1, 0, 0),
+                  icon: const Icon(Icons.keyboard_arrow_right),
+                  onPointerDown: _beginTouchMovement,
+                  onPointerEnd: _endTouchMovement,
+                  onSemanticTap: _pulseTouchMovement,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget get _cameraControls {
     final compactLayout = MediaQuery.sizeOf(context).width < 700;
@@ -1001,7 +1042,7 @@ class _PresentationBoundaryScreenState
       return 'Moving to ${position.x.toStringAsFixed(2)}, '
           '${position.z.toStringAsFixed(2)}';
     }
-    return 'Tap ground to move · WASD/arrow keys for direct movement';
+    return 'Tap ground or use the movement pad · WASD/arrow keys supported';
   }
 
   String get _playerCombatStatus {
@@ -1159,7 +1200,7 @@ class _PresentationBoundaryScreenState
       _frameCount = 0;
       _totalFrameMicroseconds = 0;
       _maximumFrameMicroseconds = 0;
-      _interactionStatus = 'Ready · explore Relay Zero';
+      _interactionStatus = 'Ready · tap or hold the movement arrows';
     });
     _startGameLoop();
   }

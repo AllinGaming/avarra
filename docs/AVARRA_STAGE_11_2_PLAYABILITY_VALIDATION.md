@@ -93,6 +93,37 @@ seconds. All three reported zero skipped-frame events, zero invalid-renderable
 messages, and zero fatal exceptions. Their captures were byte-identical,
 confirming consistent camera projection/framing.
 
+### Movement-control corrective pass
+
+A follow-up Android report that movement appeared broken exposed an acceptance
+gap in the earlier trace: smooth SurfaceView frames and alternating input did
+not prove player displacement. The captured app state was already defeated at
+`HP 0/100`; movement correctly stopped, but the still-active-looking D-pad made
+that state look like failed touch input.
+
+The corrective pass now:
+
+- makes a short physical arrow tap produce one visible movement pulse while a
+  hold remains continuous and supports independent multi-touch directions;
+- labels the pad `TAP OR HOLD TO MOVE`, visibly disables it while loading or
+  defeated, and replaces the ambiguous restart-only state with an explicit
+  defeat prompt explaining that restart unlocks movement;
+- places the authored guardian at `[4.5, 0.45, 7.5]`, just outside its 3.5-unit
+  perception radius from the `[4, 0.4, 4]` entry point, so a new player can
+  learn movement before intentionally entering aggro; and
+- adds regressions for tap, hold, cancellation, multi-touch, disabled input,
+  safe initial guardian aggro, and continued guardian reachability after the
+  player approaches.
+
+The updated x64 profile APK was installed on the Pixel Android emulator. Save
+coordinates proved a short tap moved the player from `(2.821, 2.821)` to
+`(2.674, 2.674)`, and a subsequent 650 ms hold moved it to `(1.496, 1.496)`.
+The same capture showed `HP 100/100`, an idle `60/60` guardian, and the new
+control instruction. Fifteen focused control/world/Game tests passed, Game
+analysis was clean, and the Android profile APK rebuilt successfully. The full
+200-test repository gate was intentionally not repeated for this narrow pass;
+the prior consolidated result remains the broader baseline.
+
 The final consolidated gate passed 200 tests: 160 pure-Dart/server and 40
 Flutter/renderer/application tests. Repository analysis was clean, the server
 compiled, Game built for Android and Windows debug, Forge built for Windows
