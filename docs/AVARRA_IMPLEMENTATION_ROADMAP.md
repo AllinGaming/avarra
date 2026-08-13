@@ -577,6 +577,8 @@ three persistent relay stabilizer objectives         COMPLETE (Stage 11.3)
 one relay-core item and minimal inventory             COMPLETE (Stage 11.4)
 objective gate and completion state                  COMPLETE (Stages 11.3–11.4)
 authoritative co-op combat/objective commands       COMPLETE (Stage 11.5)
+click/tap pursuit, repeated attacks, and auto-use    COMPLETE (Stage 11.6)
+original gothic models, materials, floors, and loot COMPLETE (Stage 11.6)
 save/resume across the full adventure                PARTIAL (solo state complete)
 ```
 
@@ -647,9 +649,25 @@ Stage 11.5 status (implemented 2026-08-13):
   mission UI from the authoritative mirror; and
 - loopback coverage completes Relay Zero through the real replication path.
 
+Stage 11.6 status (implemented 2026-08-14):
+
+- a renderer-neutral action-target rule turns a selected hostile into
+  pursue-to-range and repeated basic attacks on mouse, touch, offline, and
+  connected clients; direct movement or a ground click cancels the action;
+- selected authored interactions are approached and activated automatically,
+  providing click-to-use relays and click-to-pick-up loot;
+- Relay Zero is now `Relay Zero: Ashfall`, with three Hollow Wardens, optional
+  enemy-bound drops, and locked-loot presentation/collision lifecycle shared
+  by Game and host authority; and
+- six original assembled glTF models and three generated 512×512 dark-gothic
+  materials replace cube presentation while retaining the CC0 cube mesh only
+  as their small geometry source and renderer fixture.
+
 Next: Stage 12 physical-Android passes, durable host save/resume, disconnect
 policy, and complete solo/co-op product acceptance. See
-`AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md` and ADR-031.
+`AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`. The Stage 11.6 pass adds no
+new architecture ADR; it composes the accepted input, gameplay, content,
+renderer, and authority boundaries from ADR-010, ADR-027 through ADR-031.
 
 Gate:
 

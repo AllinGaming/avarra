@@ -196,7 +196,10 @@ gate to the streamed guardian chamber. A guarded Relay Core now enters a
 player-owned persisted inventory and completes the solo mission when returned
 to the authored control console. Protocol v3 and Stage 11.5 now route combat,
 guardian AI, objectives, pickup, per-player inventory, turn-in, and restart
-through the authoritative host. Durable co-op saves and complete physical
+through the authoritative host. Stage 11.6 turns the prototype into `Relay
+Zero: Ashfall` with click/tap pursuit and repeated attacks, automatic approach
+for interactions, three Hollow Wardens with authored drops, basalt floors, and
+an original six-model/three-material dark-gothic asset kit. Durable co-op saves and complete physical
 Android acceptance are next; the playable RPG slice still comes before AI/MCP
 expansion.
 See
@@ -209,6 +212,7 @@ See
 `docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
+`docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

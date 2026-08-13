@@ -28,11 +28,11 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 11.4 · Recover the Relay Core'), findsOneWidget);
-    expect(find.text('Relay Zero Prototype'), findsOneWidget);
+    expect(find.text('Stage 11.6 · Ashfall Action-RPG Slice'), findsOneWidget);
+    expect(find.text('Relay Zero: Ashfall'), findsOneWidget);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);
-    expect(find.text('9 ECS entities bound to the scene'), findsOneWidget);
+    expect(find.text('10 ECS entities bound to the scene'), findsOneWidget);
     expect(
       find.text(
         'Tap ground or use the movement pad · WASD/arrow keys supported',
@@ -149,7 +149,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('8 ECS entities bound to the scene'),
+      find.text('9 ECS entities bound to the scene'),
       findsOneWidget,
       reason: 'The opened gate must be removed from presentation on restore.',
     );
@@ -257,10 +257,10 @@ void main() {
 
     expect(find.text('Mission complete · Signal transmitted'), findsOneWidget);
     expect(find.text('Inventory · Empty'), findsOneWidget);
-    expect(find.text('8 ECS entities bound to the scene'), findsOneWidget);
+    expect(find.text('9 ECS entities bound to the scene'), findsOneWidget);
   });
 
-  testWidgets('does not report an unloaded guardian as defeated', (
+  testWidgets('reports a living hostile in the active north annex', (
     tester,
   ) async {
     final store = MemorySaveStore();
@@ -302,7 +302,8 @@ void main() {
 
     expect(
       find.text(
-        'Health 100/100 · Complete objectives to open the guardian path',
+        'Health 100/100 · 1 hostile nearby · '
+        'select one to pursue and strike',
       ),
       findsOneWidget,
     );

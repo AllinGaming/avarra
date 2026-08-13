@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:avarra_content/avarra_content.dart';
@@ -44,13 +45,13 @@ void main() {
       ]);
       await streaming.pumpUntilStable();
 
-      expect(definition.name, 'Relay Zero Prototype');
+      expect(definition.name, 'Relay Zero: Ashfall');
       expect(definition.worldFormatVersion, 2);
       expect(definition.contentSchemaVersion, 8);
       expect(definition.chunkSize, 8);
       expect(definition.chunks, hasLength(3));
-      expect(definition.allEntities, hasLength(15));
-      expect(runtime.ecs.entityCount, 9);
+      expect(definition.allEntities, hasLength(22));
+      expect(runtime.ecs.entityCount, 10);
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
       expect(streaming.activeOccluderEntityIds, hasLength(1));
@@ -93,6 +94,24 @@ void main() {
           .single;
       expect(turnIn.requiredItemId, 'relay.core');
       expect(turnIn.completionFlagKey, 'signal.transmitted');
+      final collectibles = definition.allEntities
+          .map((entity) => entity.component<CollectibleItemDefinition>())
+          .whereType<CollectibleItemDefinition>()
+          .toList();
+      expect(collectibles, hasLength(3));
+      expect(
+        collectibles.map((item) => item.itemId),
+        containsAll(['relay.core', 'loot.ash_sigil', 'loot.warden_iron']),
+      );
+      expect(
+        definition.allEntities
+            .where(
+              (entity) =>
+                  entity.component<GuardianBehaviorDefinition>() != null,
+            )
+            .length,
+        3,
+      );
 
       streaming.reconcile([
         ChunkStreamingRequest(
@@ -160,6 +179,26 @@ void main() {
           isTrue,
           reason: '${packageFile.path} references missing asset ${entry.value}',
         );
+        if (assetFile.path.toLowerCase().endsWith('.gltf')) {
+          final gltf =
+              jsonDecode(assetFile.readAsStringSync()) as Map<String, dynamic>;
+          final dependentUris = <String>[
+            for (final buffer
+                in (gltf['buffers'] as List<dynamic>? ?? const []))
+              if ((buffer as Map<String, dynamic>)['uri'] case final String uri)
+                uri,
+            for (final image in (gltf['images'] as List<dynamic>? ?? const []))
+              if ((image as Map<String, dynamic>)['uri'] case final String uri)
+                uri,
+          ];
+          for (final uri in dependentUris) {
+            expect(
+              File.fromUri(assetFile.parent.uri.resolve(uri)).existsSync(),
+              isTrue,
+              reason: '${assetFile.path} references missing resource $uri',
+            );
+          }
+        }
       }
     },
   );

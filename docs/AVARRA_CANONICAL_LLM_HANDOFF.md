@@ -1,7 +1,9 @@
 # AVARRA — Canonical LLM Handoff
 
-**Status:** Current source of truth  
-**Date:** 2026-08-13
+**Status:** Current source of truth
+
+**Date:** 2026-08-14
+
 **Audience:** Coding LLMs, engineers, architects
 
 ---
@@ -513,6 +515,13 @@ return-console turn-in, derived mission feedback, and restored completion.
 Protocol v3 and Stage 11.5 add bounded attack/interaction/restart commands,
 host-owned guardian/combat/adventure simulation, revisioned health/flag/player
 inventory mirrors, and a connected end-to-end Relay Zero completion proof.
+Stage 11.6 turns that proof into `Relay Zero: Ashfall`: selected hostiles are
+pursued and repeatedly attacked, selected interactions are approached and used,
+three authored Hollow Wardens reveal enemy-bound loot on defeat, and an
+original dark-gothic six-model/three-material kit replaces cube presentation.
+The action-target rule is renderer-neutral and operates in offline and
+host-authoritative connected play; locked drops are excluded from presentation
+and collision on both Game and host until their authored guardian dies.
 Durable host saves and physical Android acceptance remain Stage 12 gates before
 AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
@@ -524,6 +533,7 @@ AI/MCP expansion. See
 `AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
 `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
 `AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
+`AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-031.
 
 ---

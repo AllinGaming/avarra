@@ -46,8 +46,7 @@ void main() {
       );
       final library = RuntimeWorldLibrary(
         directory: catalogDirectory,
-        assetAvailability: (path) async =>
-            path == 'assets/models/cube/Cube.gltf',
+        assetAvailability: (_) async => true,
       );
 
       final imported = await library.importFile(moved.path);
@@ -78,7 +77,7 @@ void main() {
   test('reports every unavailable authored asset path', () async {
     final unavailable = jsonDecode(source) as Map<String, dynamic>;
     final assets = unavailable['assets']! as List<dynamic>;
-    (assets.single as Map<String, dynamic>)['path'] =
+    (assets.first as Map<String, dynamic>)['path'] =
         'assets/models/missing/Relay.gltf';
     final library = RuntimeWorldLibrary(
       directory: Directory('${root.path}${Platform.pathSeparator}catalog'),
@@ -95,6 +94,12 @@ void main() {
               RuntimeWorldLibraryErrorCodes.assetUnavailable,
             )
             .having((error) => error.context['paths'], 'paths', [
+              'assets/models/gothic/AshenVanguard.gltf',
+              'assets/models/gothic/Basalt.gltf',
+              'assets/models/gothic/CoreGate.gltf',
+              'assets/models/gothic/EmberShard.gltf',
+              'assets/models/gothic/HollowWarden.gltf',
+              'assets/models/gothic/RelayShrine.gltf',
               'assets/models/missing/Relay.gltf',
             ]),
       ),

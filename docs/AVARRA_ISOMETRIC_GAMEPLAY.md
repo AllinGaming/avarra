@@ -181,6 +181,15 @@ pursuit, shared combat attacks, leash, and return. Flutter and the renderer only
 present its ECS state. Direct pursuit is sufficient for Relay Zero's first
 arena; general pathfinding and off-mesh navigation remain future work.
 
+Stage 11.6 adds the matching player action-target layer. A mouse/touch entity
+pick remains a renderer-neutral stable-ID intent; Game turns a living hostile
+selection into collision-aware direct pursuit followed by repeated basic
+attacks, or an interactable selection into approach-and-use. Existing combat,
+interaction, and host systems still accept or reject the resulting actions.
+Direct movement and ground picks cancel the target. The small planar
+stop-range decision is covered independently of Flutter and Thermion; general
+pathfinding remains deferred.
+
 ---
 
 # 9. Streaming Bias

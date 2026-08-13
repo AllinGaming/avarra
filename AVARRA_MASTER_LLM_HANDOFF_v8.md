@@ -9,8 +9,10 @@ single-file handoff. Edit the individual source documents, then regenerate it.
 
 # AVARRA — Canonical LLM Handoff
 
-**Status:** Current source of truth  
-**Date:** 2026-08-13
+**Status:** Current source of truth
+
+**Date:** 2026-08-14
+
 **Audience:** Coding LLMs, engineers, architects
 
 ---
@@ -522,6 +524,13 @@ return-console turn-in, derived mission feedback, and restored completion.
 Protocol v3 and Stage 11.5 add bounded attack/interaction/restart commands,
 host-owned guardian/combat/adventure simulation, revisioned health/flag/player
 inventory mirrors, and a connected end-to-end Relay Zero completion proof.
+Stage 11.6 turns that proof into `Relay Zero: Ashfall`: selected hostiles are
+pursued and repeatedly attacked, selected interactions are approached and used,
+three authored Hollow Wardens reveal enemy-bound loot on defeat, and an
+original dark-gothic six-model/three-material kit replaces cube presentation.
+The action-target rule is renderer-neutral and operates in offline and
+host-authoritative connected play; locked drops are excluded from presentation
+and collision on both Game and host until their authored guardian dies.
 Durable host saves and physical Android acceptance remain Stage 12 gates before
 AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
@@ -533,6 +542,7 @@ AI/MCP expansion. See
 `AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
 `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
 `AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
+`AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-031.
 
 ---
@@ -2566,6 +2576,15 @@ fixed-step state machine performs line-of-sight perception, direct kinematic
 pursuit, shared combat attacks, leash, and return. Flutter and the renderer only
 present its ECS state. Direct pursuit is sufficient for Relay Zero's first
 arena; general pathfinding and off-mesh navigation remain future work.
+
+Stage 11.6 adds the matching player action-target layer. A mouse/touch entity
+pick remains a renderer-neutral stable-ID intent; Game turns a living hostile
+selection into collision-aware direct pursuit followed by repeated basic
+attacks, or an interactable selection into approach-and-use. Existing combat,
+interaction, and host systems still accept or reject the resulting actions.
+Direct movement and ground picks cancel the target. The small planar
+stop-range decision is covered independently of Flutter and Thermion; general
+pathfinding remains deferred.
 
 ---
 
@@ -4628,6 +4647,430 @@ objective gate. Continue with the relay-core item and minimal inventory.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md -->
+
+# AVARRA Stage 11.3 — Stabilizers and Objective Gate
+
+**Status:** Implemented; automated gate passed
+
+**Date:** 2026-08-13
+
+## Scope
+
+Stage 11.3 turns Relay Zero's single interaction proof into the first authored
+adventure sequence:
+
+```text
+stabilize Alpha, Beta, and Gamma in any order
+  → persist progress across streamed chunks and restart
+  → open the core-chamber gate from derived objective state
+  → enter the chamber
+  → stream and fight the guardian
+```
+
+## Implemented contract
+
+- Content schema v7 authors objective group membership and count-based gates.
+- The world codec validates objective dependencies, solid gate geometry, and
+  impossible gate counts.
+- Forge exposes the new fields through its existing schema-driven Inspector.
+- World-wide progress combines authored defaults with active or inactive saved
+  overlays in stable-ID order.
+- Gate openness is derived from objective progress and is not redundantly
+  persisted.
+- Open gates disappear from both renderer presentation and collision queries.
+- Relay Zero contains three persistent `relay.stabilizers` objectives across
+  the center and south chunks.
+- A complete wall-and-gate boundary blocks the east core chamber until all
+  three stabilizers are online.
+- The guardian now lives in the streamed chamber beyond that gate, preserving
+  the intended restore-before-combat sequence.
+- The new objective graph uses bundled save slot `…0421`; older proof and arena
+  saves remain untouched.
+
+## Regression coverage
+
+- content-v7 decoding, version exclusion, key/count validation;
+- world validation for objective dependencies and achievable gate counts;
+- active plus inactive-chunk save overlays producing world-wide progress;
+- deterministic gate opening and restored-open presentation;
+- bundled objective/group/gate counts and guardian chamber placement; and
+- existing interaction, persistence, streaming, combat, and creator-schema
+  behavior through the consolidated repository gate.
+
+## Verification evidence
+
+Verified on 2026-08-13:
+
+- workspace analysis passed with no issues;
+- all 206 tests passed: 163 pure-Dart/server tests plus 43 Flutter tests
+  (Thermion bridge 6, Game 28, Forge 9);
+- the real loopback TCP host, shared authored-wall collision proof, content-v7
+  decoding, objective save restoration, gate derivation, Game presentation,
+  and Forge schema workflows all passed inside that gate;
+- the headless server compiled to `build/avarra_server.exe`; and
+- the Android x64 profile APK built successfully at
+  `build/app/outputs/flutter-apk/app-profile.apk`; and
+- the Windows profile game built successfully at
+  `build/windows/x64/runner/Profile/avarra_game.exe` and launched as a
+  responsive desktop process for the manual gameplay pass.
+
+The configured Pixel 10 Pro AVD disconnected before installation. A background
+restart attempt exited before registering with ADB, so this pass does not claim
+new live-device evidence. The prior movement/profile APK evidence remains valid
+for the underlying controls and renderer, while the Stage 11.3 objective/gate
+flow still requires its device rerun when the AVD or physical device is
+available.
+
+Until Android is available again, the Windows desktop target is the active
+development playtest target. It exercises the same world, renderer, movement,
+collision, persistence, objective, gate, and combat code paths with WASD or
+arrow-key input. Android touch handling, lifecycle behavior, and device
+performance are intentionally still tracked as a separate release gate.
+
+## Remaining boundary
+
+Stage 11.4 subsequently adds the collectible Relay Core, persisted inventory,
+and final return-console completion. Host-authoritative combat/objective/item
+commands remain the next Stage 11 slice. Physical Android remains the
+release input/performance/lifecycle gate; emulator evidence is a development
+gate only.
+
+See ADR-029 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+<!-- END AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md -->
+
+# AVARRA Stage 11.4 — Relay Core and Mission Completion
+
+**Status:** Implemented; automated and artifact gates passed
+
+**Date:** 2026-08-13
+
+## Scope
+
+Stage 11.4 closes Relay Zero's solo adventure loop:
+
+```text
+complete three stabilizers
+  → enter the opened core chamber
+  → defeat the guardian
+  → recover the Relay Core into player inventory
+  → return to the control console
+  → transmit the signal and persist mission completion
+```
+
+## Implemented contract
+
+- Content schema v8 authors guarded collectibles and item turn-ins.
+- World validation rejects undeclared state flags, duplicate item IDs, invalid
+  guardian references, missing collectible references, and stacked interaction
+  effects.
+- Runtime interaction authority blocks pickup while the authored guardian is
+  alive and blocks turn-in while the required player item is absent.
+- Save format v2 persists a bounded, sorted set of item IDs per player and
+  automatically migrates v1 saves to an empty inventory.
+- Pickup atomically queues both the collected world flag and player inventory;
+  turn-in queues inventory removal and the completion flag.
+- Collected items disappear from both presentation and collision queries.
+- Game advances from stabilizer progress to guardian/core recovery, then return
+  guidance, inventory feedback, and a prominent mission-complete state.
+- Relay Zero adds one chamber core and one entry control console while retaining
+  the existing three-chunk streaming and Stage 11.3 save slot.
+
+## Regression coverage
+
+- save-v2 canonical round trip, v1 migration, validation, restore, and mutation
+  during an in-flight atomic write;
+- content-v8 decoding, version exclusion, field validation, and Forge metadata;
+- cross-entity world validation and runtime component instantiation;
+- guardian-gated pickup, single-quantity inventory, idempotent turn-in, and
+  completion flags;
+- derived recovery/inventory/completion status and collected-item exclusion;
+- bundled world item/console/guardian relationships; and
+- Game restore paths for held inventory and completed missions.
+
+## Verification evidence
+
+Verified on 2026-08-13:
+
+- workspace analysis passed with no issues;
+- all 214 tests passed: 168 pure-Dart/server tests plus 46 Flutter tests
+  (Thermion bridge 6, Game 31, Forge 9);
+- save migration, in-flight inventory mutation, content-v8 validation, item
+  graph validation, guardian-gated pickup, turn-in, restore, bundled world, and
+  Game mission feedback all passed inside that gate;
+- the headless server compiled to `build/avarra_server.exe`;
+- the Android x64 profile APK built at
+  `build/app/outputs/flutter-apk/app-profile.apk` (38.6 MB); and
+- the Windows profile Game built at
+  `build/windows/x64/runner/Profile/avarra_game.exe`, launched, and remained a
+  responsive process for the manual gameplay pass.
+
+The Windows desktop target is the active development playtest platform for
+this pass. No new Android installation or live-device claim is made because an
+ADB device was not available; Android touch, lifecycle, and performance remain
+their own device gate.
+
+## Remaining boundary
+
+Connected clients still wait for host-authoritative attack, objective, pickup,
+and turn-in commands. Guardian death itself is not persisted before pickup.
+Physical Android remains the final input, performance, lifecycle, and thermal
+acceptance gate.
+
+See ADR-030 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+<!-- END AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md -->
+
+# AVARRA Stage 11.5 — Co-op Adventure Authority
+
+**Status:** Implemented; automated authority gate passed
+
+**Date:** 2026-08-13
+
+## Scope
+
+Stage 11.5 converts the existing movement-only connected proof into the first
+host-authoritative Relay Zero gameplay session:
+
+```text
+client command
+  → bounded replication queue
+  → host validation and simulation
+  → command result
+  → revisioned health/flags/player-inventory snapshot
+  → client presentation and HUD
+```
+
+## Implemented contract
+
+- Protocol v3 defines typed attack, interaction, and restart intent.
+- The host owns combat cooldown/range/line-of-sight, guardian AI, objective
+  interactions, gate opening, pickup prerequisites, inventory, turn-in, health,
+  death, and restart.
+- Offline and hosted play share the authored interaction-effect executor and
+  read/write adventure-state interfaces.
+- Per-client commands are monotonic and bounded to 32 pending entries.
+- Gameplay snapshots are revisioned; stale/duplicate state cannot overwrite a
+  newer mirror.
+- World persistent flags and combat health are session-wide. Inventory is
+  player-specific and sent only to its owner.
+- Connected Game submits commands and derives progress, inventory, hidden
+  pickups/open gates, health, and mission status from host state.
+- The host rebuilds its collision authority when objective gates open or
+  collectibles leave the world.
+
+## Automated evidence
+
+- Protocol tests canonically round-trip every v3 message and retain exact-field
+  rejection.
+- Replication tests cover command sequencing/queue extraction, command results,
+  revisioned health, flags, and player inventory mirrors.
+- A real loopback TCP test completes all three stabilizers, receives guardian
+  damage, restarts, defeats the guardian, collects the Relay Core, transmits it,
+  and observes final authoritative mission state.
+- Existing multiplayer movement, collision, interest, two-player avatar,
+  disconnect, server-safety, and content-mismatch tests remain green.
+
+## Verification evidence
+
+Verified on 2026-08-13:
+
+- workspace analysis passed with no issues;
+- all 216 tests passed: 170 pure-Dart/server tests plus 46 Flutter tests
+  (Thermion bridge 6, Game 31, Forge 9);
+- the headless server compiled to `build/avarra_server.exe`;
+- the Windows profile Game built at
+  `apps/avarra_game/build/windows/x64/runner/Profile/avarra_game.exe`, launched,
+  remained responsive for the smoke interval, and closed cleanly; and
+- the Android x64 profile APK built at
+  `apps/avarra_game/build/app/outputs/flutter-apk/app-profile.apk` (38.6 MB).
+
+## Stage 12 acceptance boundary
+
+This pass makes no new live-Android claim. Stage 12 groups the physical Android
+passes so device testing happens after the large gameplay implementation pass:
+
+- install/profile on the connected Android target;
+- solo, Android-host/Windows-client, and Windows-host/Android-client runs;
+- touch movement, selection, attack, interaction, restart, background/end, and
+  reconnect behavior;
+- frame/tick latency, memory, network, battery/thermal, and sustained play;
+- host-owned durable co-op save/resume and remote-player disconnect policy.
+
+Until that gate passes, multiplayer adventure state is authoritative but
+session-scoped rather than durable.
+
+See ADR-031 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+<!-- END AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md -->
+
+# AVARRA Stage 11.6 — Ashfall Action-RPG Gameplay
+
+**Status:** Implemented; automated Windows gate passed
+
+**Date:** 2026-08-14
+
+**Scope:** Avarra Game, shared headless/listen host, bundled Relay Zero world
+
+## Outcome
+
+Stage 11.6 turns the technically complete Relay Zero proof into the first
+recognizable AVARRA action-RPG slice. It uses an original dark-gothic direction
+inspired by the readability and cadence of classic isometric action RPGs. It
+does not copy Diablo characters, art, names, logos, symbols, maps, or audio.
+
+The playable world is now `Relay Zero: Ashfall`.
+
+## Gameplay pass
+
+- Selecting a living authored hostile creates an action target.
+- The controlled character pursues until inside a buffered attack range and
+  then repeats the existing deterministic basic attack on cooldown.
+- The same client behavior submits bounded authoritative attack and movement
+  intent while connected; the host still owns range, line of sight, cooldown,
+  damage, death, AI, and loot availability.
+- Direct WASD/touch-pad movement or a ground click cancels the current action.
+- Selecting an authored interactable approaches it and activates it once in
+  range, covering relays, the return console, and loot pickup.
+- Three authored Hollow Wardens now occupy the streamed world. Two provide
+  optional drops (`Ash Sigil` and `Warden Iron`); the original chamber Warden
+  continues to guard the mission-critical `Relay Core`.
+- A guarded item is absent from presentation and collision until its owning
+  hostile is dead. Pickup removes it again through the existing persistence and
+  per-player inventory rules.
+
+`apps/avarra_game/lib/src/action_targeting.dart` owns the small renderer-neutral
+planar stop-range decision. It does not own combat authority or mutate ECS.
+
+## Original prototype asset kit
+
+Six assembled glTF models replace the visible cube proof:
+
+- `AshenVanguard.gltf`
+- `HollowWarden.gltf`
+- `Basalt.gltf`
+- `RelayShrine.gltf`
+- `CoreGate.gltf`
+- `EmberShard.gltf`
+
+They reuse the Khronos CC0 cube mesh as simple source geometry and assemble it
+into original multi-part forms. Three project-specific 512×512 base-color
+materials were generated with OpenAI's built-in image generation mode, copied
+into `apps/avarra_game/assets/models/gothic/materials/`, and referenced by the
+glTF files.
+
+### Material prompts
+
+`basalt_flagstone.png`:
+
+> Use case: stylized-concept. Asset type: tileable game texture for a 3D
+> isometric action-RPG environment. Primary request: seamless square texture of
+> ancient worn black basalt flagstones with subtle cracks, chipped edges, and
+> sparse cold gray mortar. Style/medium: stylized realistic hand-painted
+> PBR-like base-color texture, readable from a distant isometric camera.
+> Composition/framing: orthographic flat material swatch filling the entire
+> square, uniform detail density, perfectly seamless on every edge.
+> Lighting/mood: neutral diffuse lighting baked as lightly as possible;
+> ominous gothic atmosphere without a scene or objects. Color palette:
+> charcoal, near-black basalt, desaturated slate gray, extremely restrained
+> rusty brown accents. Constraints: seamless/tileable edges; no perspective;
+> no directional shadows; no focal object; no text; no symbols; no logos; no
+> watermark. Avoid: Diablo characters or logos, recognizable copyrighted
+> imagery, bright colors, skulls, torches, UI, borders, vignette.
+
+`ember_bronze.png`:
+
+> Use case: stylized-concept. Asset type: tileable game texture for original 3D
+> gothic relay machinery. Primary request: seamless square texture of
+> tarnished dark bronze plates with oxidized seams, hammered metal grain, and
+> faint original ember-orange arcane circuit lines. Style/medium: stylized
+> hand-painted PBR-like base-color texture, readable on small low-poly objects
+> from an isometric camera. Composition/framing: orthographic flat material
+> swatch filling the square, uniform detail density, perfectly seamless on
+> every edge. Lighting/mood: neutral diffuse material reference, ancient
+> occult machinery, restrained glow painted only into thin circuit lines.
+> Color palette: soot-black bronze, muted copper, verdigris traces, sparse
+> ember orange. Constraints: seamless/tileable; no perspective; no directional
+> shadow; no focal emblem; no readable text; no logos; no watermark. Avoid:
+> recognizable franchise symbols, pentagrams, skulls, characters, scene
+> background, UI, border, vignette.
+
+`ash_armor.png`:
+
+> Use case: stylized-concept. Asset type: tileable game texture for original
+> low-poly action-RPG characters and monsters. Primary request: seamless square
+> material of layered ash-gray leather, blackened iron scales, worn oxblood
+> cloth strips, and subtle pale bone stitching, designed as a versatile dark
+> fantasy armor surface. Style/medium: stylized hand-painted PBR-like
+> base-color texture with chunky readable shapes for a distant isometric
+> camera. Composition/framing: orthographic flat material swatch filling the
+> square, uniform detail density, edge-to-edge seamless repetition.
+> Lighting/mood: neutral diffuse reference lighting, grim heroic gothic tone.
+> Color palette: ash gray, charcoal iron, deep muted oxblood, ivory bone
+> accents. Constraints: seamless/tileable; no perspective; no strong
+> directional shadow; no complete armor object; no faces or characters; no
+> text; no logos; no watermark. Avoid: recognizable franchise armor,
+> copyrighted insignia, skull focal points, bright saturated red, scene
+> background, UI, border, vignette.
+
+Asset provenance remains recorded beside the files in
+`apps/avarra_game/assets/models/THIRD_PARTY.md`.
+
+## Verification evidence
+
+Verified on 2026-08-14:
+
+- workspace analysis passed with no issues;
+- all 219 tests passed: 170 pure-Dart/server tests plus 49 Flutter tests
+  (Thermion bridge 6, Game 34, Forge 9);
+- bundled-world coverage strictly decoded the 22-entity world, applied playable
+  validation, and resolved all seven top-level assets plus their external glTF
+  buffers and images;
+- action-target tests cover distant planar approach, buffered stop range, and
+  invalid range rejection;
+- the real loopback listen-host mission regression remained green with three
+  authoritative Hollow Wardens and locked-loot collision rebuilding;
+- the headless server compiled to `build/avarra_server.exe`;
+- the Windows profile Game built at
+  `apps/avarra_game/build/windows/x64/runner/Profile/avarra_game.exe`;
+- the profile package contains all six glTF files and all three 512×512
+  materials; and
+- a hidden Windows profile smoke created the Vulkan/Filament renderer, remained
+  responsive for 10 seconds, reported no asset/load errors, and closed cleanly.
+
+Android live input, rendering, performance, host lifecycle, and durable host
+save/resume remain grouped into Stage 12. This pass makes no new Android
+acceptance claim.
+
+## Known limitations / next work
+
+- Models are intentionally low-poly assembled prototypes with no skeletal
+  animation, attack VFX, sound, navigation mesh, or procedural affixes.
+- Pursuit uses the existing collision-aware direct movement rather than a
+  navigation/pathfinding layer, so large obstacles can still require a manual
+  route around them.
+- Optional loot is inventory flavor in this pass; equipment/stat application
+  belongs after Stage 12 establishes the device performance baseline.
+- Durable co-op state, disconnect ownership, physical Android acceptance, and
+  full 10–15 minute product playtest remain Stage 12 gates.
+
+<!-- END AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
 
 # AVARRA — First Playable: Relay Zero
@@ -4728,10 +5171,17 @@ health, persistent flags, and its own inventory. Co-op state is deliberately
 session-scoped until Stage 12 integrates durable host saves and disconnect
 policy.
 
+Stage 11.6 adds the first action-RPG presentation and targeting pass. Relay
+Zero: Ashfall now has click/tap pursuit and repeated attacks, click-to-use
+interactions, three Hollow Wardens, optional guarded loot, textured basalt
+floors, and an original dark-gothic glTF/material kit. It deliberately evokes
+the readability and cadence of classic isometric action RPGs without using
+third-party franchise art, names, characters, or symbols.
+
 The complete solo loop and first authoritative connected loop now exist. Final
 physical-Android input/performance/lifecycle acceptance and durable co-op
-save/resume are still open. The adventure intentionally reuses the current cube
-assets while the gameplay contract is made reliable.
+save/resume are still open. The CC0 cube remains only as a renderer fixture and
+geometry source for the original assembled prototype models.
 
 ## Delivery sequence
 
@@ -4739,12 +5189,14 @@ assets while the gameplay contract is made reliable.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
-4. **Complete through Stage 11.5:** implement the Stage 11 gameplay loop in
+4. **Complete through Stage 11.6:** implement the Stage 11 gameplay loop in
    thin vertical slices. Health/basic attack/death/restart, guardian AI, three persistent
    stabilizers, their objective gate, guarded Relay Core, minimal inventory,
-   return-console completion, solo restore, and session-authoritative co-op are
+   return-console completion, solo restore, session-authoritative co-op,
+   action-target controls, enemy drops, and the first original art pass are
    complete; next is cross-platform durable save/resume acceptance.
-5. Replace proof geometry incrementally after the loop is fun and measurable.
+5. Replace and animate prototype geometry incrementally after the Stage 12
+   device/performance baseline is measured.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.
 
@@ -8676,6 +9128,8 @@ three persistent relay stabilizer objectives         COMPLETE (Stage 11.3)
 one relay-core item and minimal inventory             COMPLETE (Stage 11.4)
 objective gate and completion state                  COMPLETE (Stages 11.3–11.4)
 authoritative co-op combat/objective commands       COMPLETE (Stage 11.5)
+click/tap pursuit, repeated attacks, and auto-use    COMPLETE (Stage 11.6)
+original gothic models, materials, floors, and loot COMPLETE (Stage 11.6)
 save/resume across the full adventure                PARTIAL (solo state complete)
 ```
 
@@ -8746,9 +9200,25 @@ Stage 11.5 status (implemented 2026-08-13):
   mission UI from the authoritative mirror; and
 - loopback coverage completes Relay Zero through the real replication path.
 
+Stage 11.6 status (implemented 2026-08-14):
+
+- a renderer-neutral action-target rule turns a selected hostile into
+  pursue-to-range and repeated basic attacks on mouse, touch, offline, and
+  connected clients; direct movement or a ground click cancels the action;
+- selected authored interactions are approached and activated automatically,
+  providing click-to-use relays and click-to-pick-up loot;
+- Relay Zero is now `Relay Zero: Ashfall`, with three Hollow Wardens, optional
+  enemy-bound drops, and locked-loot presentation/collision lifecycle shared
+  by Game and host authority; and
+- six original assembled glTF models and three generated 512×512 dark-gothic
+  materials replace cube presentation while retaining the CC0 cube mesh only
+  as their small geometry source and renderer fixture.
+
 Next: Stage 12 physical-Android passes, durable host save/resume, disconnect
 policy, and complete solo/co-op product acceptance. See
-`AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md` and ADR-031.
+`AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`. The Stage 11.6 pass adds no
+new architecture ADR; it composes the accepted input, gameplay, content,
+renderer, and authority boundaries from ADR-010, ADR-027 through ADR-031.
 
 Gate:
 
@@ -11092,5 +11562,187 @@ and AI host loop remains a later Stage 11 slice.
   and would expand scope before Relay Zero proves the required behaviors.
 
 <!-- END adr/ADR-028-authored-deterministic-guardian-state-machine.md -->
+
+---
+
+<!-- BEGIN adr/ADR-029-authored-objective-groups-and-derived-gates.md -->
+
+# ADR-029 — Authored Objective Groups and Derived Gates
+
+**Status:** Accepted for Stage 11.3
+
+**Date:** 2026-08-13
+
+## Context
+
+Relay Zero needs three persistent stabilizers that can be completed in any
+order and one physical gate that opens from their combined state. The Stage
+10.1 interaction effect persists one local boolean flag, but the existing Game
+summary only inspects active ECS entities. It therefore cannot report progress
+across streamed chunks or drive a world-wide gate safely.
+
+A generic quest graph, event scripting language, or hard-coded list of Relay
+Zero entity IDs would all exceed or violate the current product requirement.
+
+## Decision
+
+Content schema v7 adds two narrow authored components:
+
+- `avarra.objective` assigns a persistent interaction to a lowercase objective
+  group; and
+- `avarra.objective.gate` declares a label, group, and integer completion count
+  on solid renderable static geometry.
+
+The world codec validates component dependencies and rejects a gate whose
+required count exceeds the objectives authored in its group. Forge receives
+both components through the existing machine-readable schema Inspector.
+
+`avarra_world` derives objective progress from the immutable world definition,
+authored flag defaults, and `WorldSaveSession` overlays. This includes inactive
+chunks and uses no product entity IDs. Gate openness is derived rather than
+saved separately: when the required count is met, Game excludes the gate's
+stable entity ID from presentation and collision. Loading the same objective
+save therefore reconstructs the same open gate without another mutable flag.
+
+The bundled Relay Zero world places three stabilizers in two explorable chunks,
+puts a three-part barrier on the core-chamber boundary, and streams the guardian
+only from the chamber beyond it.
+
+## Consequences
+
+- Objective progress is coherent across streamed chunks and save restoration.
+- The authored definition, not Game code, selects group membership and gate
+  requirements.
+- Gate state cannot drift from the objective flags that caused it.
+- Multiple independent objective groups and gates are supported without a
+  general quest scripting system.
+- Connected interaction/objective authority is still deferred to the planned
+  co-op command slice; this decision supplies server-safe data and derivation,
+  not a new client-authoritative network path.
+- `requiredCount` is intentionally a simple threshold. Ordered objectives,
+  branching quests, and arbitrary conditions remain future requirements.
+
+## Rejected
+
+- Hard-coding the three stabilizer or gate entity IDs in Game.
+- Persisting a second gate-open flag that can disagree with stabilizer state.
+- Counting only currently active ECS entities.
+- Adding a generic trigger/action graph or scripting runtime for one barrier.
+
+<!-- END adr/ADR-029-authored-objective-groups-and-derived-gates.md -->
+
+---
+
+<!-- BEGIN adr/ADR-030-player-inventory-and-authored-item-turn-ins.md -->
+
+# ADR-030: Player Inventory and Authored Item Turn-ins
+
+**Status:** Accepted for Stage 11.4
+
+**Date:** 2026-08-13
+
+## Context
+
+Relay Zero's stabilizers and gate established world-wide persistent objective
+state, but the adventure still stopped after the guardian encounter. Completing
+the solo loop requires an item that belongs to a player rather than the world,
+a creator-authored prerequisite for collecting it, and a creator-authored
+destination that records final completion.
+
+Encoding inventory as another world-entity flag would confuse player ownership,
+break future co-op semantics, and make player save transfer ambiguous. Encoding
+the Relay Core through Game-side entity IDs would also bypass Forge schemas and
+make imported worlds unable to use the same gameplay path.
+
+## Decision
+
+1. Content schema v8 adds two typed components:
+   - `avarra.item.collectible` declares an item ID, display label, collected
+     flag, and guardian entity whose defeat permits pickup.
+   - `avarra.objective.item_turn_in` declares a required item ID, completion
+     flag, and completion label.
+2. World validation requires solid interaction geometry, declared persistent
+   flags, unique collectible item IDs, valid authored guardian references, and
+   resolvable turn-in item references. An entity may define only one authored
+   interaction effect.
+3. Save format v2 adds a sorted set of single-quantity item IDs to each
+   `PlayerSave`. The built-in v1-to-v2 migration supplies an empty inventory and
+   preserves existing player/world overlays.
+4. Inventory mutations mark the owning player dirty and participate in the
+   existing serialized atomic save queue. Mutations made during an in-flight
+   save remain dirty and are captured by the next revision.
+5. Offline interaction authority checks guardian defeat, grants the item and
+   sets its collected flag, then consumes the item and sets the turn-in flag.
+   Repeated pickup/turn-in attempts are idempotent.
+6. Collected items are excluded from renderer presentation and physics queries.
+   Mission and inventory UI are derived from authored definitions plus the
+   authoritative save session, without stable-ID rules in Game.
+7. Connected sessions continue to reject these mutations until Stage 11.5 adds
+   host-authoritative combat, objective, pickup, and turn-in commands.
+
+## Consequences
+
+- Relay Zero now has a complete persistent solo objective loop.
+- Existing Stage 11.3 saves remain usable through migration and retain their
+  stabilizer progress.
+- Inventory is intentionally minimal: a bounded set, no quantities, stacking,
+  equipment, trading, or arbitrary item payloads.
+- Guardian health/death is still encounter runtime state. A collected core and
+  completed mission persist, but closing between guardian defeat and pickup may
+  restart that encounter.
+- Co-op ownership and authority remain explicit follow-up work rather than
+  client-side mutation.
+
+<!-- END adr/ADR-030-player-inventory-and-authored-item-turn-ins.md -->
+
+---
+
+<!-- BEGIN adr/ADR-031-host-authoritative-adventure-commands.md -->
+
+# ADR-031: Host-authoritative Adventure Commands
+
+**Status:** Accepted for Stage 11.5
+
+**Date:** 2026-08-13
+
+## Context
+
+Stage 11.4 completed Relay Zero offline, but connected clients could only move.
+Combat, guardian behavior, objectives, pickup, turn-in, and restart were
+deliberately disabled because applying any of them in Game would let clients
+mutate canonical health, flags, or inventory.
+
+## Decision
+
+1. Network protocol v3 adds typed `attack`, `interact`, and `restart` commands,
+   command results, and revisioned gameplay-state snapshots.
+2. Commands carry intent and an optional stable target ID. Clients never send
+   damage, health, inventory grants, or completion state.
+3. Replication keeps a bounded per-client command queue, rejects excess work,
+   ignores duplicate/old sequences, and ignores stale state revisions.
+4. The listen/headless host owns combat, guardian AI, interaction validation,
+   authored effects, restart transforms, health, persistent flags, and a
+   separate inventory for every connected player.
+5. Offline saves and the multiplayer host share `AdventureStateView` and
+   `AdventureStateStore` contracts plus one authored-effect executor. The host
+   uses a session-scoped transient store; offline Game retains `WorldSaveSession`.
+6. Each client receives authoritative health and world flags plus only its own
+   inventory. Game derives HUD progress and collision/presentation exclusions
+   from this mirror while connected.
+7. Stage 11.5 does not claim durable co-op saves. Host state survives for the
+   life of the session only; reconnect/disconnect persistence is Stage 12 work.
+
+## Consequences
+
+- Relay Zero's full mission can now be completed by a connected client without
+  client-side state mutation.
+- The same authority runs in Windows/Android listen hosts and the pure-Dart
+  headless server.
+- TCP, JSON snapshots, and full-state delivery remain provisional and are not
+  made permanent by this decision.
+- Physical Android input, lifecycle, thermal, direct-LAN, and sustained
+  performance acceptance is intentionally consolidated into Stage 12.
+
+<!-- END adr/ADR-031-host-authoritative-adventure-commands.md -->
 
 ---

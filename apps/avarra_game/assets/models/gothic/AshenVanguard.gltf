@@ -1,0 +1,36 @@
+{
+  "asset": {"version": "2.0", "generator": "AVARRA Gothic Kit"},
+  "buffers": [{"byteLength": 1800, "uri": "../cube/Cube.bin"}],
+  "bufferViews": [
+    {"buffer": 0, "byteLength": 72, "byteOffset": 0, "target": 34963}, {"buffer": 0, "byteLength": 432, "byteOffset": 72, "target": 34962},
+    {"buffer": 0, "byteLength": 432, "byteOffset": 504, "target": 34962}, {"buffer": 0, "byteLength": 576, "byteOffset": 936, "target": 34962},
+    {"buffer": 0, "byteLength": 288, "byteOffset": 1512, "target": 34962}
+  ],
+  "accessors": [
+    {"bufferView": 0, "componentType": 5123, "count": 36, "max": [35], "min": [0], "type": "SCALAR"},
+    {"bufferView": 1, "componentType": 5126, "count": 36, "max": [1, 1, 1.000001], "min": [-1, -1, -1], "type": "VEC3"},
+    {"bufferView": 2, "componentType": 5126, "count": 36, "max": [1, 1, 1], "min": [-1, -1, -1], "type": "VEC3"},
+    {"bufferView": 3, "componentType": 5126, "count": 36, "max": [1, 0, 0, 1], "min": [0, 0, -1, -1], "type": "VEC4"},
+    {"bufferView": 4, "componentType": 5126, "count": 36, "max": [1, 1], "min": [-1, -1], "type": "VEC2"}
+  ],
+  "images": [{"uri": "materials/ash_armor.png"}, {"uri": "materials/ember_bronze.png"}],
+  "samplers": [{"magFilter": 9729, "minFilter": 9987, "wrapS": 10497, "wrapT": 10497}],
+  "textures": [{"sampler": 0, "source": 0}, {"sampler": 0, "source": 1}],
+  "materials": [
+    {"name": "Ash and oxblood armor", "pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0.2, "roughnessFactor": 0.72}},
+    {"name": "Tarnished weapon", "pbrMetallicRoughness": {"baseColorTexture": {"index": 1}, "baseColorFactor": [0.65, 0.62, 0.58, 1], "metallicFactor": 0.75, "roughnessFactor": 0.4}}
+  ],
+  "meshes": [
+    {"name": "Armor", "primitives": [{"attributes": {"POSITION": 1, "NORMAL": 2, "TANGENT": 3, "TEXCOORD_0": 4}, "indices": 0, "material": 0}]},
+    {"name": "Metal", "primitives": [{"attributes": {"POSITION": 1, "NORMAL": 2, "TANGENT": 3, "TEXCOORD_0": 4}, "indices": 0, "material": 1}]}
+  ],
+  "nodes": [
+    {"mesh": 0, "name": "Torso", "translation": [0, 0.55, 0], "scale": [0.44, 0.58, 0.28]},
+    {"mesh": 0, "name": "Coat", "translation": [0, -0.05, 0.02], "scale": [0.52, 0.25, 0.34]},
+    {"mesh": 1, "name": "Head", "translation": [0, 1.34, 0], "scale": [0.25, 0.25, 0.25]},
+    {"mesh": 1, "name": "Shoulders", "translation": [0, 0.92, 0], "scale": [0.62, 0.13, 0.34]},
+    {"mesh": 1, "name": "Sword", "translation": [0.68, 0.42, 0], "rotation": [0, 0, 0.3826834, 0.9238795], "scale": [0.07, 0.62, 0.07]}
+  ],
+  "scenes": [{"nodes": [0, 1, 2, 3, 4]}],
+  "scene": 0
+}

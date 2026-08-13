@@ -4,13 +4,37 @@
   "contentSchemaVersion": 8,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
-    "name": "Relay Zero Prototype",
+    "name": "Relay Zero: Ashfall",
     "chunkSize": 8
   },
   "assets": [
     {
       "id": "01890f47-e8b8-7a68-9000-000000000001",
       "path": "assets/models/cube/Cube.gltf"
+    },
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000002",
+      "path": "assets/models/gothic/AshenVanguard.gltf"
+    },
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000003",
+      "path": "assets/models/gothic/HollowWarden.gltf"
+    },
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000004",
+      "path": "assets/models/gothic/Basalt.gltf"
+    },
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000005",
+      "path": "assets/models/gothic/RelayShrine.gltf"
+    },
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000006",
+      "path": "assets/models/gothic/CoreGate.gltf"
+    },
+    {
+      "id": "01890f47-e8b8-7a68-9000-000000000007",
+      "path": "assets/models/gothic/EmberShard.gltf"
     }
   ],
   "entities": [
@@ -21,11 +45,11 @@
           "schemaVersion": 1,
           "position": [4, 0.4, 4],
           "rotation": [0, 0, 0, 1],
-          "scale": [0.4, 0.4, 0.4]
+          "scale": [0.62, 0.62, 0.62]
         },
         "avarra.renderable_reference": {
           "schemaVersion": 1,
-          "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+          "assetId": "01890f47-e8b8-7a68-9000-000000000002"
         },
         "avarra.physics.collider": {
           "schemaVersion": 1,
@@ -60,6 +84,21 @@
       "coordinate": [0, 0],
       "entities": [
         {
+          "id": "01890f47-e8b8-7a68-8000-000000000016",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4, -0.1, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [4, 0.08, 4]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            }
+          }
+        },
+        {
           "id": "01890f47-e8b8-7a68-8000-000000000002",
           "components": {
             "avarra.transform": {
@@ -70,7 +109,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -92,7 +131,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -113,7 +152,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -134,7 +173,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -155,7 +194,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000005"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -194,7 +233,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000005"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -233,7 +272,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000006"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -260,7 +299,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000005"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -292,6 +331,21 @@
       "coordinate": [0, -1],
       "entities": [
         {
+          "id": "01890f47-e8b8-7a68-8000-000000000017",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4, -0.1, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [4, 0.08, 4]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            }
+          }
+        },
+        {
           "id": "01890f47-e8b8-7a68-8000-000000000005",
           "components": {
             "avarra.transform": {
@@ -302,7 +356,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000005"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -341,7 +395,86 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000019",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [5.8, 0.45, 4.8],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.42, 0.42, 0.42]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000003"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.36, 0.4, 0.36],
+              "bodyKind": "character",
+              "isSensor": false
+            },
+            "avarra.character_controller": {
+              "schemaVersion": 1,
+              "moveSpeed": 1.15,
+              "skinWidth": 0.03,
+              "arrivalTolerance": 0.08
+            },
+            "avarra.health": {
+              "schemaVersion": 1,
+              "maximumHealth": 40
+            },
+            "avarra.combat.basic_attack": {
+              "schemaVersion": 1,
+              "damage": 6,
+              "range": 1,
+              "cooldownSeconds": 1.3
+            },
+            "avarra.ai.guardian_behavior": {
+              "schemaVersion": 1,
+              "perceptionRange": 2.8,
+              "leashRange": 3.8
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000021",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [5.8, 0.3, 4.8],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.22, 0.22, 0.22]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000007"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.22, 0.25, 0.22],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Recover Ash Sigil",
+              "range": 2.4
+            },
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "loot.ash_sigil",
+              "itemLabel": "Ash Sigil",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000019"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"collected": false}
             }
           }
         }
@@ -351,6 +484,21 @@
       "id": "01890f47-e8b8-7a68-8000-000000000103",
       "coordinate": [1, 0],
       "entities": [
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000018",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4, -0.1, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [4, 0.08, 4]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            }
+          }
+        },
         {
           "id": "01890f47-e8b8-7a68-8000-000000000007",
           "components": {
@@ -362,7 +510,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -383,7 +531,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -405,7 +553,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000003"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
@@ -437,6 +585,85 @@
           }
         },
         {
+          "id": "01890f47-e8b8-7a68-8000-000000000020",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [5.8, 0.45, 1.7],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.42, 0.42, 0.42]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000003"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.36, 0.4, 0.36],
+              "bodyKind": "character",
+              "isSensor": false
+            },
+            "avarra.character_controller": {
+              "schemaVersion": 1,
+              "moveSpeed": 1.15,
+              "skinWidth": 0.03,
+              "arrivalTolerance": 0.08
+            },
+            "avarra.health": {
+              "schemaVersion": 1,
+              "maximumHealth": 40
+            },
+            "avarra.combat.basic_attack": {
+              "schemaVersion": 1,
+              "damage": 6,
+              "range": 1,
+              "cooldownSeconds": 1.3
+            },
+            "avarra.ai.guardian_behavior": {
+              "schemaVersion": 1,
+              "perceptionRange": 2.8,
+              "leashRange": 3.8
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000022",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [5.8, 0.3, 1.7],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.22, 0.22, 0.22]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000007"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.22, 0.25, 0.22],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Recover Warden Iron",
+              "range": 2.4
+            },
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "loot.warden_iron",
+              "itemLabel": "Warden Iron",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000020"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"collected": false}
+            }
+          }
+        },
+        {
           "id": "01890f47-e8b8-7a68-8000-000000000015",
           "components": {
             "avarra.transform": {
@@ -447,7 +674,7 @@
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
-              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+              "assetId": "01890f47-e8b8-7a68-9000-000000000007"
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,

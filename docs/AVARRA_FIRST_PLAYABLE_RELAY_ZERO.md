@@ -96,10 +96,17 @@ health, persistent flags, and its own inventory. Co-op state is deliberately
 session-scoped until Stage 12 integrates durable host saves and disconnect
 policy.
 
+Stage 11.6 adds the first action-RPG presentation and targeting pass. Relay
+Zero: Ashfall now has click/tap pursuit and repeated attacks, click-to-use
+interactions, three Hollow Wardens, optional guarded loot, textured basalt
+floors, and an original dark-gothic glTF/material kit. It deliberately evokes
+the readability and cadence of classic isometric action RPGs without using
+third-party franchise art, names, characters, or symbols.
+
 The complete solo loop and first authoritative connected loop now exist. Final
 physical-Android input/performance/lifecycle acceptance and durable co-op
-save/resume are still open. The adventure intentionally reuses the current cube
-assets while the gameplay contract is made reliable.
+save/resume are still open. The CC0 cube remains only as a renderer fixture and
+geometry source for the original assembled prototype models.
 
 ## Delivery sequence
 
@@ -107,12 +114,14 @@ assets while the gameplay contract is made reliable.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
-4. **Complete through Stage 11.5:** implement the Stage 11 gameplay loop in
+4. **Complete through Stage 11.6:** implement the Stage 11 gameplay loop in
    thin vertical slices. Health/basic attack/death/restart, guardian AI, three persistent
    stabilizers, their objective gate, guarded Relay Core, minimal inventory,
-   return-console completion, solo restore, and session-authoritative co-op are
+   return-console completion, solo restore, session-authoritative co-op,
+   action-target controls, enemy drops, and the first original art pass are
    complete; next is cross-platform durable save/resume acceptance.
-5. Replace proof geometry incrementally after the loop is fun and measurable.
+5. Replace and animate prototype geometry incrementally after the Stage 12
+   device/performance baseline is measured.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.
 

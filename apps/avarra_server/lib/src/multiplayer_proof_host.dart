@@ -165,6 +165,7 @@ final class MultiplayerProofHost {
       adventureState: adventureState,
       primaryPlayerSpawn: primaryPlayerSpawn,
     );
+    host._rebuildCollisionAuthority();
     host._connectionSubscription = transport.connections.listen(
       (connection) => unawaited(host._accept(connection)),
     );
@@ -510,8 +511,11 @@ final class MultiplayerProofHost {
         if (result.accepted) {
           _gameplayStateRevision += 1;
           detail = result.targetKilled
-              ? 'Guardian defeated.'
+              ? 'Hostile defeated. Loot revealed.'
               : 'Hit for ${result.damageDealt.toStringAsFixed(0)} damage.';
+          if (result.targetKilled) {
+            _rebuildCollisionAuthority();
+          }
         } else {
           detail = _attackRejectionDetail(result.rejection!);
         }
@@ -639,11 +643,22 @@ final class MultiplayerProofHost {
       adventureState,
     ).openedGateEntityIds(runtimeWorld.definition);
     for (final entry in runtimeWorld.ecs.query<CollectibleItemComponent>()) {
-      if (adventureState.flagValue(
+      final collected =
+          adventureState.flagValue(
             entry.entityId,
             entry.component.collectedFlagKey,
           ) ==
-          true) {
+          true;
+      final guardianHandle = runtimeWorld.ecs.handleFor(
+        entry.component.guardedByEntityId,
+      );
+      final guardianDefeated =
+          guardianHandle != null &&
+          (runtimeWorld.ecs
+                  .tryComponent<HealthComponent>(guardianHandle)
+                  ?.isDead ??
+              false);
+      if (collected || !guardianDefeated) {
         excluded.add(entry.entityId);
       }
     }
