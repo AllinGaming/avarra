@@ -22,7 +22,6 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-import 'src/authored_interaction_effects.dart';
 import 'src/authored_world_movement_bounds.dart';
 import 'src/fixed_step_frame_clock.dart';
 import 'src/hold_direction_button.dart';
@@ -483,6 +482,9 @@ class _PresentationBoundaryScreenState
     _movementBounds = AuthoredWorldMovementBounds(widget.streaming.index);
     _playerSpawnTransform = _authoredPlayerSpawn(authoredPlayerEntityId);
     _presentation = _extractPresentation();
+    if (multiplayerClient != null) {
+      _applyAuthoritativeGameplayState(multiplayerClient);
+    }
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
       excludedEntityIds: _excludedGameplayEntityIds,
@@ -505,7 +507,7 @@ class _PresentationBoundaryScreenState
     );
     _interactionEffects = AuthoredInteractionEffectExecutor(
       ecs: widget.runtimeWorld.ecs,
-      persistence: widget.persistence,
+      state: widget.persistence,
       playerId: widget.localPlayerId,
     );
     _cameraRig = IsometricCameraRig(
@@ -1296,14 +1298,24 @@ class _PresentationBoundaryScreenState
 
   AuthoredObjectiveProgress get _objectiveProgress => authoredObjectiveProgress(
     widget.runtimeWorld.definition,
-    widget.persistence,
+    _adventureStateView,
   );
 
   AuthoredAdventureProgress get _adventureProgress => authoredAdventureProgress(
     widget.runtimeWorld.definition,
-    widget.persistence,
+    _adventureStateView,
     widget.localPlayerId,
   );
+
+  AdventureStateView get _adventureStateView {
+    final client = widget.multiplayerClient;
+    return client == null
+        ? widget.persistence
+        : _ReplicationAdventureStateView(
+            client: client,
+            playerId: widget.localPlayerId,
+          );
+  }
 
   Set<EntityId> get _openObjectiveGateEntityIds =>
       _objectiveProgress.openedGateEntityIds(widget.runtimeWorld.definition);
@@ -1324,9 +1336,7 @@ class _PresentationBoundaryScreenState
 
   Set<EntityId> get _authoredCombatantEntityIds => {
     for (final entity in widget.runtimeWorld.definition.allEntities)
-      if (entity.id != _playerEntityId &&
-          entity.component<HealthDefinition>() != null)
-        entity.id,
+      if (entity.component<GuardianBehaviorDefinition>() != null) entity.id,
   };
 
   EntityId? get _attackTargetId {
@@ -1396,8 +1406,13 @@ class _PresentationBoundaryScreenState
       return;
     }
     if (widget.multiplayerClient != null) {
+      final submission = widget.multiplayerClient!.submitGameplayCommand(
+        kind: GameplayCommandKind.attack,
+        targetEntityId: targetId,
+      );
+      _watchGameplayCommand(submission.sent);
       setState(() {
-        _interactionStatus = 'Attack awaits an authoritative host command';
+        _interactionStatus = 'Attack submitted to the host';
       });
       return;
     }
@@ -1452,6 +1467,17 @@ class _PresentationBoundaryScreenState
   }
 
   void _restartPlayer() {
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      final submission = multiplayerClient.submitGameplayCommand(
+        kind: GameplayCommandKind.restart,
+      );
+      _watchGameplayCommand(submission.sent);
+      setState(() {
+        _interactionStatus = 'Restart submitted to the host';
+      });
+      return;
+    }
     if (!_combatSystem.restart(
       entityId: _playerEntityId,
       spawnTransform: _playerSpawnTransform,
@@ -1534,9 +1560,14 @@ class _PresentationBoundaryScreenState
         case MoveCharacterIntent():
           throw StateError('Movement intents are handled before this switch.');
         case InteractEntityIntent(:final entityId):
-          if (widget.multiplayerClient != null) {
-            _interactionStatus =
-                'Interaction awaits an authoritative host command';
+          final multiplayerClient = widget.multiplayerClient;
+          if (multiplayerClient != null) {
+            final submission = multiplayerClient.submitGameplayCommand(
+              kind: GameplayCommandKind.interact,
+              targetEntityId: entityId,
+            );
+            _watchGameplayCommand(submission.sent);
+            _interactionStatus = 'Interaction submitted to the host';
             return;
           }
           final result = _interactionSystem.interact(
@@ -1890,6 +1921,13 @@ class _PresentationBoundaryScreenState
     }
     setState(() {
       _applyReplicatedEntities(client);
+      if (event is ReplicationGameplayStateApplied) {
+        _applyAuthoritativeGameplayState(client);
+        _rebuildGameplayQueries();
+      }
+      if (event case ReplicationGameplayCommandResult(:final result)) {
+        _interactionStatus = result.detail;
+      }
       if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) != null) {
         _cameraRig = _cameraRig.copyWith(target: _playerPosition);
       }
@@ -1898,6 +1936,11 @@ class _PresentationBoundaryScreenState
           'Joined connection ${connectionId.value}',
         ReplicationClientDisconnected(:final connectionId) =>
           'Disconnected from connection ${connectionId.value}',
+        ReplicationGameplayCommandResult(:final result) =>
+          'Joined: ${result.kind.name} '
+              '${result.accepted ? 'accepted' : 'rejected'}',
+        ReplicationGameplayStateApplied(:final revision) =>
+          'Joined: gameplay state $revision',
         ReplicationEntitySpawned() ||
         ReplicationEntityDespawned() => 'Joined · interest changed',
         ReplicationSnapshotApplied(
@@ -1946,6 +1989,50 @@ class _PresentationBoundaryScreenState
       );
     }
     _presentation = _extractPresentation();
+  }
+
+  void _applyAuthoritativeGameplayState(ReplicationClient client) {
+    for (final state in client.healthStates.values) {
+      final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
+      if (handle == null) {
+        continue;
+      }
+      final health = HealthComponent(
+        maximumHealth: state.maximum,
+        currentHealth: state.current,
+      );
+      if (widget.runtimeWorld.ecs.hasComponent<HealthComponent>(handle)) {
+        widget.runtimeWorld.ecs.replaceComponent(handle, health);
+      } else {
+        widget.runtimeWorld.ecs.addComponent(handle, health);
+      }
+    }
+    for (final state in client.persistentFlagStates.values) {
+      final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
+      if (handle == null ||
+          !widget.runtimeWorld.ecs.hasComponent<PersistentFlagsComponent>(
+            handle,
+          )) {
+        continue;
+      }
+      widget.runtimeWorld.ecs.replaceComponent(
+        handle,
+        PersistentFlagsComponent(state.flags),
+      );
+    }
+    _presentation = _extractPresentation();
+  }
+
+  void _watchGameplayCommand(Future<void> sent) {
+    unawaited(
+      sent.catchError((Object error) {
+        if (mounted) {
+          setState(() {
+            _interactionStatus = 'Could not send gameplay command: $error';
+          });
+        }
+      }),
+    );
   }
 
   void _materializeReplicatedAvatar(ReplicatedEntityState entity) {
@@ -2177,6 +2264,10 @@ class _PresentationBoundaryScreenState
             activeBefore.length != activeAfter.length ||
             !activeBefore.containsAll(activeAfter);
         if (activeSetChanged) {
+          final multiplayerClient = widget.multiplayerClient;
+          if (multiplayerClient != null) {
+            _applyAuthoritativeGameplayState(multiplayerClient);
+          }
           _rebuildGameplayQueries();
           setState(() {
             _presentation = _extractPresentation();
@@ -2300,6 +2391,28 @@ bool _transformValuesDiffer(TransformComponent left, TransformComponent right) {
   return left.position != right.position ||
       left.rotation != right.rotation ||
       left.scale != right.scale;
+}
+
+final class _ReplicationAdventureStateView implements AdventureStateView {
+  const _ReplicationAdventureStateView({
+    required this.client,
+    required this.playerId,
+  });
+
+  final ReplicationClient client;
+  final PlayerId playerId;
+
+  @override
+  bool? flagValue(EntityId entityId, String key) =>
+      client.authoritativeFlagValue(entityId, key);
+
+  @override
+  Set<String> inventoryFor(PlayerId requestedPlayerId) =>
+      requestedPlayerId == playerId ? client.inventoryItemIds : const {};
+
+  @override
+  bool hasItem(PlayerId requestedPlayerId, String itemId) =>
+      inventoryFor(requestedPlayerId).contains(itemId);
 }
 
 final _movementKeys = {

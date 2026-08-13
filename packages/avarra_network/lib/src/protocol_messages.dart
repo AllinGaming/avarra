@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:avarra_core/avarra_core.dart';
 
 import 'network_error_codes.dart';
@@ -5,16 +7,19 @@ import 'network_values.dart';
 
 const String avarraNetworkWireFormat = 'avarra.net';
 const int currentNetworkWireVersion = 1;
-const int currentNetworkProtocolVersion = 2;
+const int currentNetworkProtocolVersion = 3;
 
 abstract final class NetworkMessageType {
   static const clientHello = 1;
   static const joinAccepted = 2;
   static const joinRejected = 3;
   static const movementIntent = 4;
+  static const gameplayCommand = 5;
   static const spawnEntity = 10;
   static const despawnEntity = 11;
   static const transformSnapshot = 12;
+  static const gameplayCommandResult = 13;
+  static const gameplayStateSnapshot = 14;
 }
 
 sealed class NetworkMessage {
@@ -108,6 +113,34 @@ final class MovementIntentMessage extends NetworkMessage {
 
   @override
   int get messageType => NetworkMessageType.movementIntent;
+}
+
+/// Discrete player actions whose outcome is decided by the host.
+enum GameplayCommandKind { attack, interact, restart }
+
+final class GameplayCommandMessage extends NetworkMessage {
+  GameplayCommandMessage({
+    required this.sequence,
+    required this.kind,
+    this.targetEntityId,
+  }) {
+    if (sequence < 0) {
+      _invalid('Gameplay command sequence cannot be negative.');
+    }
+    if (kind == GameplayCommandKind.restart && targetEntityId != null) {
+      _invalid('Restart commands cannot include a target entity.');
+    }
+    if (kind != GameplayCommandKind.restart && targetEntityId == null) {
+      _invalid('Attack and interact commands require a target entity.');
+    }
+  }
+
+  final int sequence;
+  final GameplayCommandKind kind;
+  final EntityId? targetEntityId;
+
+  @override
+  int get messageType => NetworkMessageType.gameplayCommand;
 }
 
 final class NetworkTransform {
@@ -204,6 +237,111 @@ final class TransformSnapshotMessage extends NetworkMessage {
   @override
   int get messageType => NetworkMessageType.transformSnapshot;
 }
+
+final class GameplayCommandResultMessage extends NetworkMessage {
+  GameplayCommandResultMessage({
+    required this.sequence,
+    required this.kind,
+    required this.accepted,
+    required this.detail,
+  }) {
+    if (sequence < 0 || detail.trim().isEmpty || detail.length > 160) {
+      _invalid('Gameplay command result values are invalid.');
+    }
+  }
+
+  final int sequence;
+  final GameplayCommandKind kind;
+  final bool accepted;
+  final String detail;
+
+  @override
+  int get messageType => NetworkMessageType.gameplayCommandResult;
+}
+
+final class NetworkHealthState {
+  NetworkHealthState({
+    required this.entityId,
+    required this.current,
+    required this.maximum,
+  }) {
+    if (!current.isFinite ||
+        !maximum.isFinite ||
+        maximum <= 0 ||
+        current < 0 ||
+        current > maximum) {
+      _invalid('Network health values are invalid.');
+    }
+  }
+
+  final EntityId entityId;
+  final double current;
+  final double maximum;
+}
+
+final class NetworkPersistentFlagState {
+  NetworkPersistentFlagState({
+    required this.entityId,
+    required Map<String, bool> flags,
+  }) : flags = Map.unmodifiable(SplayTreeMap<String, bool>.of(flags)) {
+    if (this.flags.length > 64 ||
+        this.flags.keys.any((key) => !_networkStateKeyPattern.hasMatch(key))) {
+      _invalid('Network persistent flags are invalid.');
+    }
+  }
+
+  final EntityId entityId;
+  final Map<String, bool> flags;
+}
+
+/// Authoritative adventure and combat state for one connected player.
+final class GameplayStateSnapshotMessage extends NetworkMessage {
+  GameplayStateSnapshotMessage({
+    required this.revision,
+    required Iterable<NetworkHealthState> healthStates,
+    required Iterable<NetworkPersistentFlagState> persistentFlagStates,
+    required Iterable<String> inventoryItemIds,
+  }) : healthStates = List.unmodifiable(
+         healthStates.toList()..sort(
+           (left, right) => left.entityId.value.compareTo(right.entityId.value),
+         ),
+       ),
+       persistentFlagStates = List.unmodifiable(
+         persistentFlagStates.toList()..sort(
+           (left, right) => left.entityId.value.compareTo(right.entityId.value),
+         ),
+       ),
+       inventoryItemIds = Set.unmodifiable(
+         SplayTreeSet<String>.of(inventoryItemIds),
+       ) {
+    if (revision < 0 ||
+        this.healthStates.length > 256 ||
+        this.persistentFlagStates.length > 256 ||
+        this.inventoryItemIds.length > 64 ||
+        this.inventoryItemIds.any(
+          (itemId) => !_networkStateKeyPattern.hasMatch(itemId),
+        ) ||
+        this.healthStates.map((state) => state.entityId).toSet().length !=
+            this.healthStates.length ||
+        this.persistentFlagStates
+                .map((state) => state.entityId)
+                .toSet()
+                .length !=
+            this.persistentFlagStates.length) {
+      _invalid('Gameplay state snapshot values are invalid.');
+    }
+  }
+
+  final int revision;
+  final List<NetworkHealthState> healthStates;
+  final List<NetworkPersistentFlagState> persistentFlagStates;
+  final Set<String> inventoryItemIds;
+
+  @override
+  int get messageType => NetworkMessageType.gameplayStateSnapshot;
+}
+
+final RegExp _networkStateKeyPattern = RegExp(r'^[a-z][a-z0-9_.-]{0,63}$');
 
 bool _same(List<double> left, List<double> right) {
   if (left.length != right.length) {

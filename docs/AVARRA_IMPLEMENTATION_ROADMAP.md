@@ -576,7 +576,7 @@ one pursuing/attacking guardian                   COMPLETE (Stage 11.2)
 three persistent relay stabilizer objectives         COMPLETE (Stage 11.3)
 one relay-core item and minimal inventory             COMPLETE (Stage 11.4)
 objective gate and completion state                  COMPLETE (Stages 11.3–11.4)
-authoritative co-op combat/objective commands
+authoritative co-op combat/objective commands       COMPLETE (Stage 11.5)
 save/resume across the full adventure                PARTIAL (solo state complete)
 ```
 
@@ -637,8 +637,19 @@ Stage 11.4 status (implemented 2026-08-13):
 - pickup, inventory, turn-in, completion, and restored progress use the same
   serialized save queue as existing world/player state.
 
-Next: Stage 11.5 host-authoritative combat, objective, pickup, and turn-in
-commands. See `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md` and ADR-030.
+Stage 11.5 status (implemented 2026-08-13):
+
+- protocol v3 carries typed attack, interaction, and restart intent plus
+  command results and revisioned gameplay state;
+- the listen/headless host owns combat, guardian AI, objectives, gate state,
+  pickup, per-player inventory, turn-in, death, and restart;
+- connected Game derives health, flags, inventory, collision exclusions, and
+  mission UI from the authoritative mirror; and
+- loopback coverage completes Relay Zero through the real replication path.
+
+Next: Stage 12 physical-Android passes, durable host save/resume, disconnect
+policy, and complete solo/co-op product acceptance. See
+`AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md` and ADR-031.
 
 Gate:
 
@@ -668,6 +679,17 @@ complete undo. Live LLM calls remain outside required CI.
 ---
 
 # Stage 12 — Creator Loop
+
+First close the consolidated Android/gameplay acceptance pass:
+
+```text
+physical-device solo play
+Android host → Windows client
+Windows host → Android client
+touch input and lifecycle/end behavior
+sustained frame/tick/memory/network/thermal measurements
+host-owned durable co-op save/resume and disconnect policy
+```
 
 Polish:
 

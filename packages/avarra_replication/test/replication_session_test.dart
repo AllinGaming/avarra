@@ -187,6 +187,77 @@ void main() {
       await server.close();
     },
   );
+
+  test('queues gameplay commands and applies authoritative state', () async {
+    final ecs = EcsWorld();
+    _create(ecs, _globalId, Vector3.zero());
+    final server = AuthoritativeReplicationServer(
+      ecs: ecs,
+      requiredContent: _content,
+      playerEntityResolver: (_, _) => _globalId,
+    );
+    server.registerEntity(_globalId, alwaysRelevant: true);
+    final connected = await _connect(server);
+
+    final submission = connected.client.submitGameplayCommand(
+      kind: GameplayCommandKind.attack,
+      targetEntityId: _localId,
+    );
+    await submission.sent;
+    final second = connected.client.submitGameplayCommand(
+      kind: GameplayCommandKind.interact,
+      targetEntityId: _localId,
+    );
+    await second.sent;
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    final commands = server.takeGameplayCommands(connected.connectionId);
+    expect(commands.map((command) => command.sequence), [
+      submission.sequence,
+      second.sequence,
+    ]);
+
+    final resultEvent = connected.client.events
+        .where((event) => event is ReplicationGameplayCommandResult)
+        .cast<ReplicationGameplayCommandResult>()
+        .first;
+    await server.sendGameplayCommandResult(
+      connected.connectionId,
+      GameplayCommandResultMessage(
+        sequence: second.sequence,
+        kind: GameplayCommandKind.interact,
+        accepted: true,
+        detail: 'Interaction accepted.',
+      ),
+    );
+    expect((await resultEvent).result.sequence, second.sequence);
+
+    await server.sendGameplayState(
+      connected.connectionId,
+      GameplayStateSnapshotMessage(
+        revision: 1,
+        healthStates: [
+          NetworkHealthState(entityId: _globalId, current: 75, maximum: 100),
+        ],
+        persistentFlagStates: [
+          NetworkPersistentFlagState(
+            entityId: _localId,
+            flags: const {'activated': true},
+          ),
+        ],
+        inventoryItemIds: const {'relay.core'},
+      ),
+    );
+    await _waitUntil(() => connected.client.latestGameplayStateRevision == 1);
+    expect(connected.client.healthStates[_globalId]?.current, 75);
+    expect(
+      connected.client.authoritativeFlagValue(_localId, 'activated'),
+      true,
+    );
+    expect(connected.client.inventoryItemIds, {'relay.core'});
+
+    await connected.client.close();
+    await server.close();
+  });
 }
 
 EntityHandle _create(EcsWorld ecs, EntityId id, Vector3 position) {

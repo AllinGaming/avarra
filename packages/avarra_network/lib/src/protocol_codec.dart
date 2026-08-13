@@ -86,6 +86,11 @@ final class NetworkProtocolCodec {
         'sequence': message.sequence,
         'direction': [message.directionX, message.directionZ],
       },
+      GameplayCommandMessage() => {
+        'sequence': message.sequence,
+        'kind': message.kind.name,
+        'targetEntityId': message.targetEntityId?.value,
+      },
       SpawnEntityMessage() => {
         'networkEntityId': message.networkEntityId.value,
         'entityId': message.entityId.value,
@@ -105,6 +110,28 @@ final class NetworkProtocolCodec {
               'transform': _encodeTransform(state.transform),
             },
         ],
+      },
+      GameplayCommandResultMessage() => {
+        'sequence': message.sequence,
+        'kind': message.kind.name,
+        'accepted': message.accepted,
+        'detail': message.detail,
+      },
+      GameplayStateSnapshotMessage() => {
+        'revision': message.revision,
+        'healthStates': [
+          for (final state in message.healthStates)
+            {
+              'entityId': state.entityId.value,
+              'current': state.current,
+              'maximum': state.maximum,
+            },
+        ],
+        'persistentFlagStates': [
+          for (final state in message.persistentFlagStates)
+            {'entityId': state.entityId.value, 'flags': state.flags},
+        ],
+        'inventoryItemIds': message.inventoryItemIds.toList(),
       },
     };
   }
@@ -167,6 +194,22 @@ final class NetworkProtocolCodec {
           directionX: _double(direction[0], r'$.payload.direction[0]'),
           directionZ: _double(direction[1], r'$.payload.direction[1]'),
         );
+      case NetworkMessageType.gameplayCommand:
+        _exactFields(payload, const {
+          'sequence',
+          'kind',
+          'targetEntityId',
+        }, r'$.payload');
+        return GameplayCommandMessage(
+          sequence: _int(payload['sequence'], r'$.payload.sequence'),
+          kind: _gameplayCommandKind(payload['kind'], r'$.payload.kind'),
+          targetEntityId: payload['targetEntityId'] == null
+              ? null
+              : _entityId(
+                  payload['targetEntityId'],
+                  r'$.payload.targetEntityId',
+                ),
+        );
       case NetworkMessageType.spawnEntity:
         _exactFields(payload, const {
           'networkEntityId',
@@ -220,6 +263,62 @@ final class NetworkProtocolCodec {
                 _object(values[index], r'$.payload.transforms[$index]'),
                 index,
               ),
+          ],
+        );
+      case NetworkMessageType.gameplayCommandResult:
+        _exactFields(payload, const {
+          'sequence',
+          'kind',
+          'accepted',
+          'detail',
+        }, r'$.payload');
+        return GameplayCommandResultMessage(
+          sequence: _int(payload['sequence'], r'$.payload.sequence'),
+          kind: _gameplayCommandKind(payload['kind'], r'$.payload.kind'),
+          accepted: _bool(payload['accepted'], r'$.payload.accepted'),
+          detail: _string(payload['detail'], r'$.payload.detail'),
+        );
+      case NetworkMessageType.gameplayStateSnapshot:
+        _exactFields(payload, const {
+          'revision',
+          'healthStates',
+          'persistentFlagStates',
+          'inventoryItemIds',
+        }, r'$.payload');
+        final health = _list(
+          payload['healthStates'],
+          r'$.payload.healthStates',
+        );
+        final flags = _list(
+          payload['persistentFlagStates'],
+          r'$.payload.persistentFlagStates',
+        );
+        final inventory = _list(
+          payload['inventoryItemIds'],
+          r'$.payload.inventoryItemIds',
+        );
+        return GameplayStateSnapshotMessage(
+          revision: _int(payload['revision'], r'$.payload.revision'),
+          healthStates: [
+            for (var index = 0; index < health.length; index += 1)
+              _decodeHealthState(
+                _object(health[index], r'$.payload.healthStates[$index]'),
+                index,
+              ),
+          ],
+          persistentFlagStates: [
+            for (var index = 0; index < flags.length; index += 1)
+              _decodePersistentFlagState(
+                _object(
+                  flags[index],
+                  r'$.payload.persistentFlagStates[$index]',
+                ),
+                index,
+              ),
+          ],
+          inventoryItemIds: [
+            for (var index = 0; index < inventory.length; index += 1)
+              _string(inventory[index], r'$.payload.inventoryItemIds[$index]'),
           ],
         );
       default:
@@ -298,6 +397,52 @@ final class NetworkProtocolCodec {
     );
   }
 
+  NetworkHealthState _decodeHealthState(Map<String, dynamic> value, int index) {
+    _exactFields(value, const {
+      'entityId',
+      'current',
+      'maximum',
+    }, r'$.payload.healthStates[]');
+    return NetworkHealthState(
+      entityId: _entityId(
+        value['entityId'],
+        r'$.payload.healthStates[$index].entityId',
+      ),
+      current: _double(
+        value['current'],
+        r'$.payload.healthStates[$index].current',
+      ),
+      maximum: _double(
+        value['maximum'],
+        r'$.payload.healthStates[$index].maximum',
+      ),
+    );
+  }
+
+  NetworkPersistentFlagState _decodePersistentFlagState(
+    Map<String, dynamic> value,
+    int index,
+  ) {
+    _exactFields(value, const {'entityId', 'flags'}, r'$.payload.flags[]');
+    final flags = _object(
+      value['flags'],
+      r'$.payload.persistentFlagStates[$index].flags',
+    );
+    return NetworkPersistentFlagState(
+      entityId: _entityId(
+        value['entityId'],
+        r'$.payload.persistentFlagStates[$index].entityId',
+      ),
+      flags: {
+        for (final entry in flags.entries)
+          entry.key: _bool(
+            entry.value,
+            r'$.payload.persistentFlagStates[$index].flags.${entry.key}',
+          ),
+      },
+    );
+  }
+
   List<double> _doubleList(Object? value, int length, String field) {
     final list = _list(value, r'$.payload.transform');
     if (list.length != length) {
@@ -342,6 +487,24 @@ final class NetworkProtocolCodec {
       _malformed('$path must be a finite number.');
     }
     return value.toDouble();
+  }
+
+  bool _bool(Object? value, String path) {
+    if (value is! bool) {
+      _malformed('$path must be a boolean.');
+    }
+    return value;
+  }
+
+  GameplayCommandKind _gameplayCommandKind(Object? value, String path) {
+    final text = _string(value, path);
+    final result = GameplayCommandKind.values
+        .where((kind) => kind.name == text)
+        .firstOrNull;
+    if (result == null) {
+      _malformed('$path must be a known gameplay command kind.');
+    }
+    return result;
   }
 
   WorldId _worldId(Object? value, String path) {

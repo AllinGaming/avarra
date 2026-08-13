@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
@@ -180,6 +181,35 @@ final class AuthoritativeReplicationServer {
     return result;
   }
 
+  List<GameplayCommandMessage> takeGameplayCommands(
+    NetworkConnectionId connectionId,
+  ) {
+    final commands = _requireClient(connectionId).pendingGameplayCommands;
+    final result = List<GameplayCommandMessage>.of(commands);
+    commands.clear();
+    return List.unmodifiable(result);
+  }
+
+  Future<void> sendGameplayCommandResult(
+    NetworkConnectionId connectionId,
+    GameplayCommandResultMessage result,
+  ) {
+    return _requireClient(connectionId).channel.send(result);
+  }
+
+  Future<bool> sendGameplayState(
+    NetworkConnectionId connectionId,
+    GameplayStateSnapshotMessage snapshot,
+  ) async {
+    final client = _requireClient(connectionId);
+    if (snapshot.revision <= client.latestGameplayStateRevision) {
+      return false;
+    }
+    await client.channel.send(snapshot);
+    client.latestGameplayStateRevision = snapshot.revision;
+    return true;
+  }
+
   Future<void> replicate(TickId tickId) async {
     final previous = _lastReplicatedTick;
     if (previous != null && tickId.compareTo(previous) <= 0) {
@@ -286,6 +316,25 @@ final class AuthoritativeReplicationServer {
         client.highestReceivedInputSequence = message.sequence;
         client.pendingMovementIntent = message;
       }
+      return;
+    }
+    if (message case GameplayCommandMessage()) {
+      if (message.sequence <= client.highestReceivedGameplayCommandSequence) {
+        return;
+      }
+      client.highestReceivedGameplayCommandSequence = message.sequence;
+      if (client.pendingGameplayCommands.length >= 32) {
+        await client.channel.send(
+          GameplayCommandResultMessage(
+            sequence: message.sequence,
+            kind: message.kind,
+            accepted: false,
+            detail: 'The host command queue is full.',
+          ),
+        );
+        return;
+      }
+      client.pendingGameplayCommands.addLast(message);
       return;
     }
     throw AvarraException(
@@ -503,6 +552,9 @@ final class _ServerClient {
   int highestReceivedInputSequence = -1;
   int? acknowledgedInputSequence;
   MovementIntentMessage? pendingMovementIntent;
+  int highestReceivedGameplayCommandSequence = -1;
+  int latestGameplayStateRevision = -1;
+  final ListQueue<GameplayCommandMessage> pendingGameplayCommands = ListQueue();
 }
 
 final class _RegisteredEntity {

@@ -38,7 +38,7 @@ void main() {
       expect(interaction.accepted, isTrue);
       final applied = AuthoredInteractionEffectExecutor(
         ecs: firstEcs,
-        persistence: firstSession,
+        state: firstSession,
         playerId: playerId,
       ).apply(objectiveEntityId);
       expect(applied.handled, isTrue);
@@ -47,7 +47,7 @@ void main() {
       expect(
         AuthoredInteractionEffectExecutor(
           ecs: firstEcs,
-          persistence: firstSession,
+          state: firstSession,
           playerId: playerId,
         ).apply(objectiveEntityId).changed,
         isFalse,
@@ -143,7 +143,7 @@ void main() {
     );
     final executor = AuthoredInteractionEffectExecutor(
       ecs: ecs,
-      persistence: session,
+      state: session,
       playerId: playerId,
     );
 

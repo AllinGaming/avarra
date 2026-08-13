@@ -38,13 +38,32 @@ final class MultiplayerProofHost {
     required this.content,
     required this.transport,
     required this.replication,
-    required this.collisionWorld,
-    required this.movementSystem,
+    required DeterministicPhysicsCollisionWorld collisionWorld,
     required this.tickRateHz,
     required this.playerEntityId,
     required this.primaryPlayerId,
     required this.listenAddresses,
-  });
+    required this.adventureState,
+    required TransformComponent primaryPlayerSpawn,
+  }) : _collisionWorld = collisionWorld,
+       _movementSystem = CharacterMovementSystem(
+         ecs: runtimeWorld.ecs,
+         collisionWorld: collisionWorld,
+       ),
+       _combatSystem = CombatSystem(
+         ecs: runtimeWorld.ecs,
+         collisionWorld: collisionWorld,
+       ),
+       _interactionSystem = InteractionSystem(
+         ecs: runtimeWorld.ecs,
+         collisionWorld: collisionWorld,
+       ),
+       _guardianSystem = GuardianBehaviorSystem(
+         ecs: runtimeWorld.ecs,
+         collisionWorld: collisionWorld,
+       ) {
+    _playerSpawns[playerEntityId] = primaryPlayerSpawn;
+  }
 
   static Future<MultiplayerProofHost> start({
     required String worldPackageSource,
@@ -128,21 +147,23 @@ final class MultiplayerProofHost {
     final collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       runtimeWorld.ecs,
     );
-    final movementSystem = CharacterMovementSystem(
-      ecs: runtimeWorld.ecs,
-      collisionWorld: collisionWorld,
-    );
+    final adventureState = TransientAdventureStateStore(runtimeWorld.ecs)
+      ..registerPlayer(primaryPlayerId);
+    final primaryPlayerSpawn = runtimeWorld.ecs
+        .component<TransformComponent>(player.handle)
+        .copyWith();
     host = MultiplayerProofHost._(
       runtimeWorld: runtimeWorld,
       content: content,
       transport: transport,
       replication: replication,
       collisionWorld: collisionWorld,
-      movementSystem: movementSystem,
       tickRateHz: tickRateHz,
       playerEntityId: player.entityId,
       primaryPlayerId: primaryPlayerId,
       listenAddresses: List.unmodifiable(listenAddresses.toList()..sort()),
+      adventureState: adventureState,
+      primaryPlayerSpawn: primaryPlayerSpawn,
     );
     host._connectionSubscription = transport.connections.listen(
       (connection) => unawaited(host._accept(connection)),
@@ -160,8 +181,7 @@ final class MultiplayerProofHost {
   final ContentHandshake content;
   final TcpNetworkTransportServer transport;
   final AuthoritativeReplicationServer replication;
-  final DeterministicPhysicsCollisionWorld collisionWorld;
-  final CharacterMovementSystem movementSystem;
+  final TransientAdventureStateStore adventureState;
   final int tickRateHz;
   final EntityId playerEntityId;
   final PlayerId primaryPlayerId;
@@ -171,10 +191,19 @@ final class MultiplayerProofHost {
   _connectionSubscription;
   final Map<NetworkConnectionId, NetworkTransportConnection> _connections = {};
   final Map<NetworkConnectionId, EntityId> _controlledEntities = {};
+  final Map<NetworkConnectionId, PlayerId> _connectedPlayers = {};
   final Set<EntityId> _dynamicPlayerEntities = {};
+  final Map<EntityId, TransformComponent> _playerSpawns = {};
+  late DeterministicPhysicsCollisionWorld _collisionWorld;
+  late CharacterMovementSystem _movementSystem;
+  late CombatSystem _combatSystem;
+  late InteractionSystem _interactionSystem;
+  late GuardianBehaviorSystem _guardianSystem;
   Timer? _timer;
   Future<void> _tickQueue = Future.value();
   int _nextTick = 0;
+  int _gameplayStateRevision = 0;
+  Duration _simulationTime = Duration.zero;
   int _completedTicks = 0;
   int _totalTickMicroseconds = 0;
   int _maximumTickMicroseconds = 0;
@@ -183,6 +212,7 @@ final class MultiplayerProofHost {
   bool _closed = false;
 
   int get port => transport.port;
+  DeterministicPhysicsCollisionWorld get collisionWorld => _collisionWorld;
   Stream<String> get events => _events.stream;
   bool get isClosed => _closed;
   List<String> get joinEndpoints =>
@@ -220,7 +250,7 @@ final class MultiplayerProofHost {
     _retireDisconnectedConnections(const {});
     await transport.close();
     await _events.close();
-    collisionWorld.dispose();
+    _collisionWorld.dispose();
   }
 
   Future<void> _accept(NetworkTransportConnection connection) async {
@@ -243,7 +273,9 @@ final class MultiplayerProofHost {
     NetworkConnectionId connectionId,
   ) {
     if (playerId == primaryPlayerId) {
+      adventureState.registerPlayer(playerId);
       _controlledEntities[connectionId] = playerEntityId;
+      _connectedPlayers[connectionId] = playerId;
       return playerEntityId;
     }
     final entityId = EntityId.parse(playerId.value);
@@ -298,6 +330,28 @@ final class MultiplayerProofHost {
         ),
       );
     }
+    final health = runtimeWorld.ecs.tryComponent<HealthComponent>(template);
+    if (health != null) {
+      runtimeWorld.ecs.addComponent(
+        handle,
+        HealthComponent(maximumHealth: health.maximumHealth),
+      );
+    }
+    final attack = runtimeWorld.ecs.tryComponent<BasicAttackComponent>(
+      template,
+    );
+    if (attack != null) {
+      runtimeWorld.ecs
+        ..addComponent(
+          handle,
+          BasicAttackComponent(
+            damage: attack.damage,
+            range: attack.range,
+            cooldown: attack.cooldown,
+          ),
+        )
+        ..addComponent(handle, const BasicAttackStateComponent());
+    }
     replication.registerEntity(
       entityId,
       alwaysRelevant: true,
@@ -305,6 +359,22 @@ final class MultiplayerProofHost {
     );
     _dynamicPlayerEntities.add(entityId);
     _controlledEntities[connectionId] = entityId;
+    _connectedPlayers[connectionId] = playerId;
+    adventureState.registerPlayer(playerId);
+    _playerSpawns[entityId] = TransformComponent(
+      position: Vector3.copy(
+        runtimeWorld.ecs.component<TransformComponent>(handle).position,
+      ),
+      rotation: runtimeWorld.ecs
+          .component<TransformComponent>(handle)
+          .rotation
+          .clone(),
+      scale: runtimeWorld.ecs
+          .component<TransformComponent>(handle)
+          .scale
+          .clone(),
+    );
+    _gameplayStateRevision += 1;
     return entityId;
   }
 
@@ -314,6 +384,7 @@ final class MultiplayerProofHost {
     }
     final activeConnections = replication.activeConnectionIds.toSet();
     _retireDisconnectedConnections(activeConnections);
+    _simulationTime += Duration(microseconds: 1000000 ~/ tickRateHz);
     for (final connectionId in activeConnections.toList()..sort()) {
       final entityId = _controlledEntities[connectionId];
       if (entityId == null) {
@@ -327,9 +398,19 @@ final class MultiplayerProofHost {
           '${position.x.toStringAsFixed(3)},${position.z.toStringAsFixed(3)}',
         );
       }
+      for (final command in replication.takeGameplayCommands(connectionId)) {
+        await _applyGameplayCommand(connectionId, entityId, command);
+      }
       _updateInterest(connectionId);
     }
+    _tickGuardianAuthority();
     await replication.replicate(TickId(_nextTick++));
+    for (final connectionId in activeConnections.toList()..sort()) {
+      await replication.sendGameplayState(
+        connectionId,
+        _gameplaySnapshotFor(connectionId),
+      );
+    }
   }
 
   Future<void> _guardedTick() async {
@@ -352,7 +433,7 @@ final class MultiplayerProofHost {
   }
 
   Vector3 _applyMovement(EntityId entityId, MovementIntentMessage intent) {
-    return movementSystem
+    return _movementSystem
         .moveDirection(
           entityId: entityId,
           direction: Vector3(intent.directionX, 0, intent.directionZ),
@@ -394,16 +475,224 @@ final class MultiplayerProofHost {
         _retiredBytesReceived += connection.statistics.bytesReceived;
       }
       final entityId = _controlledEntities.remove(connectionId)!;
+      final playerId = _connectedPlayers.remove(connectionId)!;
       if (_dynamicPlayerEntities.remove(entityId)) {
         replication.unregisterEntity(entityId);
         final handle = runtimeWorld.ecs.handleFor(entityId);
         if (handle != null) {
           runtimeWorld.ecs.destroyEntity(handle);
         }
+        adventureState.unregisterPlayer(playerId);
+        _playerSpawns.remove(entityId);
+        _gameplayStateRevision += 1;
       }
       if (!_events.isClosed) {
         _events.add('left:${connectionId.value}:${entityId.value}');
       }
     }
   }
+
+  Future<void> _applyGameplayCommand(
+    NetworkConnectionId connectionId,
+    EntityId actorId,
+    GameplayCommandMessage command,
+  ) async {
+    late final bool accepted;
+    late final String detail;
+    switch (command.kind) {
+      case GameplayCommandKind.attack:
+        final result = _combatSystem.attack(
+          attackerId: actorId,
+          targetId: command.targetEntityId!,
+          simulationTime: _simulationTime,
+        );
+        accepted = result.accepted;
+        if (result.accepted) {
+          _gameplayStateRevision += 1;
+          detail = result.targetKilled
+              ? 'Guardian defeated.'
+              : 'Hit for ${result.damageDealt.toStringAsFixed(0)} damage.';
+        } else {
+          detail = _attackRejectionDetail(result.rejection!);
+        }
+      case GameplayCommandKind.interact:
+        final interaction = _interactionSystem.interact(
+          actorId: actorId,
+          targetId: command.targetEntityId!,
+        );
+        if (!interaction.accepted) {
+          accepted = false;
+          detail = _interactionRejectionDetail(interaction.rejection!);
+          break;
+        }
+        final effect = AuthoredInteractionEffectExecutor(
+          ecs: runtimeWorld.ecs,
+          state: adventureState,
+          playerId: replication.playerIdFor(connectionId),
+        ).apply(command.targetEntityId!);
+        accepted = !effect.blocked;
+        detail = effect.blocked
+            ? _effectRejectionDetail(effect.rejection!)
+            : interaction.label!;
+        if (effect.changed) {
+          _gameplayStateRevision += 1;
+          _rebuildCollisionAuthority();
+        }
+      case GameplayCommandKind.restart:
+        accepted = _combatSystem.restart(
+          entityId: actorId,
+          spawnTransform: _playerSpawns[actorId]!,
+        );
+        detail = accepted
+            ? 'Restarted at the session entry point.'
+            : 'Restart is unavailable.';
+        if (accepted) {
+          _gameplayStateRevision += 1;
+          _guardianSystem.resetActiveGuardians();
+        }
+    }
+    await replication.sendGameplayCommandResult(
+      connectionId,
+      GameplayCommandResultMessage(
+        sequence: command.sequence,
+        kind: command.kind,
+        accepted: accepted,
+        detail: detail,
+      ),
+    );
+  }
+
+  void _tickGuardianAuthority() {
+    final target = _nearestLivingControlledPlayer();
+    if (target == null) {
+      return;
+    }
+    final results = _guardianSystem.tickAll(
+      targetId: target,
+      simulationTime: _simulationTime,
+      deltaSeconds: 1 / tickRateHz,
+    );
+    if (results.any((result) => result.attack?.accepted ?? false)) {
+      _gameplayStateRevision += 1;
+    }
+  }
+
+  EntityId? _nearestLivingControlledPlayer() {
+    final guardians = runtimeWorld.ecs
+        .query<GuardianBehaviorComponent>()
+        .toList();
+    if (guardians.isEmpty) {
+      return null;
+    }
+    final guardianPosition = runtimeWorld.ecs
+        .component<TransformComponent>(guardians.first.handle)
+        .position;
+    EntityId? nearest;
+    var nearestDistance = double.infinity;
+    for (final entityId in _controlledEntities.values.toSet()) {
+      final handle = runtimeWorld.ecs.handleFor(entityId);
+      if (handle == null ||
+          (runtimeWorld.ecs.tryComponent<HealthComponent>(handle)?.isDead ??
+              true)) {
+        continue;
+      }
+      final position = runtimeWorld.ecs
+          .component<TransformComponent>(handle)
+          .position;
+      final distance = (position - guardianPosition).length2;
+      if (distance < nearestDistance) {
+        nearest = entityId;
+        nearestDistance = distance;
+      }
+    }
+    return nearest;
+  }
+
+  GameplayStateSnapshotMessage _gameplaySnapshotFor(
+    NetworkConnectionId connectionId,
+  ) {
+    final health = runtimeWorld.ecs.query<HealthComponent>().toList();
+    final flags = adventureState.persistentFlagSnapshots();
+    return GameplayStateSnapshotMessage(
+      revision: _gameplayStateRevision,
+      healthStates: [
+        for (final entry in health)
+          NetworkHealthState(
+            entityId: entry.entityId,
+            current: entry.component.currentHealth,
+            maximum: entry.component.maximumHealth,
+          ),
+      ],
+      persistentFlagStates: [
+        for (final entry in flags.entries)
+          NetworkPersistentFlagState(entityId: entry.key, flags: entry.value),
+      ],
+      inventoryItemIds: adventureState.inventoryFor(
+        replication.playerIdFor(connectionId),
+      ),
+    );
+  }
+
+  void _rebuildCollisionAuthority() {
+    final excluded = authoredObjectiveProgress(
+      runtimeWorld.definition,
+      adventureState,
+    ).openedGateEntityIds(runtimeWorld.definition);
+    for (final entry in runtimeWorld.ecs.query<CollectibleItemComponent>()) {
+      if (adventureState.flagValue(
+            entry.entityId,
+            entry.component.collectedFlagKey,
+          ) ==
+          true) {
+        excluded.add(entry.entityId);
+      }
+    }
+    final replacement = DeterministicPhysicsCollisionWorld.fromEcs(
+      runtimeWorld.ecs,
+      excludedEntityIds: excluded,
+    );
+    _collisionWorld.dispose();
+    _collisionWorld = replacement;
+    _movementSystem = CharacterMovementSystem(
+      ecs: runtimeWorld.ecs,
+      collisionWorld: replacement,
+    );
+    _combatSystem = CombatSystem(
+      ecs: runtimeWorld.ecs,
+      collisionWorld: replacement,
+    );
+    _interactionSystem = InteractionSystem(
+      ecs: runtimeWorld.ecs,
+      collisionWorld: replacement,
+    );
+    _guardianSystem = GuardianBehaviorSystem(
+      ecs: runtimeWorld.ecs,
+      collisionWorld: replacement,
+    );
+  }
 }
+
+String _attackRejectionDetail(CombatAttackRejection rejection) =>
+    switch (rejection) {
+      CombatAttackRejection.cooldown => 'Attack is cooling down.',
+      CombatAttackRejection.outOfRange => 'Target is out of range.',
+      CombatAttackRejection.blocked => 'Attack is blocked.',
+      CombatAttackRejection.attackerDead => 'Restart before attacking.',
+      CombatAttackRejection.targetDead => 'Target is already defeated.',
+      _ => 'Attack is unavailable.',
+    };
+
+String _interactionRejectionDetail(InteractionRejection rejection) =>
+    switch (rejection) {
+      InteractionRejection.outOfRange => 'Move closer to interact.',
+      InteractionRejection.blocked => 'Interaction is blocked.',
+      _ => 'Interaction is unavailable.',
+    };
+
+String _effectRejectionDetail(AuthoredInteractionEffectRejection rejection) =>
+    switch (rejection) {
+      AuthoredInteractionEffectRejection.guardianNotDefeated =>
+        'Defeat the guardian first.',
+      AuthoredInteractionEffectRejection.requiredItemMissing =>
+        'The required item is missing.',
+    };

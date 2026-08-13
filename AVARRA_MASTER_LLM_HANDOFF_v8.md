@@ -512,16 +512,28 @@ orthographic renderer readiness, uses a bounded vsync-aligned 60 Hz fixed step,
 pools repeated glTF instances, coalesces save/streaming work, makes controls
 camera-relative, contains movement to authored chunks, repairs legacy invalid
 saves, and replaces the portrait diagnostic wall with a compact HUD. Relay
-Zero now uses an 8×8 centered arena and a survivable guardian balance. Next is
-three persistent stabilizers and an authored objective gate before item,
-co-op, persistence, or AI/MCP expansion. See
+Zero now uses an 8×8 centered arena and a survivable guardian balance. Content
+schema v7 and Stage 11.3 add three persistent stabilizers evaluated world-wide
+from authored defaults plus save overlays. Their authored group opens a derived
+solid gate without product entity-ID rules, and the guardian now streams from
+the chamber beyond it. Content schema v8, save format v2, and Stage 11.4 add a
+guardian-gated Relay Core, player-owned single-quantity inventory, an authored
+return-console turn-in, derived mission feedback, and restored completion.
+Protocol v3 and Stage 11.5 add bounded attack/interaction/restart commands,
+host-owned guardian/combat/adventure simulation, revisioned health/flag/player
+inventory mirrors, and a connected end-to-end Relay Zero completion proof.
+Durable host saves and physical Android acceptance remain Stage 12 gates before
+AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
 `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
 `AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-028.
+`AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
+`AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
+`AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-031.
 
 ---
 
@@ -4450,9 +4462,9 @@ Neither warning blocks the current artifacts.
 
 ## Next slice
 
-Stage 11.3 expands Relay Zero into a real objective sequence: author three
-persistent stabilizers and a gate that opens from authored objective state.
-The relay-core item and minimal inventory follow that objective foundation.
+Stage 11.3 subsequently expands Relay Zero with three persistent stabilizers
+and a gate opened from authored world-wide objective state. The relay-core item
+and minimal inventory now follow that completed objective foundation.
 
 See ADR-028 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
@@ -4478,7 +4490,8 @@ black/loading frame, the diagnostic panel covered most of a portrait display,
 camera rotation changed the apparent meaning of the D-pad, and a held direction
 could leave the sparse authored chunk set and unload the encounter.
 
-Stage 11.3 is intentionally paused until this baseline is usable.
+Stage 11.3 remained paused until this baseline became usable and now builds on
+the corrected movement/device gate.
 
 ## Implemented corrections
 
@@ -4560,6 +4573,37 @@ seconds. All three reported zero skipped-frame events, zero invalid-renderable
 messages, and zero fatal exceptions. Their captures were byte-identical,
 confirming consistent camera projection/framing.
 
+### Movement-control corrective pass
+
+A follow-up Android report that movement appeared broken exposed an acceptance
+gap in the earlier trace: smooth SurfaceView frames and alternating input did
+not prove player displacement. The captured app state was already defeated at
+`HP 0/100`; movement correctly stopped, but the still-active-looking D-pad made
+that state look like failed touch input.
+
+The corrective pass now:
+
+- makes a short physical arrow tap produce one visible movement pulse while a
+  hold remains continuous and supports independent multi-touch directions;
+- labels the pad `TAP OR HOLD TO MOVE`, visibly disables it while loading or
+  defeated, and replaces the ambiguous restart-only state with an explicit
+  defeat prompt explaining that restart unlocks movement;
+- places the authored guardian at `[4.5, 0.45, 7.5]`, just outside its 3.5-unit
+  perception radius from the `[4, 0.4, 4]` entry point, so a new player can
+  learn movement before intentionally entering aggro; and
+- adds regressions for tap, hold, cancellation, multi-touch, disabled input,
+  safe initial guardian aggro, and continued guardian reachability after the
+  player approaches.
+
+The updated x64 profile APK was installed on the Pixel Android emulator. Save
+coordinates proved a short tap moved the player from `(2.821, 2.821)` to
+`(2.674, 2.674)`, and a subsequent 650 ms hold moved it to `(1.496, 1.496)`.
+The same capture showed `HP 100/100`, an idle `60/60` guardian, and the new
+control instruction. Fifteen focused control/world/Game tests passed, Game
+analysis was clean, and the Android profile APK rebuilt successfully. The full
+200-test repository gate was intentionally not repeated for this narrow pass;
+the prior consolidated result remains the broader baseline.
+
 The final consolidated gate passed 200 tests: 160 pure-Dart/server and 40
 Flutter/renderer/application tests. Repository analysis was clean, the server
 compiled, Game built for Android and Windows debug, Forge built for Windows
@@ -4571,14 +4615,14 @@ Physical Android profiling remains a separate release gate.
 - Relay Zero still uses sparse cube-based proof art, not production level art.
 - Debug-mode timing remains materially worse than profile/release timing and is
   not a performance acceptance signal.
-- The world is only three chunks and one combat encounter; Stage 11.3 must add
-  the stabilizer objective sequence before this is a meaningful game session.
+- The world remains only three chunks and one combat encounter. Stage 11.3 now
+  adds the stabilizer sequence and gate; item/core/final completion remain.
 - Host-authoritative combat/guardian AI remains deferred to the co-op slice.
 
 ## Next
 
-After this pass holds its device gate, resume Stage 11.3: three persistent
-stabilizers and an authored objective gate.
+Stage 11.3 subsequently adds three persistent stabilizers and an authored
+objective gate. Continue with the relay-core item and minimal inventory.
 
 <!-- END AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md -->
 
@@ -4588,7 +4632,7 @@ stabilizers and an authored objective gate.
 
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Stage 11 in progress; combat and guardian slices implemented
+**Status:** Solo and session-authoritative co-op implemented; device and durable-save acceptance remain
 
 **Date:** 2026-08-12
 
@@ -4664,8 +4708,30 @@ perception, pursuit, attack scheduling, leash, return, and defeat while reusing
 the existing movement and combat authorities. Offline Game runs the behavior;
 connected clients continue to wait for the later host-authoritative slice.
 
-This is not yet the complete adventure. It intentionally reuses the current
-cube assets while the gameplay contract is made reliable.
+Stage 11.3 replaces the one-console objective summary with content schema v7's
+authored objective groups and derived gates. Relay Zero now has three
+persistent stabilizers across streamed chunks. Completing all three removes a
+solid core-chamber gate from both collision and presentation; the guardian is
+streamed from the chamber beyond it. World-wide progress includes inactive
+saved chunks and contains no Game-side entity-ID rules.
+
+Stage 11.4 completes the solo objective loop with content schema v8 and save
+format v2. A guardian-gated Relay Core enters player-owned, single-quantity
+inventory; pickup removes its presentation and collision; an authored return
+console consumes it and persists the mission-complete state. Existing v1 saves
+migrate with empty inventory while retaining their world overlays.
+
+Stage 11.5 adds protocol-v3 gameplay commands and moves combat, guardian AI,
+objectives, pickup, per-player inventory, turn-in, death, and restart under the
+listen/headless host. Connected Game now renders and reports revisioned host
+health, persistent flags, and its own inventory. Co-op state is deliberately
+session-scoped until Stage 12 integrates durable host saves and disconnect
+policy.
+
+The complete solo loop and first authoritative connected loop now exist. Final
+physical-Android input/performance/lifecycle acceptance and durable co-op
+save/resume are still open. The adventure intentionally reuses the current cube
+assets while the gameplay contract is made reliable.
 
 ## Delivery sequence
 
@@ -4673,10 +4739,11 @@ cube assets while the gameplay contract is made reliable.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
-4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
-   slices. Health/basic attack/death/restart and guardian AI are complete; next
-   is three persistent stabilizers and their objective gate, then item/core →
-   co-op authority → full save/resume.
+4. **Complete through Stage 11.5:** implement the Stage 11 gameplay loop in
+   thin vertical slices. Health/basic attack/death/restart, guardian AI, three persistent
+   stabilizers, their objective gate, guarded Relay Core, minimal inventory,
+   return-console completion, solo restore, and session-authoritative co-op are
+   complete; next is cross-platform durable save/resume acceptance.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.
@@ -5459,11 +5526,12 @@ Server validates.
 
 Stage 8 movement messages contain only normalized direction and a monotonic
 input sequence. The host retains the newest pending sequence, advances its
-canonical transform, and returns the processed sequence in a snapshot. Network
-interaction/ability/inventory commands remain unimplemented rather than falling
-back to client authority.
+canonical transform, and returns the processed sequence in a snapshot. Protocol
+v3 adds monotonic typed attack, interaction, and restart commands. The host
+resolves their outcome; clients never declare damage, inventory grants, or
+objective completion.
 
-Protocol v2 returns the stable controlled entity during join. The host consumes
+Protocol v3 retains the stable controlled entity returned by v2. The host consumes
 movement per connection and never routes two players to the same authored
 avatar.
 
@@ -5503,6 +5571,11 @@ transforms each tick. Delta compression, quantization, interpolation,
 generic prediction/rollback, and bandwidth budgets remain future work. The
 Stage 9 Game proof now predicts only its controlled movement and replays
 unacknowledged inputs over authoritative snapshots.
+
+Stage 11.5 adds revisioned gameplay snapshots containing authoritative combat
+health, world persistent flags, and the receiving player's inventory. Clients
+ignore stale revisions. These are still full JSON state messages, not the final
+bandwidth representation.
 
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape
@@ -5599,8 +5672,10 @@ autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
 save policy arrive with the networking stages. See ADR-020.
 
 Stage 9 flushes the host player's existing local save path before ending an
-Android backgrounded session. Canonical multi-player host saves and remote
-player persistence on disconnect are still not integrated.
+Android backgrounded session. Canonical multiplayer host saves and remote-player
+persistence on disconnect are still not integrated. Stage 11.5 keeps
+authoritative adventure state for the lifetime of the host session; durable
+host save/resume is a Stage 12 gate.
 
 ---
 
@@ -8597,11 +8672,11 @@ Build in thin vertical slices:
 player/enemy health and damage                    COMPLETE (Stage 11.1)
 one basic attack and death/restart                COMPLETE (Stage 11.1)
 one pursuing/attacking guardian                   COMPLETE (Stage 11.2)
-three persistent relay stabilizer objectives
-one relay-core item and minimal inventory
-objective gate and completion state
-authoritative co-op combat/objective commands
-save/resume across the full adventure
+three persistent relay stabilizer objectives         COMPLETE (Stage 11.3)
+one relay-core item and minimal inventory             COMPLETE (Stage 11.4)
+objective gate and completion state                  COMPLETE (Stages 11.3–11.4)
+authoritative co-op combat/objective commands       COMPLETE (Stage 11.5)
+save/resume across the full adventure                PARTIAL (solo state complete)
 ```
 
 Stage 11.1 status (implemented 2026-08-13):
@@ -8639,9 +8714,41 @@ Stage 11.2 playability follow-up (implemented 2026-08-13):
 - authored chunk bounds stop movement into empty space while legacy invalid
   saves recover to the authored spawn.
 
-Next: Stage 11.3 three persistent stabilizers and an authored objective gate.
-See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
-`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`, and ADR-028.
+Stage 11.3 status (implemented 2026-08-13):
+
+- content schema v7 groups persistent interactions as authored objectives and
+  defines count-based solid gates without product entity-ID rules;
+- objective progress evaluates active and inactive chunks from authored
+  defaults plus save overlays;
+- three Relay Zero stabilizers open the physical core-chamber gate in any
+  order; and
+- the guardian now streams from the chamber beyond that gate.
+
+Stage 11.4 status (implemented 2026-08-13):
+
+- content schema v8 authors guarded single-quantity collectibles and item
+  turn-in completion without Game-side stable-ID rules;
+- save format v2 adds sorted player inventory with automatic v1 migration;
+- the Relay Core can be recovered only after its authored guardian is defeated
+  and disappears from presentation/collision after pickup;
+- the authored entry console consumes the core, persists signal transmission,
+  and exposes a clear mission-complete state; and
+- pickup, inventory, turn-in, completion, and restored progress use the same
+  serialized save queue as existing world/player state.
+
+Stage 11.5 status (implemented 2026-08-13):
+
+- protocol v3 carries typed attack, interaction, and restart intent plus
+  command results and revisioned gameplay state;
+- the listen/headless host owns combat, guardian AI, objectives, gate state,
+  pickup, per-player inventory, turn-in, death, and restart;
+- connected Game derives health, flags, inventory, collision exclusions, and
+  mission UI from the authoritative mirror; and
+- loopback coverage completes Relay Zero through the real replication path.
+
+Next: Stage 12 physical-Android passes, durable host save/resume, disconnect
+policy, and complete solo/co-op product acceptance. See
+`AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md` and ADR-031.
 
 Gate:
 
@@ -8671,6 +8778,17 @@ complete undo. Live LLM calls remain outside required CI.
 ---
 
 # Stage 12 — Creator Loop
+
+First close the consolidated Android/gameplay acceptance pass:
+
+```text
+physical-device solo play
+Android host → Windows client
+Windows host → Android client
+touch input and lifecycle/end behavior
+sustained frame/tick/memory/network/thermal measurements
+host-owned durable co-op save/resume and disconnect policy
+```
 
 Polish:
 

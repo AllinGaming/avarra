@@ -1,6 +1,6 @@
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Solo adventure loop implemented; co-op authority remains
+**Status:** Solo and session-authoritative co-op implemented; device and durable-save acceptance remain
 
 **Date:** 2026-08-12
 
@@ -89,10 +89,17 @@ inventory; pickup removes its presentation and collision; an authored return
 console consumes it and persists the mission-complete state. Existing v1 saves
 migrate with empty inventory while retaining their world overlays.
 
-The complete solo loop now exists, but co-op combat/objective/item authority
-and final physical-Android acceptance are still open. The adventure
-intentionally reuses the current cube assets while the gameplay contract is
-made reliable.
+Stage 11.5 adds protocol-v3 gameplay commands and moves combat, guardian AI,
+objectives, pickup, per-player inventory, turn-in, death, and restart under the
+listen/headless host. Connected Game now renders and reports revisioned host
+health, persistent flags, and its own inventory. Co-op state is deliberately
+session-scoped until Stage 12 integrates durable host saves and disconnect
+policy.
+
+The complete solo loop and first authoritative connected loop now exist. Final
+physical-Android input/performance/lifecycle acceptance and durable co-op
+save/resume are still open. The adventure intentionally reuses the current cube
+assets while the gameplay contract is made reliable.
 
 ## Delivery sequence
 
@@ -100,11 +107,11 @@ made reliable.
 2. **Complete:** Stage 10.1B safe Forge source save and unchanged-Game import.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
-4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
-   slices. Health/basic attack/death/restart, guardian AI, three persistent
+4. **Complete through Stage 11.5:** implement the Stage 11 gameplay loop in
+   thin vertical slices. Health/basic attack/death/restart, guardian AI, three persistent
    stabilizers, their objective gate, guarded Relay Core, minimal inventory,
-   return-console completion, and restore are complete; next is co-op authority
-   → complete cross-platform save/resume acceptance.
+   return-console completion, solo restore, and session-authoritative co-op are
+   complete; next is cross-platform durable save/resume acceptance.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.

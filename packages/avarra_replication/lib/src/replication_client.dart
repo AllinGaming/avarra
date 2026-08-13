@@ -62,8 +62,27 @@ final class ReplicationSnapshotApplied extends ReplicationClientEvent {
   final int? acknowledgedInputSequence;
 }
 
+final class ReplicationGameplayCommandResult extends ReplicationClientEvent {
+  const ReplicationGameplayCommandResult(this.result);
+
+  final GameplayCommandResultMessage result;
+}
+
+final class ReplicationGameplayStateApplied extends ReplicationClientEvent {
+  const ReplicationGameplayStateApplied(this.revision);
+
+  final int revision;
+}
+
 final class MovementIntentSubmission {
   const MovementIntentSubmission({required this.sequence, required this.sent});
+
+  final int sequence;
+  final Future<void> sent;
+}
+
+final class GameplayCommandSubmission {
+  const GameplayCommandSubmission({required this.sequence, required this.sent});
 
   final int sequence;
   final Future<void> sent;
@@ -117,6 +136,9 @@ final class ReplicationClient {
   final StreamController<ReplicationClientEvent> _events =
       StreamController.broadcast();
   final Map<NetworkEntityId, ReplicatedEntityState> _entities = {};
+  final Map<EntityId, NetworkHealthState> _healthStates = {};
+  final Map<EntityId, NetworkPersistentFlagState> _persistentFlagStates = {};
+  Set<String> _inventoryItemIds = const {};
   late final StreamSubscription<NetworkMessage> _subscription;
   NetworkConnectionId? _connectionId;
   EntityId? _controlledEntityId;
@@ -124,6 +146,8 @@ final class ReplicationClient {
   TickId? _latestTickId;
   int? _acknowledgedInputSequence;
   int _nextInputSequence = 0;
+  int _nextGameplayCommandSequence = 0;
+  int? _latestGameplayStateRevision;
   bool _closed = false;
 
   NetworkConnectionId? get connectionId => _connectionId;
@@ -132,9 +156,15 @@ final class ReplicationClient {
   bool get isJoined => _connectionId != null;
   TickId? get latestTickId => _latestTickId;
   int? get acknowledgedInputSequence => _acknowledgedInputSequence;
+  int? get latestGameplayStateRevision => _latestGameplayStateRevision;
   Stream<ReplicationClientEvent> get events => _events.stream;
   Map<NetworkEntityId, ReplicatedEntityState> get entities =>
       Map.unmodifiable(_entities);
+  Map<EntityId, NetworkHealthState> get healthStates =>
+      Map.unmodifiable(_healthStates);
+  Map<EntityId, NetworkPersistentFlagState> get persistentFlagStates =>
+      Map.unmodifiable(_persistentFlagStates);
+  Set<String> get inventoryItemIds => _inventoryItemIds;
   NetworkTransportStatistics get transportStatistics => _channel.statistics;
 
   Future<ReplicatedEntityState> waitForControlledEntity({
@@ -195,6 +225,44 @@ final class ReplicationClient {
       ),
     );
   }
+
+  Future<int> sendGameplayCommand({
+    required GameplayCommandKind kind,
+    EntityId? targetEntityId,
+  }) async {
+    final submission = submitGameplayCommand(
+      kind: kind,
+      targetEntityId: targetEntityId,
+    );
+    await submission.sent;
+    return submission.sequence;
+  }
+
+  GameplayCommandSubmission submitGameplayCommand({
+    required GameplayCommandKind kind,
+    EntityId? targetEntityId,
+  }) {
+    if (!isJoined) {
+      throw AvarraException(
+        code: ReplicationErrorCodes.protocolViolation,
+        message: 'Gameplay commands cannot be sent before joining.',
+      );
+    }
+    final sequence = _nextGameplayCommandSequence++;
+    return GameplayCommandSubmission(
+      sequence: sequence,
+      sent: _channel.send(
+        GameplayCommandMessage(
+          sequence: sequence,
+          kind: kind,
+          targetEntityId: targetEntityId,
+        ),
+      ),
+    );
+  }
+
+  bool? authoritativeFlagValue(EntityId entityId, String key) =>
+      _persistentFlagStates[entityId]?.flags[key];
 
   Future<void> close() async {
     if (_closed) {
@@ -276,6 +344,30 @@ final class ReplicationClient {
             acknowledgedInputSequence: message.acknowledgedInputSequence,
           ),
         );
+      case GameplayCommandResultMessage():
+        _events.add(ReplicationGameplayCommandResult(message));
+      case GameplayStateSnapshotMessage():
+        final previous = _latestGameplayStateRevision;
+        if (previous != null && message.revision <= previous) {
+          return;
+        }
+        _healthStates
+          ..clear()
+          ..addEntries(
+            message.healthStates.map(
+              (state) => MapEntry(state.entityId, state),
+            ),
+          );
+        _persistentFlagStates
+          ..clear()
+          ..addEntries(
+            message.persistentFlagStates.map(
+              (state) => MapEntry(state.entityId, state),
+            ),
+          );
+        _inventoryItemIds = message.inventoryItemIds;
+        _latestGameplayStateRevision = message.revision;
+        _events.add(ReplicationGameplayStateApplied(message.revision));
       default:
         _protocolViolation('Client received a client-only message after join.');
     }
@@ -314,6 +406,10 @@ final class ReplicationClient {
         (left, right) => left.networkEntityId.compareTo(right.networkEntityId),
       );
     _entities.clear();
+    _healthStates.clear();
+    _persistentFlagStates.clear();
+    _inventoryItemIds = const {};
+    _latestGameplayStateRevision = null;
     if (!_events.isClosed) {
       for (final entity in entities) {
         _events.add(ReplicationEntityDespawned(entity));

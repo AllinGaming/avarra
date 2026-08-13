@@ -45,36 +45,37 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 20. `docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`
 21. `docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`
 22. `docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`
-23. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-24. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-25. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-26. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-27. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-28. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-29. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-30. `docs/AVARRA_OPEN_DECISIONS.md`
-31. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-32. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-33. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-34. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-35. ADRs under `docs/adr/`
+23. `docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`
+24. `docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`
+25. `docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`
+26. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+27. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+28. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+29. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+30. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+31. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+32. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+33. `docs/AVARRA_OPEN_DECISIONS.md`
+34. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+35. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+36. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+37. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+38. ADRs under `docs/adr/`
 
 ## Implementation status
 
 Stages 0 through 9 and the initial Stage 10 Forge vertical slice have
 implemented prototype slices. Stage 10.1A's playable contract, Stage 10.1B's
 recoverable project/runtime-import gate, and Stage 10.2's editor completion
-gate pass. Stage 11.1 supplies authored deterministic combat, death/restart,
-and the first playable Relay Zero guardian encounter. Stage 11.2 adds authored,
-deterministic perception, pursuit, attack, leash, return, and defeat. Three
-persistent stabilizers and their objective gate are next. A Stage 11.2
+gate pass. Stages 11.1–11.5 supply authored combat, guardian behavior, three
+persistent stabilizers, a derived gate, player inventory, Relay Core turn-in,
+and host-authoritative connected gameplay. A Stage 11.2
 playability follow-up gates simulation on renderer readiness, reduces the
 mobile update load, fixes camera-relative controls and authored-world bounds,
 replaces the diagnostic wall with a compact gameplay HUD, pools repeated glTF
 assets, and drives presentation from a bounded vsync-aligned 60 Hz fixed step.
-Physical Android runtime/performance validation remains open for the
-presentation, character, streaming, persistence, and direct-LAN multiplayer
-gates.
+Physical Android runtime/performance and durable co-op save/resume validation
+are consolidated into the Stage 12 device passes.
 
 ```text
 apps/
@@ -193,8 +194,11 @@ pursuit, attack, leash, return, and defeat to the bundled `Relay Zero
 Prototype`. Three world-wide persistent stabilizers now open an authored solid
 gate to the streamed guardian chamber. A guarded Relay Core now enters a
 player-owned persisted inventory and completes the solo mission when returned
-to the authored control console. Host-authoritative combat/objective/item
-commands are next; the playable RPG slice still comes before AI/MCP expansion.
+to the authored control console. Protocol v3 and Stage 11.5 now route combat,
+guardian AI, objectives, pickup, per-player inventory, turn-in, and restart
+through the authoritative host. Durable co-op saves and complete physical
+Android acceptance are next; the playable RPG slice still comes before AI/MCP
+expansion.
 See
 `docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
@@ -204,6 +208,7 @@ See
 `docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
+`docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

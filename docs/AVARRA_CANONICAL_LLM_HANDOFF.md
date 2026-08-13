@@ -510,8 +510,11 @@ solid gate without product entity-ID rules, and the guardian now streams from
 the chamber beyond it. Content schema v8, save format v2, and Stage 11.4 add a
 guardian-gated Relay Core, player-owned single-quantity inventory, an authored
 return-console turn-in, derived mission feedback, and restored completion.
-Next is host-authoritative combat/objective/item commands before AI/MCP
-expansion. See
+Protocol v3 and Stage 11.5 add bounded attack/interaction/restart commands,
+host-owned guardian/combat/adventure simulation, revisioned health/flag/player
+inventory mirrors, and a connected end-to-end Relay Zero completion proof.
+Durable host saves and physical Android acceptance remain Stage 12 gates before
+AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
@@ -520,7 +523,8 @@ expansion. See
 `AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
 `AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
 `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-030.
+`AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-031.
 
 ---
 

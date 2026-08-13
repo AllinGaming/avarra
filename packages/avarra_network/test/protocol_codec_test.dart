@@ -24,6 +24,11 @@ void main() {
         detail: 'Package mismatch.',
       ),
       MovementIntentMessage(sequence: 4, directionX: 0.6, directionZ: -0.8),
+      GameplayCommandMessage(
+        sequence: 5,
+        kind: GameplayCommandKind.attack,
+        targetEntityId: _entityId,
+      ),
       SpawnEntityMessage(
         networkEntityId: NetworkEntityId(9),
         entityId: _entityId,
@@ -40,6 +45,25 @@ void main() {
             transform: _transform,
           ),
         ],
+      ),
+      GameplayCommandResultMessage(
+        sequence: 5,
+        kind: GameplayCommandKind.attack,
+        accepted: true,
+        detail: 'Attack accepted.',
+      ),
+      GameplayStateSnapshotMessage(
+        revision: 7,
+        healthStates: [
+          NetworkHealthState(entityId: _entityId, current: 70, maximum: 100),
+        ],
+        persistentFlagStates: [
+          NetworkPersistentFlagState(
+            entityId: _entityId,
+            flags: const {'activated': true},
+          ),
+        ],
+        inventoryItemIds: const {'relay.core'},
       ),
     ];
 

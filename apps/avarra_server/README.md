@@ -16,6 +16,12 @@ snapshots. Protocol v2 assigns each connection an independent controlled
 avatar; the initial host limit is four clients. The proof mode is not a
 production discovery/authentication/service daemon.
 
+Stage 11.5 upgrades the session to protocol v3. The host now consumes bounded
+attack, interaction, and restart commands; runs guardian/combat/adventure
+authority; and publishes revisioned health, persistent-flag, and per-player
+inventory state. Adventure state is session-scoped until Stage 12 integrates
+durable multiplayer persistence.
+
 Listen-host player movement uses the shared deterministic kinematic
 box-sweep/wall-slide system. Dynamic proof avatars copy the authored character
 controller and collider rather than bypassing authoritative collision.

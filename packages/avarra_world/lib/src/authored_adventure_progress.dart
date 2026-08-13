@@ -68,7 +68,7 @@ final class AuthoredAdventureProgress {
 /// Derives the current adventure state without Game-side stable-ID rules.
 AuthoredAdventureProgress authoredAdventureProgress(
   WorldDefinition definition,
-  WorldSaveSession persistence,
+  AdventureStateView persistence,
   PlayerId playerId,
 ) {
   final entities = definition.allEntities.toList()

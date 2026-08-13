@@ -86,11 +86,12 @@ Server validates.
 
 Stage 8 movement messages contain only normalized direction and a monotonic
 input sequence. The host retains the newest pending sequence, advances its
-canonical transform, and returns the processed sequence in a snapshot. Network
-interaction/ability/inventory commands remain unimplemented rather than falling
-back to client authority.
+canonical transform, and returns the processed sequence in a snapshot. Protocol
+v3 adds monotonic typed attack, interaction, and restart commands. The host
+resolves their outcome; clients never declare damage, inventory grants, or
+objective completion.
 
-Protocol v2 returns the stable controlled entity during join. The host consumes
+Protocol v3 retains the stable controlled entity returned by v2. The host consumes
 movement per connection and never routes two players to the same authored
 avatar.
 
@@ -130,6 +131,11 @@ transforms each tick. Delta compression, quantization, interpolation,
 generic prediction/rollback, and bandwidth budgets remain future work. The
 Stage 9 Game proof now predicts only its controlled movement and replays
 unacknowledged inputs over authoritative snapshots.
+
+Stage 11.5 adds revisioned gameplay snapshots containing authoritative combat
+health, world persistent flags, and the receiving player's inventory. Clients
+ignore stale revisions. These are still full JSON state messages, not the final
+bandwidth representation.
 
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape
@@ -226,8 +232,10 @@ autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
 save policy arrive with the networking stages. See ADR-020.
 
 Stage 9 flushes the host player's existing local save path before ending an
-Android backgrounded session. Canonical multi-player host saves and remote
-player persistence on disconnect are still not integrated.
+Android backgrounded session. Canonical multiplayer host saves and remote-player
+persistence on disconnect are still not integrated. Stage 11.5 keeps
+authoritative adventure state for the lifetime of the host session; durable
+host save/resume is a Stage 12 gate.
 
 ---
 

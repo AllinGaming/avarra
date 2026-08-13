@@ -1,3 +1,4 @@
+export 'src/adventure_state_store.dart';
 export 'src/dirty_state_tracker.dart';
 export 'src/persistence_error_codes.dart';
 export 'src/save_migrations.dart';

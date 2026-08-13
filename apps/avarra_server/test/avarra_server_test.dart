@@ -4,12 +4,15 @@ import 'dart:isolate';
 
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_core/testing.dart';
+import 'package:avarra_ecs/avarra_ecs.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:test/test.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 void main() {
   test('runs a finite deterministic headless simulation', () {
@@ -214,6 +217,120 @@ void main() {
     await hostEvents.cancel();
     await host.close();
   });
+
+  test('host authoritatively completes the Relay Zero mission', () async {
+    final host = await MultiplayerProofHost.start(
+      worldPackageSource: _findProofWorld().readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+    );
+    final hostEvents = host.events.listen((_) {});
+    final client = await _connect(host, _primaryPlayerId);
+    await client.waitForControlledEntity();
+    await _waitUntil(() => client.latestGameplayStateRevision != null);
+
+    for (final objective in [
+      (_relayAlphaId, Vector3(1, 0.4, 5.5)),
+      (_relayBetaId, Vector3(5.2, 0.4, 1.5)),
+      (_relayGammaId, Vector3(2, 0.5, -5.5)),
+    ]) {
+      _moveHostEntity(host, _playerEntityId, objective.$2);
+      final result = await _sendCommand(
+        client,
+        GameplayCommandKind.interact,
+        targetEntityId: objective.$1,
+      );
+      expect(result.accepted, isTrue, reason: result.detail);
+      await _waitUntil(
+        () => client.authoritativeFlagValue(objective.$1, 'activated') == true,
+      );
+    }
+
+    _moveHostEntity(host, _playerEntityId, Vector3(11, 0.4, 5.2));
+    await _waitUntil(
+      () => (client.healthStates[_playerEntityId]?.current ?? 100) < 100,
+    );
+    final restart = await _sendCommand(client, GameplayCommandKind.restart);
+    expect(restart.accepted, isTrue, reason: restart.detail);
+    await _waitUntil(
+      () => client.healthStates[_playerEntityId]?.current == 100,
+    );
+
+    final guardianHandle = host.runtimeWorld.ecs.handleFor(_guardianId)!;
+    host.runtimeWorld.ecs.replaceComponent(
+      guardianHandle,
+      HealthComponent(maximumHealth: 60, currentHealth: 20),
+    );
+    _moveHostEntity(host, _playerEntityId, Vector3(11, 0.4, 4.5));
+    final attack = await _sendCommand(
+      client,
+      GameplayCommandKind.attack,
+      targetEntityId: _guardianId,
+    );
+    expect(attack.accepted, isTrue, reason: attack.detail);
+    await _waitUntil(() => client.healthStates[_guardianId]?.current == 0);
+
+    _moveHostEntity(host, _playerEntityId, Vector3(12, 0.4, 4));
+    final collect = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _relayCoreId,
+    );
+    expect(collect.accepted, isTrue, reason: collect.detail);
+    await _waitUntil(() => client.inventoryItemIds.contains('relay.core'));
+
+    _moveHostEntity(host, _playerEntityId, Vector3(3, 0.4, 6.8));
+    final transmit = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _controlConsoleId,
+    );
+    expect(transmit.accepted, isTrue, reason: transmit.detail);
+    await _waitUntil(
+      () =>
+          client.authoritativeFlagValue(
+            _controlConsoleId,
+            'signal.transmitted',
+          ) ==
+          true,
+    );
+    expect(client.inventoryItemIds, isEmpty);
+
+    await client.close();
+    await hostEvents.cancel();
+    await host.close();
+  });
+}
+
+Future<GameplayCommandResultMessage> _sendCommand(
+  ReplicationClient client,
+  GameplayCommandKind kind, {
+  EntityId? targetEntityId,
+}) async {
+  final submission = client.submitGameplayCommand(
+    kind: kind,
+    targetEntityId: targetEntityId,
+  );
+  final result = client.events
+      .where((event) => event is ReplicationGameplayCommandResult)
+      .cast<ReplicationGameplayCommandResult>()
+      .map((event) => event.result)
+      .firstWhere((event) => event.sequence == submission.sequence);
+  await submission.sent;
+  return result.timeout(const Duration(seconds: 2));
+}
+
+void _moveHostEntity(
+  MultiplayerProofHost host,
+  EntityId entityId,
+  Vector3 position,
+) {
+  final handle = host.runtimeWorld.ecs.handleFor(entityId)!;
+  final current = host.runtimeWorld.ecs.component<TransformComponent>(handle);
+  host.runtimeWorld.ecs.replaceComponent(
+    handle,
+    current.copyWith(position: position),
+  );
 }
 
 Future<ReplicationClient> _connect(
@@ -263,3 +380,11 @@ Future<void> _waitUntil(bool Function() condition) async {
 final _primaryPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
 final _secondPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000403');
 final _playerEntityId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
+final _relayAlphaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000004');
+final _relayBetaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000010');
+final _relayGammaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000005');
+final _guardianId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000009');
+final _relayCoreId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000015');
+final _controlConsoleId = EntityId.parse(
+  '01890f47-e8b8-7a68-8000-000000000014',
+);

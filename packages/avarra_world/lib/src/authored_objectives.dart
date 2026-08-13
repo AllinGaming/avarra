@@ -75,7 +75,7 @@ final class AuthoredObjectiveProgress {
 /// Evaluates objectives across active and inactive chunks without ID rules.
 AuthoredObjectiveProgress authoredObjectiveProgress(
   WorldDefinition definition,
-  WorldSaveSession persistence,
+  AdventureStateView persistence,
 ) {
   final objectives =
       definition.allEntities

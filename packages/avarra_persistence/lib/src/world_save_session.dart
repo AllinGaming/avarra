@@ -4,6 +4,7 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import 'adventure_state_store.dart';
 import 'dirty_state_tracker.dart';
 import 'persistence_error_codes.dart';
 import 'save_models.dart';
@@ -46,7 +47,7 @@ final class WorldSaveRestoreResult {
 }
 
 /// One authoritative save slot bound to one loaded world instance.
-final class WorldSaveSession {
+final class WorldSaveSession implements AdventureStateStore {
   WorldSaveSession({
     required this.ecs,
     required this.repository,
@@ -135,6 +136,7 @@ final class WorldSaveSession {
     return true;
   }
 
+  @override
   bool? flagValue(EntityId entityId, String key) {
     final handle = ecs.handleFor(entityId);
     if (handle != null && ecs.hasComponent<PersistentFlagsComponent>(handle)) {
@@ -143,6 +145,7 @@ final class WorldSaveSession {
     return _savedEntities[entityId]?.flags[key];
   }
 
+  @override
   bool setFlag(EntityId entityId, String key, bool value) {
     final handle = ecs.handleFor(entityId);
     if (handle == null || !ecs.hasComponent<PersistentFlagsComponent>(handle)) {
@@ -161,17 +164,20 @@ final class WorldSaveSession {
     return true;
   }
 
+  @override
   Set<String> inventoryFor(PlayerId playerId) {
     _requirePlayer(playerId);
     return Set.unmodifiable(_playerInventories[playerId]!);
   }
 
+  @override
   bool hasItem(PlayerId playerId, String itemId) {
     _validateItemId(itemId);
     return inventoryFor(playerId).contains(itemId);
   }
 
   /// Grants one single-quantity authored item to a registered player.
+  @override
   bool addItem(PlayerId playerId, String itemId) {
     _validateItemId(itemId);
     _requirePlayer(playerId);
@@ -183,6 +189,7 @@ final class WorldSaveSession {
   }
 
   /// Removes an authored item during an accepted turn-in.
+  @override
   bool removeItem(PlayerId playerId, String itemId) {
     _validateItemId(itemId);
     _requirePlayer(playerId);
