@@ -27,6 +27,13 @@ and simultaneous directions. Multiplayer movement is host-rate paced, locally
 predicted, and reconciled against authoritative acknowledgments. Backgrounding
 ends a hosted session safely.
 
+Stage 12.1 gives host mode the same canonical save-v2 session used by solo
+play. Authoritative progression and player records autosave, flush before host
+end/disconnect, and restore across host restart. Remote avatars leave ECS on
+disconnect while their stable position and inventory remain available for
+reconnect. A late replication event can no longer outlive a replaced world
+presentation boundary. Encounter health/AI phase still reset intentionally.
+
 The robustness follow-up bounds prediction to 60 pending inputs with a
 two-second acknowledgment-stall pause, replays prediction through the same
 collision system used by authority, and interpolates remote player avatars
@@ -54,6 +61,9 @@ acknowledgment and clean disconnect.
 The Stage 9 reverse direction also passed functionally: an Android emulator
 listen host accepted the Windows Game client, displayed two independent
 players, acknowledged local host input, and closed the session on background.
+The Stage 12.1 API 37 emulator repeat passed durable Windows-host → Android-Game
+disconnect and Android-listen-host → Windows headless movement acknowledgment;
+the full native-shell product repeat remains part of the physical/manual gate.
 The follow-up release reduced captured single-client emulator frame time from
 roughly 100 ms to 9–11 ms average by coalescing renderer work and skipping
 unchanged native updates; a 1.2-second held direction produced 36 authoritative

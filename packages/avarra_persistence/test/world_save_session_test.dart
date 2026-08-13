@@ -45,6 +45,50 @@ void main() {
   });
 
   test(
+    'retains a disconnected player until its stable entity reconnects',
+    () async {
+      final store = MemorySaveStore();
+      final firstRuntime = _runtime();
+      final remoteHandle = firstRuntime.ecs.createEntity(
+        entityId: _remoteEntity,
+      );
+      firstRuntime.ecs.addComponent(
+        remoteHandle,
+        TransformComponent(position: Vector3(3.25, 0.45, -1.5)),
+      );
+      final first = _session(firstRuntime, store);
+      expect(first.registerPlayer(_remotePlayer, _remoteEntity), isTrue);
+      expect(first.addItem(_remotePlayer, 'loot.ash_sigil'), isTrue);
+      await first.saveIfDirty();
+      firstRuntime.ecs.destroyEntity(remoteHandle);
+
+      final secondRuntime = _runtime();
+      final second = _session(secondRuntime, store);
+      await second.restore();
+      second.setFlag(_persistentEntity, 'activated', true);
+      await second.saveIfDirty();
+
+      final reconnectedHandle = secondRuntime.ecs.createEntity(
+        entityId: _remoteEntity,
+      );
+      secondRuntime.ecs.addComponent(
+        reconnectedHandle,
+        TransformComponent(position: Vector3.zero()),
+      );
+      expect(second.registerPlayer(_remotePlayer, _remoteEntity), isTrue);
+      expect(second.inventoryFor(_remotePlayer), {'loot.ash_sigil'});
+      final restoredPosition = secondRuntime.ecs
+          .component<TransformComponent>(reconnectedHandle)
+          .position;
+      expect(restoredPosition.x, 3.25);
+      expect(restoredPosition.z, -1.5);
+      expect(second.persistentFlagSnapshots()[_persistentEntity], {
+        'activated': true,
+      });
+    },
+  );
+
+  test(
     'retains saved overlays while their streamed entity is unloaded',
     () async {
       final store = MemorySaveStore();
@@ -224,7 +268,9 @@ final class _ControlledStore implements SaveStore {
 final _save = SaveId.parse('01890f47-e8b8-7a68-8000-000000000401');
 final _world = WorldId.parse('01890f47-e8b8-7a68-8000-000000000010');
 final _player = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
+final _remotePlayer = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000403');
 final _playerEntity = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
+final _remoteEntity = EntityId.parse('01890f47-e8b8-7a68-8000-000000000403');
 final _persistentEntity = EntityId.parse(
   '01890f47-e8b8-7a68-8000-000000000004',
 );

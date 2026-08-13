@@ -67,15 +67,17 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 Stages 0 through 9 and the initial Stage 10 Forge vertical slice have
 implemented prototype slices. Stage 10.1A's playable contract, Stage 10.1B's
 recoverable project/runtime-import gate, and Stage 10.2's editor completion
-gate pass. Stages 11.1–11.5 supply authored combat, guardian behavior, three
+gate pass. Stages 11.1–11.6 supply authored combat, guardian behavior, three
 persistent stabilizers, a derived gate, player inventory, Relay Core turn-in,
 and host-authoritative connected gameplay. A Stage 11.2
 playability follow-up gates simulation on renderer readiness, reduces the
 mobile update load, fixes camera-relative controls and authored-world bounds,
 replaces the diagnostic wall with a compact gameplay HUD, pools repeated glTF
 assets, and drives presentation from a bounded vsync-aligned 60 Hz fixed step.
-Physical Android runtime/performance and durable co-op save/resume validation
-are consolidated into the Stage 12 device passes.
+Stage 12.1 adds canonical durable host saves plus stable disconnect/reconnect
+retention. Its 223-test and API 37 Android-emulator gate passes in both network
+directions; physical Android runtime/performance validation remains
+consolidated into the Stage 12 device passes.
 
 ```text
 apps/
@@ -199,9 +201,11 @@ guardian AI, objectives, pickup, per-player inventory, turn-in, and restart
 through the authoritative host. Stage 11.6 turns the prototype into `Relay
 Zero: Ashfall` with click/tap pursuit and repeated attacks, automatic approach
 for interactions, three Hollow Wardens with authored drops, basalt floors, and
-an original six-model/three-material dark-gothic asset kit. Durable co-op saves and complete physical
-Android acceptance are next; the playable RPG slice still comes before AI/MCP
-expansion.
+an original six-model/three-material dark-gothic asset kit. Stage 12.1 now
+autosaves host-owned progression and restores player position/inventory across
+disconnect or host restart; its automated and emulator acceptance gates pass.
+Complete physical Android acceptance is next; the
+playable RPG slice still comes before AI/MCP expansion.
 See
 `docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
@@ -213,6 +217,7 @@ See
 `docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

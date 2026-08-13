@@ -65,6 +65,8 @@ typedef MultiplayerHostStarter =
     Future<MultiplayerProofHost?> Function(
       String worldPackageSource,
       PlayerId primaryPlayerId,
+      SaveStore saveStore,
+      SaveId saveId,
     );
 
 void main() {
@@ -222,6 +224,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           );
         }
         return _PresentationBoundaryScreen(
+          key: ObjectKey(loadedWorld.runtimeWorld),
           enableRenderer: widget.enableRenderer,
           runtimeWorld: loadedWorld.runtimeWorld,
           streaming: loadedWorld.streaming,
@@ -247,16 +250,18 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
     const PlayableWorldValidator().validate(definition).throwIfInvalid();
     final runtimeWorld = const RuntimeWorldLoader().load(definition);
     final player = runtimeWorld.ecs.query<PlayerControlledComponent>().single;
+    final saveStore = await widget.saveStoreLoader();
+    final saveId = saveIdForWorldPackageSource(
+      configuredFilePath: _configuredWorldPath,
+      worldId: definition.id,
+      bundledSaveId: _proofSaveId,
+      isRuntimeImport: selection.isImported,
+    );
     final persistence = WorldSaveSession(
       ecs: runtimeWorld.ecs,
-      repository: SaveRepository(store: await widget.saveStoreLoader()),
+      repository: SaveRepository(store: saveStore),
       dirtyState: DirtyStateTracker(),
-      saveId: saveIdForWorldPackageSource(
-        configuredFilePath: _configuredWorldPath,
-        worldId: definition.id,
-        bundledSaveId: _proofSaveId,
-        isRuntimeImport: selection.isImported,
-      ),
+      saveId: saveId,
       worldId: definition.id,
       sourceWorldFormatVersion: definition.worldFormatVersion,
       chunkSize: definition.chunkSize!,
@@ -312,6 +317,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
     final multiplayerHost = await widget.multiplayerHostStarter(
       source,
       configuredPlayerId,
+      saveStore,
+      saveId,
     );
     ReplicationClient? multiplayerClient;
     var multiplayerStatus = multiplayerHost == null
@@ -375,6 +382,7 @@ final class _LoadedWorld {
 
 class _PresentationBoundaryScreen extends StatefulWidget {
   const _PresentationBoundaryScreen({
+    super.key,
     required this.enableRenderer,
     required this.runtimeWorld,
     required this.streaming,
@@ -443,6 +451,7 @@ class _PresentationBoundaryScreenState
   Timer? _saveTimer;
   Timer? _hostMetricsTimer;
   StreamSubscription<ReplicationClientEvent>? _replicationSubscription;
+  bool _acceptReplicationEvents = true;
   final Set<EntityId> _networkAvatarEntityIds = {};
   bool _streamingInFlight = false;
   bool _streamingDirty = false;
@@ -560,6 +569,7 @@ class _PresentationBoundaryScreenState
 
   @override
   void dispose() {
+    _acceptReplicationEvents = false;
     _gameLoopTicker.dispose();
     _saveTimer?.cancel();
     _hostMetricsTimer?.cancel();
@@ -612,7 +622,7 @@ class _PresentationBoundaryScreenState
             children: [
               Text(avarraProductName, style: textTheme.headlineMedium),
               const SizedBox(height: 4),
-              const Text('Stage 11.6 · Ashfall Action-RPG Slice'),
+              const Text('Stage 12.1 · Durable Ashfall Hosting'),
               Text(widget.runtimeWorld.definition.name),
               Text(
                 'World source: ${widget.sourceLabel}',
@@ -1171,7 +1181,8 @@ class _PresentationBoundaryScreenState
         : 'Listening ${host.joinEndpoints.join(', ')}';
     return 'Host: $state · ${metrics.activeClients}/'
         '${host.replication.maximumClients} clients · '
-        '${metrics.entityCount} authoritative entities';
+        '${metrics.entityCount} authoritative entities · '
+        'save r${host.saveRevision}${host.restoredSave ? ' restored' : ''}';
   }
 
   String get _performanceStatus {
@@ -2126,10 +2137,10 @@ class _PresentationBoundaryScreenState
   }
 
   void _handleReplicationEvent(ReplicationClientEvent event) {
-    if (!mounted) {
+    final client = widget.multiplayerClient;
+    if (!mounted || !_acceptReplicationEvents || client == null) {
       return;
     }
-    final client = widget.multiplayerClient!;
     final chunkBefore = _currentChunkCoordinate;
     if (event case ReplicationSnapshotApplied(
       :final acknowledgedInputSequence,
@@ -2756,6 +2767,8 @@ Future<ReplicationClient?> _connectConfiguredMultiplayer(
 Future<MultiplayerProofHost?> _startConfiguredMultiplayerHost(
   String worldPackageSource,
   PlayerId primaryPlayerId,
+  SaveStore saveStore,
+  SaveId saveId,
 ) {
   if (_configuredMultiplayerRole != 'host') {
     return Future.value();
@@ -2765,6 +2778,8 @@ Future<MultiplayerProofHost?> _startConfiguredMultiplayerHost(
     primaryPlayerId: primaryPlayerId,
     bindAddress: InternetAddress.anyIPv4,
     port: _configuredMultiplayerPort,
+    saveStore: saveStore,
+    saveId: saveId,
   );
 }
 

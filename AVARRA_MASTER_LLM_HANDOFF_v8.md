@@ -531,8 +531,16 @@ original dark-gothic six-model/three-material kit replaces cube presentation.
 The action-target rule is renderer-neutral and operates in offline and
 host-authoritative connected play; locked drops are excluded from presentation
 and collision on both Game and host until their authored guardian dies.
-Durable host saves and physical Android acceptance remain Stage 12 gates before
-AI/MCP expansion. See
+Stage 12.1 replaces transient host adventure state with the canonical
+`WorldSaveSession`. Two-second autosave plus disconnect/shutdown flush preserve
+authored progression, player position, and inventory; remote avatars despawn
+while stable player records remain for reconnect and complete host restart.
+The 223-test matrix, server AOT compile, Windows/Android profile builds, API 37
+emulator lifecycle, Windows-host → Android-Game join/durable disconnect, and
+Android-listen-host → Windows headless movement/acknowledgment probe pass. The
+cross-role run also closed a late replication-event race when a loaded world is
+replaced. Physical Android and the complete native-shell product playtest remain
+open before AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
@@ -543,7 +551,8 @@ AI/MCP expansion. See
 `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
 `AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-031.
+`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
 
 ---
 
@@ -5071,6 +5080,117 @@ acceptance claim.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md -->
+
+# AVARRA Stage 12.1 — Durable Host and Emulator Acceptance
+
+**Status:** Automated and Android-emulator gate complete; physical gate open
+
+**Date:** 2026-08-14
+
+## Scope
+
+Stage 12.1 closes the durable authority gap before the creator-loop work:
+
+```text
+authoritative mutation or movement
+  → generation-aware dirty state
+  → two-second host autosave / disconnect / shutdown flush
+  → canonical save-v2 atomic store
+  → host restart or stable-player reconnect
+  → position, flags, and inventory restored
+```
+
+## Implemented contract
+
+- `MultiplayerProofHost` owns a `WorldSaveSession`, not a transient inventory.
+- Game supplies its application-owned `SaveStore` and exact world-derived
+  `SaveId` when starting a listen host.
+- The standalone server stores saves in `--save-directory`, defaulting to
+  `.avarra_saves` beside its world file.
+- Host events report `saved:<reason>:<revision>` for autosave, disconnect, and
+  shutdown writes; Game host diagnostics expose current/restored revision.
+- Player movement, restart, authored flags, and inventory participate in the
+  same dirty-generation and serialized atomic-write rules.
+- Disconnect flushes a remote player before destroying its runtime avatar.
+  Registration and cached save data remain, so stable reconnect restores the
+  avatar's position and inventory.
+- Concurrent connections cannot claim the same `PlayerId`.
+- Input processing, gameplay snapshot lookup/write, and a normal socket close
+  can race within one host tick. Expected `clientNotFound`/socket retirement is
+  ignored while every other authority error still surfaces.
+
+## Automated evidence
+
+- `WorldSaveSession` tests register a dynamic remote player, save it, destroy
+  its ECS entity, perform another world save while it is absent, and restore
+  its position/inventory when the stable entity reconnects.
+- Real loopback TCP tests restore an accepted objective and primary-player
+  position after a complete host restart.
+- A second loopback test disconnects and reconnects a remote player in one host
+  session and verifies stable entity identity, position, and inventory.
+- Existing Relay Zero mission, two-client avatar, wall-collision, content
+  mismatch, and clean disconnect coverage remains in the final matrix.
+- Replacing a loaded connected world now keys a fresh presentation boundary
+  and retires late replication events. This regression was found by the
+  emulator cross-role pass and is covered by a Game widget test.
+
+Final automated result on 2026-08-14:
+
+```text
+dart analyze .                         clean
+pure Dart and server tests             173 passed
+Thermion bridge Flutter tests            6 passed
+Game Flutter tests                      35 passed
+Forge Flutter tests                      9 passed
+total                                  223 passed
+server AOT compile                     passed
+disconnect/reconnect focused stress    10/10 passed
+```
+
+## Platform acceptance boundary
+
+The consolidated pass produced:
+
+- Windows profile package plus a 12-second process-stability smoke;
+- Android x64 profile package on `emulator-5554`, an API 37 x64 Pixel 10 Pro
+  AVD (`sdk_gphone16k_x86_64`);
+- Android cold start and hot resume with the same process ID (`9754`) and no
+  relevant Flutter, fatal, renderer, socket, or missing-asset errors;
+- a rendered Relay Zero frame containing the player, dungeon geometry, HUD,
+  attack/use actions, and touch/camera controls;
+- Windows headless authority → Android Game client: one established socket,
+  stable player `…403` joined, a prior disk save restored at revision 2,
+  disconnect flushed revision 3, and the host emitted clean leave/stop events;
+- Android Game listen host → Windows headless client probe through `adb
+  forward`: connection 2 controlled stable player `…403`, 7 relevant entities,
+  authoritative tick 76, movement acknowledgment 0, 438 bytes sent, and 5319
+  bytes received; and
+- Android host observation of 146435 KiB total PSS (about 143 MiB), 254212 KiB
+  total RSS (about 248 MiB), 25.0 °C emulated temperature, 100% emulated
+  battery, and zero relevant Android errors during the probe.
+
+The new `bin/multiplayer_client_probe.dart` deliberately validates the same
+content handshake, controlled-entity assignment, snapshot path, movement
+intent, authoritative acknowledgment, and disconnect used by Game without a
+renderer. The Windows Flutter profile packaged successfully, but a
+tool-launched reverse client process did not reach observable window/network
+bootstrap in this non-interactive runner; that attempt is not counted as
+reverse-direction evidence. Stage 9 already records a native Windows Game
+client acceptance. Repeat the native shell as part of the manual product
+playtest rather than treating process existence as proof.
+
+The connected target was an emulator, not a physical Pixel. Physical-device
+touch quality, sustained thermal/battery behavior, direct LAN routing, native
+Windows Game reverse-client confirmation, and the final 10–15 minute solo/co-op
+product playtest remain open.
+
+See ADR-032.
+
+<!-- END AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
 
 # AVARRA — First Playable: Relay Zero
@@ -5168,8 +5288,7 @@ Stage 11.5 adds protocol-v3 gameplay commands and moves combat, guardian AI,
 objectives, pickup, per-player inventory, turn-in, death, and restart under the
 listen/headless host. Connected Game now renders and reports revisioned host
 health, persistent flags, and its own inventory. Co-op state is deliberately
-session-scoped until Stage 12 integrates durable host saves and disconnect
-policy.
+session-scoped through Stage 11.5.
 
 Stage 11.6 adds the first action-RPG presentation and targeting pass. Relay
 Zero: Ashfall now has click/tap pursuit and repeated attacks, click-to-use
@@ -5178,9 +5297,15 @@ floors, and an original dark-gothic glTF/material kit. It deliberately evokes
 the readability and cadence of classic isometric action RPGs without using
 third-party franchise art, names, characters, or symbols.
 
-The complete solo loop and first authoritative connected loop now exist. Final
-physical-Android input/performance/lifecycle acceptance and durable co-op
-save/resume are still open. The CC0 cube remains only as a renderer fixture and
+Stage 12.1 makes host adventure progression durable. The listen/headless host
+uses canonical save-v2, autosaves authoritative mutations, flushes player state
+before disconnect/shutdown, and restores stable position/inventory records on
+reconnect or host restart. Unfinished encounter health and AI phase still
+reset, matching the intentional solo save boundary.
+
+The complete solo loop, authoritative connected loop, and durable co-op
+adventure save now exist. Final physical-Android input/performance/lifecycle
+acceptance is still open. The CC0 cube remains only as a renderer fixture and
 geometry source for the original assembled prototype models.
 
 ## Delivery sequence
@@ -6123,11 +6248,15 @@ migrations, and recoverable file replacement. Game currently exercises local
 autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
 save policy arrive with the networking stages. See ADR-020.
 
-Stage 9 flushes the host player's existing local save path before ending an
-Android backgrounded session. Canonical multiplayer host saves and remote-player
-persistence on disconnect are still not integrated. Stage 11.5 keeps
-authoritative adventure state for the lifetime of the host session; durable
-host save/resume is a Stage 12 gate.
+Stage 12.1 integrates canonical multiplayer saves. Listen/headless authority
+uses `WorldSaveSession`, autosaves dirty state every two simulation seconds,
+and flushes before disconnect or shutdown. The Game passes the listen host its
+application-owned store and exact world-derived `SaveId`; the standalone server
+uses an explicit/default save directory. Remote runtime avatars are removed on
+disconnect, while stable position and inventory records remain cached and
+serialized for reconnect or complete host restart. One `PlayerId` cannot own
+two live connections. Combat health/cooldowns/AI phase remain encounter-scoped.
+See ADR-032.
 
 ---
 
@@ -9214,8 +9343,9 @@ Stage 11.6 status (implemented 2026-08-14):
   materials replace cube presentation while retaining the CC0 cube mesh only
   as their small geometry source and renderer fixture.
 
-Next: Stage 12 physical-Android passes, durable host save/resume, disconnect
-policy, and complete solo/co-op product acceptance. See
+Stage 12.1 durable host save/resume, stable-player retention, and the grouped
+Android-emulator gate are complete. Next is physical-Android and complete
+solo/co-op product acceptance. See
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`. The Stage 11.6 pass adds no
 new architecture ADR; it composes the accepted input, gameplay, content,
 renderer, and authority boundaries from ADR-010, ADR-027 through ADR-031.
@@ -9259,6 +9389,29 @@ touch input and lifecycle/end behavior
 sustained frame/tick/memory/network/thermal measurements
 host-owned durable co-op save/resume and disconnect policy
 ```
+
+Stage 12.1 status (implemented and emulator-validated 2026-08-14):
+
+- listen/headless hosts now reuse canonical save-v2 through
+  `WorldSaveSession`, with the Game supplying its application store and exact
+  world-derived save identity;
+- authoritative movement, flags, and inventory autosave every two simulation
+  seconds and flush before disconnect or shutdown;
+- remote ECS avatars despawn while stable player position/inventory records are
+  retained and reapplied on reconnect or complete host restart; and
+- duplicate live ownership of one `PlayerId` is rejected, while expected
+  socket-close/input/snapshot races retire without becoming host failures (the
+  focused disconnect/reconnect case passes 10 consecutive stress runs); and
+- the 223-test matrix, server AOT compile, Windows/Android profile packages,
+  Android lifecycle, both emulator bridge directions, durable disconnect
+  flush, and Windows headless movement probe pass. A cross-role run also found
+  and closed a late replication-event/world-replacement race in Game.
+
+Automated persistence/loopback and grouped Android-emulator acceptance are
+complete. Physical Android sustained-play, touch, thermal/battery, direct-LAN,
+native Windows Game reverse-client confirmation, and the complete 10–15 minute
+product playtest remain open. See
+`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md` and ADR-032.
 
 Polish:
 
@@ -11744,5 +11897,76 @@ mutate canonical health, flags, or inventory.
   performance acceptance is intentionally consolidated into Stage 12.
 
 <!-- END adr/ADR-031-host-authoritative-adventure-commands.md -->
+
+---
+
+<!-- BEGIN adr/ADR-032-durable-host-saves-and-player-retention.md -->
+
+# ADR-032 — Durable Host Saves and Player Retention
+
+**Status:** Accepted for Stage 12.1
+
+**Date:** 2026-08-14
+
+## Context
+
+Stage 11.5 made combat and adventure progression host-authoritative, but the
+host stored flags and inventories only in memory. Disconnecting a remote player
+deleted its inventory, and ending the host discarded all session progression.
+Stage 12 requires durable host-owned save/resume and an explicit disconnect
+ownership policy on Windows and Android.
+
+AVARRA already has one canonical, server-safe `WorldSaveSession` with stable-ID
+entity overlays, player positions/inventory, revisioned atomic writes, and
+format migration. Adding a second multiplayer save model would create divergent
+restore rules and migration work.
+
+## Decision
+
+1. Listen and headless hosts use `WorldSaveSession` as their
+   `AdventureStateStore`. `MemorySaveStore` remains the default for isolated
+   tests; product hosts provide `FileSaveStore` and an explicit `SaveId`.
+2. Game passes the same world-derived save identity and application-owned store
+   to its listen host. The connected presentation session does not own
+   authoritative mutations.
+3. The host autosaves dirty authoritative state every two simulation seconds
+   and flushes before player retirement and host shutdown.
+4. Movement and restart mark the controlling player dirty. Authored flag and
+   inventory mutations already mark themselves dirty through the shared save
+   session.
+5. A disconnected dynamic avatar is removed from ECS and replication, but its
+   stable `PlayerId`/`EntityId`, last position, and inventory record remain in
+   the save session. Reconnecting the same player reconstructs the avatar and
+   reapplies that record.
+6. One `PlayerId` may have only one active connection to a host. Host migration
+   remains deferred.
+7. Encounter health, cooldowns, and active guardian AI phases remain
+   encounter-scoped. Durable state covers authored progression, collected
+   items, per-player inventory, and player position, matching solo save v2.
+8. A client-close/snapshot-write race is treated as normal disconnect cleanup,
+   not a host error; the connection is retired on the following authority tick.
+
+## Consequences
+
+- Solo, listen-host, and headless authority reuse one save schema, repository,
+  recovery algorithm, and migration path.
+- Remote players can leave and rejoin without losing position or inventory,
+  including after a complete host restart.
+- Host background/end waits for the queued authority tick and an atomic save
+  before closing transport resources.
+- Saves retain records for previously joined players. Account eviction and
+  world-owner administration are future product policy, not implicit
+  disconnect behavior.
+- A host restart resets unfinished combat encounters; persisting arbitrary live
+  combat graphs is intentionally outside save-format v2.
+
+## Validation boundary
+
+Pure-Dart tests cover dynamic player registration, retained records, save
+round-trip, real TCP disconnect/reconnect, and complete host restart. Stage 12.1
+also performs grouped Windows/Android-emulator packaging and lifecycle checks.
+Physical Android sustained-play and thermal acceptance remain open.
+
+<!-- END adr/ADR-032-durable-host-saves-and-player-retention.md -->
 
 ---

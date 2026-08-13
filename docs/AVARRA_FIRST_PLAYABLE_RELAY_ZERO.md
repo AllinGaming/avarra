@@ -93,8 +93,7 @@ Stage 11.5 adds protocol-v3 gameplay commands and moves combat, guardian AI,
 objectives, pickup, per-player inventory, turn-in, death, and restart under the
 listen/headless host. Connected Game now renders and reports revisioned host
 health, persistent flags, and its own inventory. Co-op state is deliberately
-session-scoped until Stage 12 integrates durable host saves and disconnect
-policy.
+session-scoped through Stage 11.5.
 
 Stage 11.6 adds the first action-RPG presentation and targeting pass. Relay
 Zero: Ashfall now has click/tap pursuit and repeated attacks, click-to-use
@@ -103,9 +102,15 @@ floors, and an original dark-gothic glTF/material kit. It deliberately evokes
 the readability and cadence of classic isometric action RPGs without using
 third-party franchise art, names, characters, or symbols.
 
-The complete solo loop and first authoritative connected loop now exist. Final
-physical-Android input/performance/lifecycle acceptance and durable co-op
-save/resume are still open. The CC0 cube remains only as a renderer fixture and
+Stage 12.1 makes host adventure progression durable. The listen/headless host
+uses canonical save-v2, autosaves authoritative mutations, flushes player state
+before disconnect/shutdown, and restores stable position/inventory records on
+reconnect or host restart. Unfinished encounter health and AI phase still
+reset, matching the intentional solo save boundary.
+
+The complete solo loop, authoritative connected loop, and durable co-op
+adventure save now exist. Final physical-Android input/performance/lifecycle
+acceptance is still open. The CC0 cube remains only as a renderer fixture and
 geometry source for the original assembled prototype models.
 
 ## Delivery sequence

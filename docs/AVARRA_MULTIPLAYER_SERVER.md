@@ -231,11 +231,15 @@ migrations, and recoverable file replacement. Game currently exercises local
 autosave/lifecycle triggers; host-owned disconnect and authoritative multiplayer
 save policy arrive with the networking stages. See ADR-020.
 
-Stage 9 flushes the host player's existing local save path before ending an
-Android backgrounded session. Canonical multiplayer host saves and remote-player
-persistence on disconnect are still not integrated. Stage 11.5 keeps
-authoritative adventure state for the lifetime of the host session; durable
-host save/resume is a Stage 12 gate.
+Stage 12.1 integrates canonical multiplayer saves. Listen/headless authority
+uses `WorldSaveSession`, autosaves dirty state every two simulation seconds,
+and flushes before disconnect or shutdown. The Game passes the listen host its
+application-owned store and exact world-derived `SaveId`; the standalone server
+uses an explicit/default save directory. Remote runtime avatars are removed on
+disconnect, while stable position and inventory records remain cached and
+serialized for reconnect or complete host restart. One `PlayerId` cannot own
+two live connections. Combat health/cooldowns/AI phase remain encounter-scoped.
+See ADR-032.
 
 ---
 

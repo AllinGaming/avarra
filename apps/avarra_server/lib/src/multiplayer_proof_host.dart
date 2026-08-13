@@ -6,6 +6,7 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_world/avarra_world.dart';
@@ -44,6 +45,8 @@ final class MultiplayerProofHost {
     required this.primaryPlayerId,
     required this.listenAddresses,
     required this.adventureState,
+    required this.autosaveInterval,
+    required this.restoredSave,
     required TransformComponent primaryPlayerSpawn,
   }) : _collisionWorld = collisionWorld,
        _movementSystem = CharacterMovementSystem(
@@ -63,6 +66,7 @@ final class MultiplayerProofHost {
          collisionWorld: collisionWorld,
        ) {
     _playerSpawns[playerEntityId] = primaryPlayerSpawn;
+    _nextAutosaveAt = autosaveInterval;
   }
 
   static Future<MultiplayerProofHost> start({
@@ -72,7 +76,17 @@ final class MultiplayerProofHost {
     int port = 45454,
     int tickRateHz = 30,
     int maximumClients = 4,
+    SaveStore? saveStore,
+    SaveId? saveId,
+    Duration autosaveInterval = const Duration(seconds: 2),
   }) async {
+    if (autosaveInterval <= Duration.zero) {
+      throw ArgumentError.value(
+        autosaveInterval,
+        'autosaveInterval',
+        'Must be positive.',
+      );
+    }
     final definition = WorldPackageCodec().decode(worldPackageSource);
     const PlayableWorldValidator().validate(definition).throwIfInvalid();
     final runtimeWorld = const RuntimeWorldLoader().load(definition);
@@ -88,6 +102,23 @@ final class MultiplayerProofHost {
       }
     }
     final player = runtimeWorld.ecs.query<PlayerControlledComponent>().single;
+    final primaryPlayerSpawn = runtimeWorld.ecs
+        .component<TransformComponent>(player.handle)
+        .copyWith();
+    final adventureState = WorldSaveSession(
+      ecs: runtimeWorld.ecs,
+      repository: SaveRepository(store: saveStore ?? MemorySaveStore()),
+      dirtyState: DirtyStateTracker(),
+      saveId: saveId ?? SaveId.parse(definition.id.value),
+      worldId: definition.id,
+      sourceWorldFormatVersion: definition.worldFormatVersion,
+      chunkSize: definition.chunkSize!,
+      players: {primaryPlayerId: player.entityId},
+      knownPersistentEntityIds: definition.allEntities.map(
+        (entity) => entity.id,
+      ),
+    );
+    final restoreResult = await adventureState.restore();
     final content = ContentHandshake(
       worldId: definition.id,
       worldFormatVersion: definition.worldFormatVersion,
@@ -147,11 +178,6 @@ final class MultiplayerProofHost {
     final collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       runtimeWorld.ecs,
     );
-    final adventureState = TransientAdventureStateStore(runtimeWorld.ecs)
-      ..registerPlayer(primaryPlayerId);
-    final primaryPlayerSpawn = runtimeWorld.ecs
-        .component<TransformComponent>(player.handle)
-        .copyWith();
     host = MultiplayerProofHost._(
       runtimeWorld: runtimeWorld,
       content: content,
@@ -163,6 +189,8 @@ final class MultiplayerProofHost {
       primaryPlayerId: primaryPlayerId,
       listenAddresses: List.unmodifiable(listenAddresses.toList()..sort()),
       adventureState: adventureState,
+      autosaveInterval: autosaveInterval,
+      restoredSave: restoreResult.found,
       primaryPlayerSpawn: primaryPlayerSpawn,
     );
     host._rebuildCollisionAuthority();
@@ -182,8 +210,10 @@ final class MultiplayerProofHost {
   final ContentHandshake content;
   final TcpNetworkTransportServer transport;
   final AuthoritativeReplicationServer replication;
-  final TransientAdventureStateStore adventureState;
+  final WorldSaveSession adventureState;
   final int tickRateHz;
+  final Duration autosaveInterval;
+  final bool restoredSave;
   final EntityId playerEntityId;
   final PlayerId primaryPlayerId;
   final List<String> listenAddresses;
@@ -205,6 +235,7 @@ final class MultiplayerProofHost {
   int _nextTick = 0;
   int _gameplayStateRevision = 0;
   Duration _simulationTime = Duration.zero;
+  late Duration _nextAutosaveAt;
   int _completedTicks = 0;
   int _totalTickMicroseconds = 0;
   int _maximumTickMicroseconds = 0;
@@ -216,6 +247,7 @@ final class MultiplayerProofHost {
   DeterministicPhysicsCollisionWorld get collisionWorld => _collisionWorld;
   Stream<String> get events => _events.stream;
   bool get isClosed => _closed;
+  int get saveRevision => adventureState.revision;
   List<String> get joinEndpoints =>
       List.unmodifiable(listenAddresses.map((address) => '$address:$port'));
 
@@ -247,14 +279,19 @@ final class MultiplayerProofHost {
     _timer?.cancel();
     await _tickQueue;
     await _connectionSubscription.cancel();
+    await _retireDisconnectedConnections(const {});
+    await _flushAdventureState('shutdown');
     await replication.close();
-    _retireDisconnectedConnections(const {});
     await transport.close();
     await _events.close();
     _collisionWorld.dispose();
   }
 
   Future<void> _accept(NetworkTransportConnection connection) async {
+    if (_closed) {
+      await connection.close();
+      return;
+    }
     try {
       final result = await replication.accept(connection);
       if (result case ServerJoinResult(connectionId: final id?)) {
@@ -273,8 +310,11 @@ final class MultiplayerProofHost {
     PlayerId playerId,
     NetworkConnectionId connectionId,
   ) {
+    if (_connectedPlayers.values.contains(playerId)) {
+      throw StateError('Player is already connected to this host.');
+    }
     if (playerId == primaryPlayerId) {
-      adventureState.registerPlayer(playerId);
+      adventureState.registerPlayer(playerId, playerEntityId);
       _controlledEntities[connectionId] = playerEntityId;
       _connectedPlayers[connectionId] = playerId;
       return playerEntityId;
@@ -353,6 +393,10 @@ final class MultiplayerProofHost {
         )
         ..addComponent(handle, const BasicAttackStateComponent());
     }
+    final reconnectSpawn = runtimeWorld.ecs
+        .component<TransformComponent>(handle)
+        .copyWith();
+    adventureState.registerPlayer(playerId, entityId);
     replication.registerEntity(
       entityId,
       alwaysRelevant: true,
@@ -361,20 +405,7 @@ final class MultiplayerProofHost {
     _dynamicPlayerEntities.add(entityId);
     _controlledEntities[connectionId] = entityId;
     _connectedPlayers[connectionId] = playerId;
-    adventureState.registerPlayer(playerId);
-    _playerSpawns[entityId] = TransformComponent(
-      position: Vector3.copy(
-        runtimeWorld.ecs.component<TransformComponent>(handle).position,
-      ),
-      rotation: runtimeWorld.ecs
-          .component<TransformComponent>(handle)
-          .rotation
-          .clone(),
-      scale: runtimeWorld.ecs
-          .component<TransformComponent>(handle)
-          .scale
-          .clone(),
-    );
+    _playerSpawns[entityId] = reconnectSpawn;
     _gameplayStateRevision += 1;
     return entityId;
   }
@@ -384,34 +415,61 @@ final class MultiplayerProofHost {
       return;
     }
     final activeConnections = replication.activeConnectionIds.toSet();
-    _retireDisconnectedConnections(activeConnections);
+    await _retireDisconnectedConnections(activeConnections);
     _simulationTime += Duration(microseconds: 1000000 ~/ tickRateHz);
     for (final connectionId in activeConnections.toList()..sort()) {
-      final entityId = _controlledEntities[connectionId];
-      if (entityId == null) {
-        continue;
+      try {
+        if (!replication.activeConnectionIds.contains(connectionId)) {
+          continue;
+        }
+        final entityId = _controlledEntities[connectionId];
+        final playerId = _connectedPlayers[connectionId];
+        if (entityId == null || playerId == null) {
+          continue;
+        }
+        final intent = replication.takeLatestMovementIntent(connectionId);
+        if (intent != null) {
+          final position = _applyMovement(entityId, intent);
+          adventureState.markPlayerDirty(playerId);
+          _events.add(
+            'input:${connectionId.value}:${intent.sequence}:'
+            '${position.x.toStringAsFixed(3)},${position.z.toStringAsFixed(3)}',
+          );
+        }
+        for (final command in replication.takeGameplayCommands(connectionId)) {
+          await _applyGameplayCommand(connectionId, entityId, command);
+        }
+        _updateInterest(connectionId);
+      } on AvarraException catch (error) {
+        if (error.code != ReplicationErrorCodes.clientNotFound) {
+          rethrow;
+        }
       }
-      final intent = replication.takeLatestMovementIntent(connectionId);
-      if (intent != null) {
-        final position = _applyMovement(entityId, intent);
-        _events.add(
-          'input:${connectionId.value}:${intent.sequence}:'
-          '${position.x.toStringAsFixed(3)},${position.z.toStringAsFixed(3)}',
-        );
-      }
-      for (final command in replication.takeGameplayCommands(connectionId)) {
-        await _applyGameplayCommand(connectionId, entityId, command);
-      }
-      _updateInterest(connectionId);
     }
     _tickGuardianAuthority();
     await replication.replicate(TickId(_nextTick++));
-    for (final connectionId in activeConnections.toList()..sort()) {
-      await replication.sendGameplayState(
-        connectionId,
-        _gameplaySnapshotFor(connectionId),
-      );
+    final snapshotConnections = replication.activeConnectionIds.toList()
+      ..sort();
+    for (final connectionId in snapshotConnections) {
+      final playerId = _connectedPlayers[connectionId];
+      if (playerId == null) {
+        continue;
+      }
+      try {
+        await replication.sendGameplayState(
+          connectionId,
+          _gameplaySnapshotFor(playerId),
+        );
+      } on SocketException {
+        // A graceful client close can race the snapshot captured at tick start.
+        // Replication retires it on the next tick; this is not a host failure.
+      } on AvarraException catch (error) {
+        if (error.code != ReplicationErrorCodes.clientNotFound) {
+          rethrow;
+        }
+      }
     }
+    await _autosaveIfDue();
   }
 
   Future<void> _guardedTick() async {
@@ -463,12 +521,21 @@ final class MultiplayerProofHost {
     });
   }
 
-  void _retireDisconnectedConnections(
+  Future<void> _retireDisconnectedConnections(
     Set<NetworkConnectionId> activeConnections,
-  ) {
+  ) async {
     final retired = _controlledEntities.keys
         .where((connectionId) => !activeConnections.contains(connectionId))
         .toList();
+    for (final connectionId in retired) {
+      final playerId = _connectedPlayers[connectionId];
+      if (playerId != null) {
+        adventureState.markPlayerDirty(playerId);
+      }
+    }
+    if (retired.isNotEmpty) {
+      await _flushAdventureState('disconnect');
+    }
     for (final connectionId in retired) {
       final connection = _connections.remove(connectionId);
       if (connection != null) {
@@ -476,20 +543,37 @@ final class MultiplayerProofHost {
         _retiredBytesReceived += connection.statistics.bytesReceived;
       }
       final entityId = _controlledEntities.remove(connectionId)!;
-      final playerId = _connectedPlayers.remove(connectionId)!;
+      _connectedPlayers.remove(connectionId);
       if (_dynamicPlayerEntities.remove(entityId)) {
         replication.unregisterEntity(entityId);
         final handle = runtimeWorld.ecs.handleFor(entityId);
         if (handle != null) {
           runtimeWorld.ecs.destroyEntity(handle);
         }
-        adventureState.unregisterPlayer(playerId);
         _playerSpawns.remove(entityId);
         _gameplayStateRevision += 1;
       }
       if (!_events.isClosed) {
         _events.add('left:${connectionId.value}:${entityId.value}');
       }
+    }
+  }
+
+  Future<void> _autosaveIfDue() async {
+    if (_simulationTime < _nextAutosaveAt) {
+      return;
+    }
+    _nextAutosaveAt = _simulationTime + autosaveInterval;
+    await _flushAdventureState('autosave');
+  }
+
+  Future<void> _flushAdventureState(String reason) async {
+    if (!adventureState.dirtyState.hasDirtyState) {
+      return;
+    }
+    final save = await adventureState.saveIfDirty();
+    if (save != null && !_events.isClosed) {
+      _events.add('saved:$reason:${save.revision}');
     }
   }
 
@@ -553,6 +637,7 @@ final class MultiplayerProofHost {
         if (accepted) {
           _gameplayStateRevision += 1;
           _guardianSystem.resetActiveGuardians();
+          adventureState.markPlayerDirty(replication.playerIdFor(connectionId));
         }
     }
     await replication.sendGameplayCommandResult(
@@ -612,9 +697,7 @@ final class MultiplayerProofHost {
     return nearest;
   }
 
-  GameplayStateSnapshotMessage _gameplaySnapshotFor(
-    NetworkConnectionId connectionId,
-  ) {
+  GameplayStateSnapshotMessage _gameplaySnapshotFor(PlayerId playerId) {
     final health = runtimeWorld.ecs.query<HealthComponent>().toList();
     final flags = adventureState.persistentFlagSnapshots();
     return GameplayStateSnapshotMessage(
@@ -631,9 +714,7 @@ final class MultiplayerProofHost {
         for (final entry in flags.entries)
           NetworkPersistentFlagState(entityId: entry.key, flags: entry.value),
       ],
-      inventoryItemIds: adventureState.inventoryFor(
-        replication.playerIdFor(connectionId),
-      ),
+      inventoryItemIds: adventureState.inventoryFor(playerId),
     );
   }
 

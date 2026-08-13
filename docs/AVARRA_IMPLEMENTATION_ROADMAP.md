@@ -663,8 +663,9 @@ Stage 11.6 status (implemented 2026-08-14):
   materials replace cube presentation while retaining the CC0 cube mesh only
   as their small geometry source and renderer fixture.
 
-Next: Stage 12 physical-Android passes, durable host save/resume, disconnect
-policy, and complete solo/co-op product acceptance. See
+Stage 12.1 durable host save/resume, stable-player retention, and the grouped
+Android-emulator gate are complete. Next is physical-Android and complete
+solo/co-op product acceptance. See
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`. The Stage 11.6 pass adds no
 new architecture ADR; it composes the accepted input, gameplay, content,
 renderer, and authority boundaries from ADR-010, ADR-027 through ADR-031.
@@ -708,6 +709,29 @@ touch input and lifecycle/end behavior
 sustained frame/tick/memory/network/thermal measurements
 host-owned durable co-op save/resume and disconnect policy
 ```
+
+Stage 12.1 status (implemented and emulator-validated 2026-08-14):
+
+- listen/headless hosts now reuse canonical save-v2 through
+  `WorldSaveSession`, with the Game supplying its application store and exact
+  world-derived save identity;
+- authoritative movement, flags, and inventory autosave every two simulation
+  seconds and flush before disconnect or shutdown;
+- remote ECS avatars despawn while stable player position/inventory records are
+  retained and reapplied on reconnect or complete host restart; and
+- duplicate live ownership of one `PlayerId` is rejected, while expected
+  socket-close/input/snapshot races retire without becoming host failures (the
+  focused disconnect/reconnect case passes 10 consecutive stress runs); and
+- the 223-test matrix, server AOT compile, Windows/Android profile packages,
+  Android lifecycle, both emulator bridge directions, durable disconnect
+  flush, and Windows headless movement probe pass. A cross-role run also found
+  and closed a late replication-event/world-replacement race in Game.
+
+Automated persistence/loopback and grouped Android-emulator acceptance are
+complete. Physical Android sustained-play, touch, thermal/battery, direct-LAN,
+native Windows Game reverse-client confirmation, and the complete 10–15 minute
+product playtest remain open. See
+`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md` and ADR-032.
 
 Polish:
 

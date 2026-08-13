@@ -59,7 +59,7 @@ final class WorldSaveSession implements AdventureStateStore {
     required Map<PlayerId, EntityId> players,
     required Iterable<EntityId> knownPersistentEntityIds,
     DateTime Function()? clock,
-  }) : players = Map.unmodifiable(players),
+  }) : _players = {...players},
        knownPersistentEntityIds = Set.unmodifiable(knownPersistentEntityIds),
        _playerInventories = {
          for (final playerId in players.keys) playerId: <String>{},
@@ -80,7 +80,7 @@ final class WorldSaveSession implements AdventureStateStore {
   final WorldId worldId;
   final int sourceWorldFormatVersion;
   final double chunkSize;
-  final Map<PlayerId, EntityId> players;
+  final Map<PlayerId, EntityId> _players;
   final Set<EntityId> knownPersistentEntityIds;
   final Map<PlayerId, Set<String>> _playerInventories;
   final DateTime Function() _clock;
@@ -91,6 +91,38 @@ final class WorldSaveSession implements AdventureStateStore {
 
   WorldSave? get loadedSave => _loadedSave;
   int get revision => _loadedSave?.revision ?? 0;
+  Map<PlayerId, EntityId> get players => Map.unmodifiable(_players);
+
+  /// Registers a stable player/entity pair and reapplies any cached save.
+  ///
+  /// Hosts retain registrations after disconnect so a later reconnect can
+  /// recover the same inventory and position without keeping a live ECS entity.
+  bool registerPlayer(PlayerId playerId, EntityId entityId) {
+    final existing = _players[playerId];
+    if (existing != null && existing != entityId) {
+      throw AvarraException(
+        code: PersistenceErrorCodes.invalidSaveData,
+        message: 'Player is already registered to another entity.',
+        context: {
+          'playerId': playerId.value,
+          'entityId': entityId.value,
+          'registeredEntityId': existing.value,
+        },
+      );
+    }
+    final added = existing == null;
+    if (added) {
+      _players[playerId] = entityId;
+      _playerInventories[playerId] = {
+        ...?_savedPlayers[playerId]?.inventoryItemIds,
+      };
+    }
+    _applyPlayer(playerId);
+    if (added && !_savedPlayers.containsKey(playerId)) {
+      markPlayerDirty(playerId);
+    }
+    return added;
+  }
 
   Future<WorldSaveRestoreResult> restore() async {
     final save = await repository.load(saveId);
@@ -143,6 +175,23 @@ final class WorldSaveSession implements AdventureStateStore {
       return ecs.component<PersistentFlagsComponent>(handle).flags[key];
     }
     return _savedEntities[entityId]?.flags[key];
+  }
+
+  Map<EntityId, Map<String, bool>> persistentFlagSnapshots() {
+    final snapshots = <EntityId, Map<String, bool>>{
+      for (final entry in _savedEntities.entries) entry.key: entry.value.flags,
+    };
+    for (final entry in ecs.query<PersistentFlagsComponent>()) {
+      if (knownPersistentEntityIds.contains(entry.entityId)) {
+        snapshots[entry.entityId] = entry.component.flags;
+      }
+    }
+    final entityIds = snapshots.keys.toList()
+      ..sort((left, right) => left.value.compareTo(right.value));
+    return Map.unmodifiable({
+      for (final entityId in entityIds)
+        entityId: Map<String, bool>.unmodifiable(snapshots[entityId]!),
+    });
   }
 
   @override
@@ -201,7 +250,7 @@ final class WorldSaveSession implements AdventureStateStore {
   }
 
   void markPlayerDirty(PlayerId playerId) {
-    final entityId = players[playerId];
+    final entityId = _players[playerId];
     if (entityId == null) {
       throw AvarraException(
         code: PersistenceErrorCodes.invalidSaveData,
@@ -254,10 +303,9 @@ final class WorldSaveSession implements AdventureStateStore {
     }
 
     final playerSaves = <PlayerId, PlayerSave>{
-      for (final entry in _savedPlayers.entries)
-        if (players.containsKey(entry.key)) entry.key: entry.value,
+      for (final entry in _savedPlayers.entries) entry.key: entry.value,
     };
-    for (final entry in players.entries) {
+    for (final entry in _players.entries) {
       final handle = ecs.handleFor(entry.value);
       if (handle == null || !ecs.hasComponent<TransformComponent>(handle)) {
         continue;
@@ -289,47 +337,54 @@ final class WorldSaveSession implements AdventureStateStore {
 
   Set<PlayerId> _applyPlayers() {
     final applied = <PlayerId>{};
-    for (final entry in _savedPlayers.entries) {
-      final expectedEntityId = players[entry.key];
-      if (expectedEntityId == null) {
-        continue;
+    for (final playerId in _players.keys) {
+      if (_applyPlayer(playerId)) {
+        applied.add(playerId);
       }
-      if (expectedEntityId != entry.value.entityId) {
-        throw AvarraException(
-          code: PersistenceErrorCodes.invalidSaveData,
-          message: 'Player save identity does not match the registered entity.',
-          context: {'playerId': entry.key.value},
-        );
-      }
-      final position = entry.value.position;
-      if (position.localX < 0 ||
-          position.localX >= chunkSize ||
-          position.localZ < 0 ||
-          position.localZ >= chunkSize) {
-        throw AvarraException(
-          code: PersistenceErrorCodes.invalidSaveData,
-          message: 'Player local position is outside chunk bounds.',
-          context: {'playerId': entry.key.value},
-        );
-      }
-      final handle = ecs.handleFor(expectedEntityId);
-      if (handle == null || !ecs.hasComponent<TransformComponent>(handle)) {
-        continue;
-      }
-      final current = ecs.component<TransformComponent>(handle);
-      ecs.replaceComponent(
-        handle,
-        current.copyWith(
-          position: Vector3(
-            position.worldX(chunkSize),
-            position.localY,
-            position.worldZ(chunkSize),
-          ),
-        ),
-      );
-      applied.add(entry.key);
     }
     return applied;
+  }
+
+  bool _applyPlayer(PlayerId playerId) {
+    final saved = _savedPlayers[playerId];
+    final expectedEntityId = _players[playerId];
+    if (saved == null || expectedEntityId == null) {
+      return false;
+    }
+    if (expectedEntityId != saved.entityId) {
+      throw AvarraException(
+        code: PersistenceErrorCodes.invalidSaveData,
+        message: 'Player save identity does not match the registered entity.',
+        context: {'playerId': playerId.value},
+      );
+    }
+    final position = saved.position;
+    if (position.localX < 0 ||
+        position.localX >= chunkSize ||
+        position.localZ < 0 ||
+        position.localZ >= chunkSize) {
+      throw AvarraException(
+        code: PersistenceErrorCodes.invalidSaveData,
+        message: 'Player local position is outside chunk bounds.',
+        context: {'playerId': playerId.value},
+      );
+    }
+    final handle = ecs.handleFor(expectedEntityId);
+    if (handle == null || !ecs.hasComponent<TransformComponent>(handle)) {
+      return false;
+    }
+    final current = ecs.component<TransformComponent>(handle);
+    ecs.replaceComponent(
+      handle,
+      current.copyWith(
+        position: Vector3(
+          position.worldX(chunkSize),
+          position.localY,
+          position.worldZ(chunkSize),
+        ),
+      ),
+    );
+    return true;
   }
 
   void _validateCompatibility(WorldSave save) {
@@ -357,7 +412,7 @@ final class WorldSaveSession implements AdventureStateStore {
       for (final player in save.players) player.playerId: player,
     });
     if (restoreInventories) {
-      for (final playerId in players.keys) {
+      for (final playerId in _players.keys) {
         _playerInventories[playerId] = {
           ...?_savedPlayers[playerId]?.inventoryItemIds,
         };
@@ -366,7 +421,7 @@ final class WorldSaveSession implements AdventureStateStore {
   }
 
   void _requirePlayer(PlayerId playerId) {
-    if (!players.containsKey(playerId)) {
+    if (!_players.containsKey(playerId)) {
       throw AvarraException(
         code: PersistenceErrorCodes.invalidSaveData,
         message: 'Player is not registered with this save session.',

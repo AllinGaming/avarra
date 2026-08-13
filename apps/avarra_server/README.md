@@ -19,8 +19,11 @@ production discovery/authentication/service daemon.
 Stage 11.5 upgrades the session to protocol v3. The host now consumes bounded
 attack, interaction, and restart commands; runs guardian/combat/adventure
 authority; and publishes revisioned health, persistent-flag, and per-player
-inventory state. Adventure state is session-scoped until Stage 12 integrates
-durable multiplayer persistence.
+inventory state. Stage 12.1 replaces its transient adventure store with the
+canonical `WorldSaveSession`: two-second autosave plus disconnect/shutdown
+flush preserve authored flags, player position, and per-player inventory.
+Remote runtime avatars despawn on disconnect while their stable save records
+remain available for reconnect. See ADR-032.
 
 Listen-host player movement uses the shared deterministic kinematic
 box-sweep/wall-slide system. Dynamic proof avatars copy the authored character
@@ -28,5 +31,20 @@ controller and collider rather than bypassing authoritative collision.
 
 ```powershell
 dart run bin/avarra_server.dart --multiplayer `
-  --world=../../apps/avarra_game/assets/worlds/isometric_proof.avarra
+  --world=../../apps/avarra_game/assets/worlds/isometric_proof.avarra `
+  --save-directory=../../build/server-saves
 ```
+
+Use the headless client probe for deterministic cross-platform transport
+acceptance without a renderer shell:
+
+```powershell
+dart run bin/multiplayer_client_probe.dart `
+  --world=../avarra_game/assets/worlds/isometric_proof.avarra `
+  --host=127.0.0.1 `
+  --port=45454
+```
+
+The probe performs the content handshake, waits for its controlled entity,
+sends movement input, requires an authoritative acknowledgment, reports byte
+and tick evidence, and then disconnects cleanly.

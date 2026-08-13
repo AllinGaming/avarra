@@ -32,6 +32,7 @@ $sourcePaths = @(
     'docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md'
     'docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md'
     'docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md'
     'docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md'
     'docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md'
     'docs/AVARRA_WORLD_CONTENT_MODEL.md'
@@ -68,6 +69,7 @@ $sourcePaths = @(
     'docs/adr/ADR-029-authored-objective-groups-and-derived-gates.md'
     'docs/adr/ADR-030-player-inventory-and-authored-item-turn-ins.md'
     'docs/adr/ADR-031-host-authoritative-adventure-commands.md'
+    'docs/adr/ADR-032-durable-host-saves-and-player-retention.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

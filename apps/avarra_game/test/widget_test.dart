@@ -28,7 +28,7 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 11.6 · Ashfall Action-RPG Slice'), findsOneWidget);
+    expect(find.text('Stage 12.1 · Durable Ashfall Hosting'), findsOneWidget);
     expect(find.text('Relay Zero: Ashfall'), findsOneWidget);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);
@@ -468,6 +468,70 @@ void main() {
     );
   });
 
+  testWidgets('retires replication events when a loaded world is replaced', (
+    tester,
+  ) async {
+    final source = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    final playerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
+    final host = (await tester.runAsync(
+      () => MultiplayerProofHost.start(
+        worldPackageSource: source!,
+        primaryPlayerId: playerId,
+        bindAddress: InternetAddress.loopbackIPv4,
+        port: 0,
+      ),
+    ))!;
+    final client = (await tester.runAsync(() async {
+      final connection = await TcpNetworkTransportConnection.connect(
+        host: InternetAddress.loopbackIPv4.address,
+        port: host.port,
+      );
+      final value = await ReplicationClient.connectAndJoin(
+        connection: connection,
+        playerId: playerId,
+        content: host.content,
+      );
+      await value.waitForControlledEntity();
+      return value;
+    }))!;
+    var connectionAttempt = 0;
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => source!,
+        worldLibraryOpener: (_) async => RuntimeWorldSelection(
+          source: source!,
+          label: 'Reloaded Relay',
+          isImported: true,
+        ),
+        multiplayerClientConnector: (_, _) async {
+          connectionAttempt += 1;
+          return connectionAttempt == 1 ? client : null;
+        },
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+    expect(find.textContaining('Network: Joined connection 1'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('open_world_library')));
+    for (var attempt = 0; attempt < 250; attempt += 1) {
+      await tester.pump(const Duration(milliseconds: 20));
+      if (find.text('World source: Reloaded Relay').evaluate().isNotEmpty) {
+        break;
+      }
+    }
+    expect(find.text('World source: Reloaded Relay'), findsOneWidget);
+    await tester.runAsync(client.close);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.runAsync(host.close);
+  });
+
   testWidgets('runs a local client inside a listen-host session', (
     tester,
   ) async {
@@ -503,7 +567,7 @@ void main() {
         enableRenderer: false,
         saveStoreLoader: () async => MemorySaveStore(),
         worldPackageSourceLoader: () async => source!,
-        multiplayerHostStarter: (_, _) async => host,
+        multiplayerHostStarter: (_, _, _, _) async => host,
         multiplayerClientConnector: (_, _) async => client,
         hostDeviceMetricsSampler: const _FakeHostDeviceMetricsSampler(),
       ),

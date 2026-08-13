@@ -522,8 +522,16 @@ original dark-gothic six-model/three-material kit replaces cube presentation.
 The action-target rule is renderer-neutral and operates in offline and
 host-authoritative connected play; locked drops are excluded from presentation
 and collision on both Game and host until their authored guardian dies.
-Durable host saves and physical Android acceptance remain Stage 12 gates before
-AI/MCP expansion. See
+Stage 12.1 replaces transient host adventure state with the canonical
+`WorldSaveSession`. Two-second autosave plus disconnect/shutdown flush preserve
+authored progression, player position, and inventory; remote avatars despawn
+while stable player records remain for reconnect and complete host restart.
+The 223-test matrix, server AOT compile, Windows/Android profile builds, API 37
+emulator lifecycle, Windows-host → Android-Game join/durable disconnect, and
+Android-listen-host → Windows headless movement/acknowledgment probe pass. The
+cross-role run also closed a late replication-event race when a loaded world is
+replaced. Physical Android and the complete native-shell product playtest remain
+open before AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
@@ -534,7 +542,8 @@ AI/MCP expansion. See
 `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
 `AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-031.
+`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
 
 ---
 

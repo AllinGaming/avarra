@@ -7,6 +7,7 @@ import 'package:avarra_core/testing.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
@@ -300,6 +301,105 @@ void main() {
     await hostEvents.cancel();
     await host.close();
   });
+
+  test('host restores authoritative objective and player state', () async {
+    final store = MemorySaveStore();
+    final source = _findProofWorld().readAsStringSync();
+    final first = await MultiplayerProofHost.start(
+      worldPackageSource: source,
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+      saveStore: store,
+      saveId: _hostSaveId,
+    );
+    final firstEvents = first.events.listen((_) {});
+    final firstClient = await _connect(first, _primaryPlayerId);
+    await firstClient.waitForControlledEntity();
+    _moveHostEntity(first, _playerEntityId, Vector3(1, 0.4, 5.5));
+    final interaction = await _sendCommand(
+      firstClient,
+      GameplayCommandKind.interact,
+      targetEntityId: _relayAlphaId,
+    );
+    expect(interaction.accepted, isTrue, reason: interaction.detail);
+    _moveHostEntity(first, _playerEntityId, Vector3(2.25, 0.4, 2.5));
+    await firstClient.close();
+    await _waitUntil(() => first.metrics.activeClients == 0);
+    await firstEvents.cancel();
+    await first.close();
+
+    final second = await MultiplayerProofHost.start(
+      worldPackageSource: source,
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+      saveStore: store,
+      saveId: _hostSaveId,
+    );
+    final secondEvents = second.events.listen((_) {});
+    expect(second.restoredSave, isTrue);
+    expect(second.saveRevision, greaterThanOrEqualTo(1));
+    expect(second.adventureState.flagValue(_relayAlphaId, 'activated'), isTrue);
+    final restoredPosition = second.runtimeWorld.ecs
+        .component<TransformComponent>(
+          second.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+        )
+        .position;
+    expect(restoredPosition.x, 2.25);
+    expect(restoredPosition.z, 2.5);
+
+    final secondClient = await _connect(second, _primaryPlayerId);
+    await secondClient.waitForControlledEntity();
+    await _waitUntil(
+      () =>
+          secondClient.authoritativeFlagValue(_relayAlphaId, 'activated') ==
+          true,
+    );
+    await secondClient.close();
+    await secondEvents.cancel();
+    await second.close();
+  });
+
+  test(
+    'remote player inventory and position survive disconnect/reconnect',
+    () async {
+      final host = await MultiplayerProofHost.start(
+        worldPackageSource: _findProofWorld().readAsStringSync(),
+        primaryPlayerId: _primaryPlayerId,
+        port: 0,
+        saveStore: MemorySaveStore(),
+        saveId: _hostSaveId,
+      );
+      final hostEvents = host.events.listen((_) {});
+      final first = await _connect(host, _secondPlayerId);
+      final controlledId = (await first.waitForControlledEntity()).entityId;
+      host.adventureState.addItem(_secondPlayerId, 'loot.ash_sigil');
+      _moveHostEntity(host, controlledId, Vector3(5.5, 0.4, 2.25));
+      await first.close();
+      await _waitUntil(
+        () => host.runtimeWorld.ecs.handleFor(controlledId) == null,
+      );
+
+      final reconnected = await _connect(host, _secondPlayerId);
+      expect(
+        (await reconnected.waitForControlledEntity()).entityId,
+        controlledId,
+      );
+      await _waitUntil(
+        () => reconnected.inventoryItemIds.contains('loot.ash_sigil'),
+      );
+      final position = host.runtimeWorld.ecs
+          .component<TransformComponent>(
+            host.runtimeWorld.ecs.handleFor(controlledId)!,
+          )
+          .position;
+      expect(position.x, 5.5);
+      expect(position.z, 2.25);
+
+      await reconnected.close();
+      await hostEvents.cancel();
+      await host.close();
+    },
+  );
 }
 
 Future<GameplayCommandResultMessage> _sendCommand(
@@ -379,6 +479,7 @@ Future<void> _waitUntil(bool Function() condition) async {
 
 final _primaryPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
 final _secondPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000403');
+final _hostSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000422');
 final _playerEntityId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
 final _relayAlphaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000004');
 final _relayBetaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000010');

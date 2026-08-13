@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_server/avarra_server.dart';
 
 final _proofPlayerId = PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402');
@@ -37,11 +38,17 @@ Future<void> _runMultiplayer(List<String> arguments) async {
     return;
   }
 
-  final source = await File(worldPath).readAsString();
+  final worldFile = File(worldPath).absolute;
+  final source = await worldFile.readAsString();
+  final saveDirectory = Directory(
+    _argumentValue(arguments, '--save-directory') ??
+        '${worldFile.parent.path}${Platform.pathSeparator}.avarra_saves',
+  );
   final host = await MultiplayerProofHost.start(
     worldPackageSource: source,
     primaryPlayerId: _proofPlayerId,
     port: port,
+    saveStore: FileSaveStore(saveDirectory),
   );
   final subscription = host.events.listen(
     (event) => stdout.writeln('multiplayer.$event'),
@@ -49,7 +56,8 @@ Future<void> _runMultiplayer(List<String> arguments) async {
   );
   stdout.writeln(
     'AVARRA_MULTIPLAYER_READY port=${host.port} '
-    'world=${host.content.worldId.value} hash=${host.content.packageHash}',
+    'world=${host.content.worldId.value} hash=${host.content.packageHash} '
+    'saveDirectory=${saveDirectory.path} saveRevision=${host.saveRevision}',
   );
   await Future<void>.delayed(Duration(seconds: durationSeconds));
   await subscription.cancel();
