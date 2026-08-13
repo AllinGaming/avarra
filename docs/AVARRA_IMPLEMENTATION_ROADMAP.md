@@ -572,7 +572,7 @@ Build in thin vertical slices:
 ```text
 player/enemy health and damage                    COMPLETE (Stage 11.1)
 one basic attack and death/restart                COMPLETE (Stage 11.1)
-one pursuing/attacking guardian
+one pursuing/attacking guardian                   COMPLETE (Stage 11.2)
 three persistent relay stabilizer objectives
 one relay-core item and minimal inventory
 objective gate and completion state
@@ -589,8 +589,22 @@ Stage 11.1 status (implemented 2026-08-13):
   guardian, dead-entity presentation/collision lifecycle, and restart; and
 - network sessions explicitly defer combat until host-authoritative commands.
 
-Next: Stage 11.2 deterministic perception, pursuit, attack scheduling, leash,
-and return behavior. See `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md` and ADR-027.
+Stage 11.1's next target was the deterministic guardian behavior now completed
+below. See `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md` and ADR-027.
+
+Stage 11.2 status (implemented 2026-08-13):
+
+- content schema v6 authors guardian perception and leash policy with strict
+  character/combat dependencies;
+- a pure-Dart fixed-step state machine owns idle, pursuit, attack, return, and
+  defeat phases in stable entity-ID order;
+- perception and movement reuse physics queries, character movement, and the
+  Stage 11.1 combat authority rather than creating client-only rules; and
+- offline Game drives the autonomous guardian and reports its phase/health,
+  while connected clients wait for later host authority.
+
+Next: Stage 11.3 three persistent stabilizers and an authored objective gate.
+See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md` and ADR-028.
 
 Gate:
 

@@ -4,6 +4,7 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
+import 'package:avarra_physics/avarra_physics.dart';
 import 'package:avarra_streaming/avarra_streaming.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,7 +45,7 @@ void main() {
 
       expect(definition.name, 'Relay Zero Prototype');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 5);
+      expect(definition.contentSchemaVersion, 6);
       expect(definition.chunkSize, 4);
       expect(definition.chunks, hasLength(3));
       expect(definition.allEntities, hasLength(9));
@@ -69,6 +70,43 @@ void main() {
       expect(
         runtime.ecs.component<HealthComponent>(guardianHandle).currentHealth,
         50,
+      );
+      expect(
+        runtime.ecs
+            .component<GuardianBehaviorComponent>(guardianHandle)
+            .perceptionRange,
+        4,
+      );
+      expect(
+        runtime.ecs
+            .component<GuardianBehaviorStateComponent>(guardianHandle)
+            .phase,
+        GuardianBehaviorPhase.idle,
+      );
+      final guardianBehavior = GuardianBehaviorSystem(
+        ecs: runtime.ecs,
+        collisionWorld: DeterministicPhysicsCollisionWorld.fromEcs(runtime.ecs),
+      );
+      var acceptedGuardianAttack = false;
+      for (var step = 1; step <= 360; step++) {
+        final results = guardianBehavior.tickAll(
+          targetId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
+          simulationTime: Duration(milliseconds: step * 16),
+          deltaSeconds: 0.016,
+        );
+        if (results.any((result) => result.attack?.accepted ?? false)) {
+          acceptedGuardianAttack = true;
+          break;
+        }
+      }
+      expect(
+        acceptedGuardianAttack,
+        isTrue,
+        reason: 'The authored guardian must have a collision-free attack path.',
+      );
+      expect(
+        runtime.ecs.component<HealthComponent>(playerHandle).currentHealth,
+        75,
       );
       final consoleHandle = runtime.ecs.handleFor(
         EntityId.parse('01890f47-e8b8-7a68-8000-000000000004'),

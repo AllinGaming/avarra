@@ -502,15 +502,19 @@ locations; and Forge uses the shared Thermion presentation bridge for stable-ID
 selection and translation gizmos. Stage 11.1 is now implemented: content schema
 v5 authors health and one basic attack; deterministic gameplay authority owns
 damage, range, line of sight, cooldown, death, and restart; and Game provides a
-stationary retaliating guardian loop with dead-entity presentation/collision
-lifecycle. Connected combat remains disabled until its host-authoritative
-slice. Next is deterministic guardian pursuit/attack AI, before item,
-objective-gate, co-op, persistence, or AI/MCP expansion. See
+combat loop with dead-entity presentation/collision lifecycle. Stage 11.2 is
+also implemented: content schema v6 authors guardian perception/leash policy,
+and a pure-Dart state machine owns idle, pursuit, attack, return, and defeat
+while reusing movement, physics, and combat authority. Offline Game drives the
+guardian; connected combat/AI remains disabled until its host-authoritative
+slice. Next is three persistent stabilizers and an authored objective gate,
+before item, co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, ADR-026, and ADR-027.
+`AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-028.
 
 ---
 
@@ -2537,6 +2541,13 @@ Engine/runtime provides path infrastructure.
 
 Gameplay owns combat/aggro decisions.
 
+The Stage 11.2 guardian is the first concrete implementation of that boundary.
+An authored server-safe component supplies perception and leash ranges; a
+fixed-step state machine performs line-of-sight perception, direct kinematic
+pursuit, shared combat attacks, leash, and return. Flutter and the renderer only
+present its ECS state. Direct pursuit is sufficient for Relay Zero's first
+arena; general pathfinding and off-mesh navigation remain future work.
+
 ---
 
 # 9. Streaming Bias
@@ -4242,7 +4253,7 @@ See ADR-026 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Stage 11 in progress; combat slice implemented
+**Status:** Stage 11 in progress; combat and guardian slices implemented
 
 **Date:** 2026-08-12
 
@@ -4308,9 +4319,15 @@ selection and a translation gizmo.
 Stage 11.1 adds the first actual fail/recover play loop. Content schema v5
 authors player and guardian health plus one direct attack; a deterministic,
 server-safe combat system owns range, line of sight, cooldown, damage, death,
-and restart. The prototype guardian currently retaliates while stationary.
-Pursuit AI is the next slice, and connected combat remains deliberately
-disabled until attacks are host-authoritative.
+and restart. At the Stage 11.1 boundary, the prototype guardian still
+retaliated while stationary and pursuit AI remained the next slice. Connected
+combat remains deliberately disabled until attacks are host-authoritative.
+
+Stage 11.2 replaces that temporary retaliation with content schema v6's
+authored guardian behavior. A deterministic server-safe state machine now owns
+perception, pursuit, attack scheduling, leash, return, and defeat while reusing
+the existing movement and combat authorities. Offline Game runs the behavior;
+connected clients continue to wait for the later host-authoritative slice.
 
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
@@ -4322,8 +4339,9 @@ cube assets while the gameplay contract is made reliable.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
 4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
-   slices. Health/basic attack/death/restart are complete; next is guardian AI,
-   then item/core → objective gate → co-op authority → full save/resume.
+   slices. Health/basic attack/death/restart and guardian AI are complete; next
+   is three persistent stabilizers and their objective gate, then item/core →
+   co-op authority → full save/resume.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.
@@ -4961,7 +4979,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–11.1 Implementation
+# 14. Current Stage 4–11.2 Implementation
 
 The initial vertical slice now provides:
 
@@ -4969,9 +4987,10 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 5, with versions 1 through 4 still readable
+  content schema version 6, with versions 1 through 5 still readable
   typed persistent-flag interaction effect
   typed health and deterministic basic-attack definitions
+  typed guardian perception and leash policy
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -5002,7 +5021,7 @@ avarra_persistence
 The Game's Relay Zero prototype world is creator-style data rather than hard-coded
 entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
-health, basic-attack, interactable, and persistent-flag semantics in
+health, basic-attack, guardian behavior, interactable, and persistent-flag semantics in
 `isometric_proof.avarra`.
 
 The current `.avarra` file is a single JSON prototype whose asset paths resolve
@@ -8242,7 +8261,7 @@ Build in thin vertical slices:
 ```text
 player/enemy health and damage                    COMPLETE (Stage 11.1)
 one basic attack and death/restart                COMPLETE (Stage 11.1)
-one pursuing/attacking guardian
+one pursuing/attacking guardian                   COMPLETE (Stage 11.2)
 three persistent relay stabilizer objectives
 one relay-core item and minimal inventory
 objective gate and completion state
@@ -8259,8 +8278,22 @@ Stage 11.1 status (implemented 2026-08-13):
   guardian, dead-entity presentation/collision lifecycle, and restart; and
 - network sessions explicitly defer combat until host-authoritative commands.
 
-Next: Stage 11.2 deterministic perception, pursuit, attack scheduling, leash,
-and return behavior. See `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md` and ADR-027.
+Stage 11.1's next target was the deterministic guardian behavior now completed
+below. See `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md` and ADR-027.
+
+Stage 11.2 status (implemented 2026-08-13):
+
+- content schema v6 authors guardian perception and leash policy with strict
+  character/combat dependencies;
+- a pure-Dart fixed-step state machine owns idle, pursuit, attack, return, and
+  defeat phases in stable entity-ID order;
+- perception and movement reuse physics queries, character movement, and the
+  Stage 11.1 combat authority rather than creating client-only rules; and
+- offline Game drives the autonomous guardian and reports its phase/health,
+  while connected clients wait for later host authority.
+
+Next: Stage 11.3 three persistent stabilizers and an authored objective gate.
+See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md` and ADR-028.
 
 Gate:
 

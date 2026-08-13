@@ -174,6 +174,13 @@ Engine/runtime provides path infrastructure.
 
 Gameplay owns combat/aggro decisions.
 
+The Stage 11.2 guardian is the first concrete implementation of that boundary.
+An authored server-safe component supplies perception and leash ranges; a
+fixed-step state machine performs line-of-sight perception, direct kinematic
+pursuit, shared combat attacks, leash, and return. Flutter and the renderer only
+present its ECS state. Direct pursuit is sufficient for Relay Zero's first
+arena; general pathfinding and off-mesh navigation remain future work.
+
 ---
 
 # 9. Streaming Bias

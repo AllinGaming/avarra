@@ -3,5 +3,7 @@ export 'src/character_movement_system.dart';
 export 'src/combat_components.dart';
 export 'src/combat_system.dart';
 export 'src/gameplay_error_codes.dart';
+export 'src/guardian_behavior_components.dart';
+export 'src/guardian_behavior_system.dart';
 export 'src/interaction_effect_components.dart';
 export 'src/interaction_system.dart';

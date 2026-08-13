@@ -273,6 +273,30 @@ final class BasicAttackDefinition extends ContentComponentDefinition {
   };
 }
 
+/// Authored perception and leash policy for the first Relay Zero guardian.
+final class GuardianBehaviorDefinition extends ContentComponentDefinition {
+  const GuardianBehaviorDefinition({
+    required this.perceptionRange,
+    required this.leashRange,
+  });
+
+  final double perceptionRange;
+  final double leashRange;
+
+  @override
+  String get type => AvarraComponentType.guardianBehavior;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'perceptionRange': perceptionRange,
+    'leashRange': leashRange,
+  };
+}
+
 final class InteractableDefinition extends ContentComponentDefinition {
   const InteractableDefinition({required this.label, required this.range});
 

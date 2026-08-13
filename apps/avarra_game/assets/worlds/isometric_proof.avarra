@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 5,
+  "contentSchemaVersion": 6,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero Prototype",
@@ -142,7 +142,7 @@
           "components": {
             "avarra.transform": {
               "schemaVersion": 1,
-              "position": [1, 0.55, 2.8],
+              "position": [1.65, 0.55, 3.4],
               "rotation": [0, 0, 0, 1],
               "scale": [0.55, 0.55, 0.55]
             },
@@ -152,9 +152,15 @@
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
-              "halfExtents": [0.55, 0.55, 0.55],
-              "bodyKind": "static",
+              "halfExtents": [0.45, 0.5, 0.45],
+              "bodyKind": "character",
               "isSensor": false
+            },
+            "avarra.character_controller": {
+              "schemaVersion": 1,
+              "moveSpeed": 1.35,
+              "skinWidth": 0.03,
+              "arrivalTolerance": 0.08
             },
             "avarra.health": {
               "schemaVersion": 1,
@@ -163,8 +169,13 @@
             "avarra.combat.basic_attack": {
               "schemaVersion": 1,
               "damage": 25,
-              "range": 2.2,
+              "range": 1.1,
               "cooldownSeconds": 0.65
+            },
+            "avarra.ai.guardian_behavior": {
+              "schemaVersion": 1,
+              "perceptionRange": 4,
+              "leashRange": 6
             }
           }
         }

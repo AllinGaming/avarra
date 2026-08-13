@@ -78,9 +78,9 @@ warnings and Android Kotlin-plugin migration warning; neither failed a build.
 
 ## Next slice
 
-Stage 11.2 adds a deterministic guardian state machine with perception,
-pursuit, stopping distance, attack scheduling, leash/return behavior, and
-server-safe tests. It must reuse `CombatSystem`; it must not create a second
-damage path.
+Stage 11.2 subsequently delivered the deterministic guardian state machine with
+perception, pursuit, attack scheduling, leash/return behavior, and server-safe
+tests. It reuses `CombatSystem` and removes the temporary retaliation path. See
+`AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md` and ADR-028.
 
 See ADR-027 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.

@@ -28,7 +28,7 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 11.1 · Relay Zero Combat'), findsOneWidget);
+    expect(find.text('Stage 11.2 · Relay Zero Guardian'), findsOneWidget);
     expect(find.text('Relay Zero Prototype'), findsOneWidget);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);
@@ -42,6 +42,7 @@ void main() {
       find.text('Health 100/100 · Select the guardian and attack'),
       findsOneWidget,
     );
+    expect(find.text('Guardian: idle · 50/50 health'), findsOneWidget);
     expect(find.byKey(const Key('camera_status')), findsOneWidget);
     expect(find.byKey(const Key('world_version_status')), findsOneWidget);
     expect(find.text('Chunk 0,0 · 1/3 active'), findsOneWidget);
@@ -353,5 +354,5 @@ Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
       fail('Game bootstrap failed: $errorText');
     }
   }
-  fail('Game bootstrap did not expose Stage 11.1 status.');
+  fail('Game bootstrap did not expose Stage 11.2 status.');
 }

@@ -344,6 +344,21 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
+    if (types.contains(AvarraComponentType.guardianBehavior) &&
+        (!types.contains(AvarraComponentType.transform) ||
+            !types.contains(AvarraComponentType.physicsCollider) ||
+            collider?.bodyKind != ContentPhysicsBodyKind.character ||
+            collider?.isSensor == true ||
+            !types.contains(AvarraComponentType.characterController) ||
+            !types.contains(AvarraComponentType.health) ||
+            !types.contains(AvarraComponentType.basicAttack))) {
+      _invalid(
+        '$path.components',
+        'Guardian behavior requires transform, non-sensor character physics, '
+            'controller, health, and basic attack.',
+        context: {'entityId': entityId.value},
+      );
+    }
     if (types.contains(AvarraComponentType.interactable) &&
         (!types.contains(AvarraComponentType.transform) ||
             collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||

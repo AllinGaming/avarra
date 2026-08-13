@@ -1,6 +1,6 @@
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Stage 11 in progress; combat slice implemented
+**Status:** Stage 11 in progress; combat and guardian slices implemented
 
 **Date:** 2026-08-12
 
@@ -66,9 +66,15 @@ selection and a translation gizmo.
 Stage 11.1 adds the first actual fail/recover play loop. Content schema v5
 authors player and guardian health plus one direct attack; a deterministic,
 server-safe combat system owns range, line of sight, cooldown, damage, death,
-and restart. The prototype guardian currently retaliates while stationary.
-Pursuit AI is the next slice, and connected combat remains deliberately
-disabled until attacks are host-authoritative.
+and restart. At the Stage 11.1 boundary, the prototype guardian still
+retaliated while stationary and pursuit AI remained the next slice. Connected
+combat remains deliberately disabled until attacks are host-authoritative.
+
+Stage 11.2 replaces that temporary retaliation with content schema v6's
+authored guardian behavior. A deterministic server-safe state machine now owns
+perception, pursuit, attack scheduling, leash, return, and defeat while reusing
+the existing movement and combat authorities. Offline Game runs the behavior;
+connected clients continue to wait for the later host-authoritative slice.
 
 This is not yet the complete adventure. It intentionally reuses the current
 cube assets while the gameplay contract is made reliable.
@@ -80,8 +86,9 @@ cube assets while the gameplay contract is made reliable.
 3. **Complete:** Stage 10.2 component editing, validation, real viewport,
    selection, transform gizmo, and bounded history.
 4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
-   slices. Health/basic attack/death/restart are complete; next is guardian AI,
-   then item/core → objective gate → co-op authority → full save/resume.
+   slices. Health/basic attack/death/restart and guardian AI are complete; next
+   is three persistent stabilizers and their objective gate, then item/core →
+   co-op authority → full save/resume.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.

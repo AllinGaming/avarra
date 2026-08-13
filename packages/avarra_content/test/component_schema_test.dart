@@ -12,6 +12,7 @@ void main() {
       expect(
         registry.schemas.map((schema) => schema.type),
         orderedEquals([
+          AvarraComponentType.guardianBehavior,
           AvarraComponentType.characterController,
           AvarraComponentType.basicAttack,
           AvarraComponentType.health,
@@ -222,6 +223,33 @@ void main() {
         'range': 2.25,
         'cooldownSeconds': 0.5,
       }, contentSchemaVersion: 4),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes authored guardian behavior in content v6', () {
+    final behavior = registry.decode(AvarraComponentType.guardianBehavior, {
+      'schemaVersion': 1,
+      'perceptionRange': 4,
+      'leashRange': 6,
+    });
+
+    expect((behavior as GuardianBehaviorDefinition).perceptionRange, 4);
+    expect(behavior.leashRange, 6);
+    expect(
+      () => registry.decode(AvarraComponentType.guardianBehavior, {
+        'schemaVersion': 1,
+        'perceptionRange': 6,
+        'leashRange': 4,
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.guardianBehavior, {
+        'schemaVersion': 1,
+        'perceptionRange': 4,
+        'leashRange': 6,
+      }, contentSchemaVersion: 5),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

@@ -60,6 +60,7 @@ final class RuntimeEntityLoader {
     final handle = ecs.createEntity(entityId: definition.id);
     var isTarget = false;
     var isOccluder = false;
+    var hasGuardianBehavior = false;
 
     for (final component in definition.components.values) {
       switch (component) {
@@ -141,6 +142,15 @@ final class RuntimeEntityLoader {
               ),
             )
             ..addComponent(handle, const BasicAttackStateComponent());
+        case GuardianBehaviorDefinition():
+          ecs.addComponent(
+            handle,
+            GuardianBehaviorComponent(
+              perceptionRange: component.perceptionRange,
+              leashRange: component.leashRange,
+            ),
+          );
+          hasGuardianBehavior = true;
         case InteractableDefinition():
           ecs.addComponent(
             handle,
@@ -160,6 +170,14 @@ final class RuntimeEntityLoader {
         case PersistentFlagsDefinition():
           ecs.addComponent(handle, PersistentFlagsComponent(component.flags));
       }
+    }
+    if (hasGuardianBehavior) {
+      ecs.addComponent(
+        handle,
+        GuardianBehaviorStateComponent(
+          homePosition: ecs.component<TransformComponent>(handle).position,
+        ),
+      );
     }
     return RuntimeEntityLoadResult(
       handle: handle,

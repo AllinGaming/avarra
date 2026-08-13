@@ -9,4 +9,7 @@ abstract final class GameplayErrorCodes {
     'GAMEPLAY_INTERACTION_INVALID',
   );
   static const invalidCombat = AvarraErrorCode('GAMEPLAY_COMBAT_INVALID');
+  static const invalidGuardianBehavior = AvarraErrorCode(
+    'GAMEPLAY_GUARDIAN_BEHAVIOR_INVALID',
+  );
 }

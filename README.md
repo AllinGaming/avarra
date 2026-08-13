@@ -43,19 +43,20 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 18. `docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`
 19. `docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`
 20. `docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`
-21. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-22. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-23. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-24. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-25. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-26. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-27. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-28. `docs/AVARRA_OPEN_DECISIONS.md`
-29. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-30. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-31. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-32. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-33. ADRs under `docs/adr/`
+21. `docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`
+22. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+23. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+24. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+25. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+26. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+27. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+28. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+29. `docs/AVARRA_OPEN_DECISIONS.md`
+30. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+31. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+32. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+33. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+34. ADRs under `docs/adr/`
 
 ## Implementation status
 
@@ -63,8 +64,9 @@ Stages 0 through 9 and the initial Stage 10 Forge vertical slice have
 implemented prototype slices. Stage 10.1A's playable contract, Stage 10.1B's
 recoverable project/runtime-import gate, and Stage 10.2's editor completion
 gate pass. Stage 11.1 supplies authored deterministic combat, death/restart,
-and the first playable Relay Zero guardian encounter. Guardian pursuit AI is
-next.
+and the first playable Relay Zero guardian encounter. Stage 11.2 adds authored,
+deterministic perception, pursuit, attack, leash, return, and defeat. Three
+persistent stabilizers and their objective gate are next.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -180,14 +182,16 @@ proof. Stage 10.1A shares the playable-world contract and removes proof-ID
 behavior. Stage 10.1B adds a versioned recoverable `.avarra-forge` project,
 native safe export, and an unchanged-Game runtime catalog that persists
 validated imports and reports missing packaged assets. Stage 10.2 completes the
-minimum editor. Content schema v5 and Stage 11.1 add authored health, a basic
-attack, damage, death/restart, and a stationary retaliating guardian to the
-bundled `Relay Zero Prototype`. Deterministic guardian pursuit is next; the
+minimum editor. Content schemas v5–v6 and Stages 11.1–11.2 add authored health,
+a basic attack, damage, death/restart, and autonomous guardian perception,
+pursuit, attack, leash, return, and defeat to the bundled `Relay Zero
+Prototype`. Persistent stabilizers and their objective gate are next; the
 playable RPG slice still comes before AI/MCP expansion. See
 `docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
+`docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

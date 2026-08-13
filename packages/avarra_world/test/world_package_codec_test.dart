@@ -378,6 +378,22 @@ void main() {
       _throwsCode(WorldErrorCodes.invalidDefinition),
     );
   });
+
+  test('rejects guardian behavior without its runtime dependencies', () {
+    final json = _validWorldJson();
+    final entities = json['entities']! as List<dynamic>;
+    final entity = entities.first as Map<String, dynamic>;
+    final components = entity['components']! as Map<String, dynamic>;
+    components[AvarraComponentType.guardianBehavior] = {
+      'schemaVersion': 1,
+      'perceptionRange': 4,
+      'leashRange': 6,
+    };
+    expect(
+      () => WorldPackageCodec().decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
 }
 
 const _worldId = '01890f47-e8b8-7a68-8000-000000000010';

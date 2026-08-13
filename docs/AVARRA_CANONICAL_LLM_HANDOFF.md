@@ -493,15 +493,19 @@ locations; and Forge uses the shared Thermion presentation bridge for stable-ID
 selection and translation gizmos. Stage 11.1 is now implemented: content schema
 v5 authors health and one basic attack; deterministic gameplay authority owns
 damage, range, line of sight, cooldown, death, and restart; and Game provides a
-stationary retaliating guardian loop with dead-entity presentation/collision
-lifecycle. Connected combat remains disabled until its host-authoritative
-slice. Next is deterministic guardian pursuit/attack AI, before item,
-objective-gate, co-op, persistence, or AI/MCP expansion. See
+combat loop with dead-entity presentation/collision lifecycle. Stage 11.2 is
+also implemented: content schema v6 authors guardian perception/leash policy,
+and a pure-Dart state machine owns idle, pursuit, attack, return, and defeat
+while reusing movement, physics, and combat authority. Offline Game drives the
+guardian; connected combat/AI remains disabled until its host-authoritative
+slice. Next is three persistent stabilizers and an authored objective gate,
+before item, co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024, ADR-025, ADR-026, and ADR-027.
+`AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-028.
 
 ---
 

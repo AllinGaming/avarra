@@ -413,6 +413,43 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.guardianBehavior,
+          version: 1,
+          introducedInContentSchemaVersion: 6,
+          editorLabel: 'Guardian Behavior',
+          editorOrder: 47,
+          help: 'Perception, pursuit, combat, leash, and return behavior.',
+          requiredComponentTypes: const {
+            AvarraComponentType.transform,
+            AvarraComponentType.physicsCollider,
+            AvarraComponentType.characterController,
+            AvarraComponentType.health,
+            AvarraComponentType.basicAttack,
+          },
+          dependencyFieldValues: const {
+            AvarraComponentType.physicsCollider: {
+              'bodyKind': 'character',
+              'isSensor': false,
+            },
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'perceptionRange',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Perception range',
+              defaultValue: 4.0,
+              minimum: 0.01,
+            ),
+            ComponentFieldSchema(
+              name: 'leashRange',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Leash range',
+              defaultValue: 6.0,
+              minimum: 0.01,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.interactable,
           version: 1,
           introducedInContentSchemaVersion: 2,
@@ -587,6 +624,7 @@ final class ComponentSchemaRegistry {
         const PlayerControlledDefinition(),
       AvarraComponentType.health => _decodeHealth(data),
       AvarraComponentType.basicAttack => _decodeBasicAttack(data),
+      AvarraComponentType.guardianBehavior => _decodeGuardianBehavior(data),
       AvarraComponentType.interactable => _decodeInteractable(data),
       AvarraComponentType.setPersistentFlagOnInteract =>
         _decodeSetPersistentFlagOnInteract(data),
@@ -654,6 +692,23 @@ final class ComponentSchemaRegistry {
       damage: damage,
       range: range,
       cooldownSeconds: cooldownSeconds,
+    );
+  }
+
+  GuardianBehaviorDefinition _decodeGuardianBehavior(
+    Map<String, Object?> data,
+  ) {
+    final perceptionRange = (data['perceptionRange']! as num).toDouble();
+    final leashRange = (data['leashRange']! as num).toDouble();
+    if (perceptionRange <= 0 || leashRange < perceptionRange) {
+      _invalidComponent(
+        AvarraComponentType.guardianBehavior,
+        'Guardian leash range must be at least its positive perception range.',
+      );
+    }
+    return GuardianBehaviorDefinition(
+      perceptionRange: perceptionRange,
+      leashRange: leashRange,
     );
   }
 

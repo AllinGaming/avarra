@@ -1,5 +1,5 @@
 /// Content-schema generation supported by this runtime.
-const int currentContentSchemaVersion = 5;
+const int currentContentSchemaVersion = 6;
 
 /// Stable component type names stored in world packages.
 abstract final class AvarraComponentType {
@@ -12,6 +12,7 @@ abstract final class AvarraComponentType {
   static const playerControlled = 'avarra.player_controlled';
   static const health = 'avarra.health';
   static const basicAttack = 'avarra.combat.basic_attack';
+  static const guardianBehavior = 'avarra.ai.guardian_behavior';
   static const interactable = 'avarra.interactable';
   static const setPersistentFlagOnInteract =
       'avarra.interaction.set_persistent_flag';

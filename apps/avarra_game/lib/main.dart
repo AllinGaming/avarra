@@ -393,6 +393,7 @@ class _PresentationBoundaryScreenState
   late CharacterMovementSystem _movementSystem;
   late InteractionSystem _interactionSystem;
   late CombatSystem _combatSystem;
+  late GuardianBehaviorSystem _guardianBehaviorSystem;
   late AuthoredInteractionEffectExecutor _interactionEffects;
   late final EntityId _playerEntityId;
   late final TransformComponent _playerSpawnTransform;
@@ -464,6 +465,10 @@ class _PresentationBoundaryScreenState
       collisionWorld: _collisionWorld,
     );
     _combatSystem = CombatSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    _guardianBehaviorSystem = GuardianBehaviorSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
@@ -553,7 +558,7 @@ class _PresentationBoundaryScreenState
       children: [
         Text(avarraProductName, style: textTheme.headlineMedium),
         const SizedBox(height: 4),
-        const Text('Stage 11.1 · Relay Zero Combat'),
+        const Text('Stage 11.2 · Relay Zero Guardian'),
         Text(widget.runtimeWorld.definition.name),
         Text(
           'World source: ${widget.sourceLabel}',
@@ -605,6 +610,7 @@ class _PresentationBoundaryScreenState
         ),
         Text(_selectionStatus, key: const Key('selection_status')),
         Text(_playerCombatStatus, key: const Key('player_health_status')),
+        Text(_guardianStatus, key: const Key('guardian_status')),
         Text(_interactionStatus, key: const Key('interaction_status')),
       ],
     );
@@ -842,6 +848,24 @@ class _PresentationBoundaryScreenState
         '${_formatHealth(health.maximumHealth)} · $objective';
   }
 
+  String get _guardianStatus {
+    final guardians = widget.runtimeWorld.ecs
+        .query<GuardianBehaviorStateComponent>();
+    if (guardians.isEmpty) {
+      return _authoredCombatantEntityIds.isEmpty
+          ? 'Guardian: not authored'
+          : 'Guardian: outside the active area';
+    }
+    final state = guardians.first.component;
+    final health = _healthFor(guardians.first.entityId);
+    if (health?.isDead ?? false) {
+      return 'Guardian: defeated';
+    }
+    return 'Guardian: ${state.phase.name} · '
+        '${_formatHealth(health!.currentHealth)}/'
+        '${_formatHealth(health.maximumHealth)} health';
+  }
+
   String get _hostStatus {
     final host = widget.multiplayerHost!;
     final metrics = _hostMetrics ?? host.metrics;
@@ -995,37 +1019,8 @@ class _PresentationBoundaryScreenState
       targetId: targetId,
       simulationTime: _simulationTime,
     );
-    var status = _combatAttackStatus(result);
+    final status = _combatAttackStatus(result);
     if (result.accepted) {
-      if (!result.targetKilled) {
-        final target = widget.runtimeWorld.ecs.handleFor(targetId);
-        if (target != null &&
-            widget.runtimeWorld.ecs.hasComponent<BasicAttackComponent>(
-              target,
-            ) &&
-            widget.runtimeWorld.ecs.hasComponent<BasicAttackStateComponent>(
-              target,
-            )) {
-          final retaliation = _combatSystem.attack(
-            attackerId: targetId,
-            targetId: _playerEntityId,
-            simulationTime: _simulationTime,
-          );
-          if (retaliation.accepted) {
-            status +=
-                ' · guardian dealt '
-                '${_formatHealth(retaliation.damageDealt)} back';
-            if (retaliation.targetKilled) {
-              status += ' · you were defeated';
-            }
-          }
-        }
-      }
-      if (_isPlayerDead) {
-        _pressedKeys.clear();
-        _touchMovementByPointer.clear();
-        _groundTarget = null;
-      }
       if (result.targetKilled) {
         _selectedEntityId = null;
       }
@@ -1074,6 +1069,7 @@ class _PresentationBoundaryScreenState
     _pressedKeys.clear();
     _touchMovementByPointer.clear();
     _groundTarget = null;
+    _guardianBehaviorSystem.resetActiveGuardians();
     _rebuildGameplayQueries();
     setState(() {
       _presentation = _extractPresentation();
@@ -1211,11 +1207,14 @@ class _PresentationBoundaryScreenState
     }
     _simulationTime += const Duration(microseconds: 16667);
     _updateRemotePlayerInterpolation();
-    if (_isPlayerDead) {
-      return;
-    }
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
+      if (_isPlayerDead) {
+        _pressedKeys.clear();
+        _touchMovementByPointer.clear();
+        _groundTarget = null;
+        return;
+      }
       var direction = _directMovementDirection;
       final groundTarget = _groundTarget;
       if (direction.length <= 1e-9 && groundTarget != null) {
@@ -1235,28 +1234,55 @@ class _PresentationBoundaryScreenState
       return;
     }
     CharacterMovementResult? result;
-    final direction = _directMovementDirection;
-    if (direction.length > 1e-9) {
-      result = _movementSystem.moveDirection(
-        entityId: _playerEntityId,
-        direction: direction,
-        deltaSeconds: _fixedDeltaSeconds,
-      );
-    } else if (_groundTarget != null) {
-      result = _movementSystem.moveToPoint(
-        entityId: _playerEntityId,
-        target: _groundTarget!.position,
-        deltaSeconds: _fixedDeltaSeconds,
-      );
+    if (!_isPlayerDead) {
+      final direction = _directMovementDirection;
+      if (direction.length > 1e-9) {
+        result = _movementSystem.moveDirection(
+          entityId: _playerEntityId,
+          direction: direction,
+          deltaSeconds: _fixedDeltaSeconds,
+        );
+      } else if (_groundTarget != null) {
+        result = _movementSystem.moveToPoint(
+          entityId: _playerEntityId,
+          target: _groundTarget!.position,
+          deltaSeconds: _fixedDeltaSeconds,
+        );
+      }
     }
-    if (result == null) {
+    final guardianResults = _guardianBehaviorSystem.tickAll(
+      targetId: _playerEntityId,
+      simulationTime: _simulationTime,
+      deltaSeconds: _fixedDeltaSeconds,
+    );
+    final guardianChanged = guardianResults.any((entry) => entry.changed);
+    if (result == null && !guardianChanged) {
       return;
     }
     setState(() {
-      _applyMovement(result!);
-      if (result.arrived) {
+      if (result != null) {
+        _applyMovement(result);
+        if (result.arrived) {
+          _groundTarget = null;
+          _interactionStatus = 'Arrived at ground target';
+        }
+      }
+      if (guardianChanged) {
+        _presentation = _extractPresentation();
+      }
+      for (final guardian in guardianResults) {
+        final attack = guardian.attack;
+        if (attack?.accepted ?? false) {
+          _interactionStatus = attack!.targetKilled
+              ? 'Guardian dealt ${_formatHealth(attack.damageDealt)} · '
+                    'you were defeated'
+              : 'Guardian dealt ${_formatHealth(attack.damageDealt)} damage';
+        }
+      }
+      if (_isPlayerDead) {
+        _pressedKeys.clear();
+        _touchMovementByPointer.clear();
         _groundTarget = null;
-        _interactionStatus = 'Arrived at ground target';
       }
     });
   }
@@ -1702,6 +1728,10 @@ class _PresentationBoundaryScreenState
       collisionWorld: _collisionWorld,
     );
     _combatSystem = CombatSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    _guardianBehaviorSystem = GuardianBehaviorSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );

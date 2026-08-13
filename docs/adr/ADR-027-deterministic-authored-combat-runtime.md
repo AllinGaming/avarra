@@ -31,11 +31,11 @@ dead entities from its immutable presentation snapshot. These are lifecycle
 policies at the composition boundary; neither the renderer nor physics package
 depends on gameplay components.
 
-The first offline encounter uses a stationary guardian that retaliates after a
-successful player attack. Pursuit and autonomous attack scheduling remain the
-next Stage 11 slice. Connected Game sessions reject combat input with an
-explicit host-authority status until protocol commands and replication are
-implemented.
+The first offline encounter used a stationary guardian that retaliated after a
+successful player attack. Stage 11.2 subsequently replaced that composition
+shortcut with the state machine in ADR-028. Connected Game sessions reject
+combat input with an explicit host-authority status until protocol commands and
+replication are implemented.
 
 ## Consequences
 
