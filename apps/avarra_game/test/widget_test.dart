@@ -42,7 +42,7 @@ void main() {
       find.text('Health 100/100 · Select the guardian and attack'),
       findsOneWidget,
     );
-    expect(find.text('Guardian: idle · 50/50 health'), findsOneWidget);
+    expect(find.text('Guardian: idle · 60/60 health'), findsOneWidget);
     expect(find.byKey(const Key('camera_status')), findsOneWidget);
     expect(find.byKey(const Key('world_version_status')), findsOneWidget);
     expect(find.text('Chunk 0,0 · 1/3 active'), findsOneWidget);
@@ -70,7 +70,7 @@ void main() {
     );
     await SaveRepository(store: store).save(
       WorldSave(
-        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000401'),
+        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000411'),
         worldId: WorldId.parse('01890f47-e8b8-7a68-8000-000000000010'),
         sourceWorldFormatVersion: 2,
         revision: 4,
@@ -107,7 +107,7 @@ void main() {
     );
     await SaveRepository(store: store).save(
       WorldSave(
-        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000401'),
+        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000411'),
         worldId: WorldId.parse('01890f47-e8b8-7a68-8000-000000000010'),
         sourceWorldFormatVersion: 2,
         revision: 2,
@@ -156,7 +156,7 @@ void main() {
     );
     await SaveRepository(store: store).save(
       WorldSave(
-        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000401'),
+        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000411'),
         worldId: WorldId.parse('01890f47-e8b8-7a68-8000-000000000010'),
         sourceWorldFormatVersion: 2,
         revision: 3,

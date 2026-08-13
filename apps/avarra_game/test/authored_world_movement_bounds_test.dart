@@ -16,8 +16,8 @@ void main() {
 
     expect(bounds.contains(Vector3(1, 0, 1)), isTrue);
     expect(bounds.contains(Vector3(1, 0, -0.01)), isTrue);
-    expect(bounds.contains(Vector3(4.01, 0, 1)), isTrue);
+    expect(bounds.contains(Vector3(8.01, 0, 1)), isTrue);
     expect(bounds.contains(Vector3(-0.01, 0, -0.01)), isFalse);
-    expect(bounds.contains(Vector3(4.01, 0, -0.01)), isFalse);
+    expect(bounds.contains(Vector3(8.01, 0, -0.01)), isFalse);
   });
 }

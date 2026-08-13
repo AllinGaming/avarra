@@ -58,8 +58,9 @@ than accidentally streaming from a host camera.
 
 ## Game integration
 
-The bundled proof world is now world format v2 with a prototype chunk size of
-four world units. Game bootstrap loads the global player, activates the initial
+At the Stage 6 gate, the bundled proof world moved to world format v2 with a
+prototype chunk size of four world units. Game bootstrap loads the global
+player, activates the initial
 chunk asynchronously, and then constructs physics and presentation state.
 
 Movement refreshes streaming interest. When active chunk membership changes,
@@ -125,7 +126,9 @@ signal, not production frame-time evidence.
 
 ## Provisional limits
 
-- Four world units is proof content, not the OD-008 production chunk size.
+- Four world units was Stage 6 proof content, not the OD-008 production chunk
+  size. The Stage 11.2 Android playability follow-up re-authors the bundled
+  Relay Zero arena at eight units without closing OD-008.
 - The in-memory source decodes the full JSON document first; random-access
   archives and cooked chunks remain OD-019.
 - Streaming budgets currently count entity creation/destruction, not measured

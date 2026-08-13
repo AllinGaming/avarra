@@ -5,7 +5,7 @@
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero Prototype",
-    "chunkSize": 4
+    "chunkSize": 8
   },
   "assets": [
     {
@@ -19,9 +19,9 @@
       "components": {
         "avarra.transform": {
           "schemaVersion": 1,
-          "position": [1, 0.45, 1],
+          "position": [4, 0.4, 4],
           "rotation": [0, 0, 0, 1],
-          "scale": [0.45, 0.45, 0.45]
+          "scale": [0.4, 0.4, 0.4]
         },
         "avarra.renderable_reference": {
           "schemaVersion": 1,
@@ -29,7 +29,7 @@
         },
         "avarra.physics.collider": {
           "schemaVersion": 1,
-          "halfExtents": [0.4, 0.4, 0.4],
+          "halfExtents": [0.34, 0.38, 0.34],
           "bodyKind": "character",
           "isSensor": false
         },
@@ -46,9 +46,9 @@
         },
         "avarra.combat.basic_attack": {
           "schemaVersion": 1,
-          "damage": 10,
-          "range": 2.2,
-          "cooldownSeconds": 0.65
+          "damage": 20,
+          "range": 2.6,
+          "cooldownSeconds": 0.45
         },
         "avarra.isometric.occlusion_target": {"schemaVersion": 1}
       }
@@ -64,9 +64,9 @@
           "components": {
             "avarra.transform": {
               "schemaVersion": 1,
-              "position": [3, 1.5, 3],
+              "position": [6.5, 0.7, 6.5],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.45, 1.5, 1.5]
+              "scale": [0.25, 0.7, 0.6]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -74,7 +74,7 @@
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
-              "halfExtents": [0.45, 1.5, 1.5],
+              "halfExtents": [0.25, 0.7, 0.6],
               "bodyKind": "static",
               "isSensor": false
             },
@@ -86,9 +86,9 @@
           "components": {
             "avarra.transform": {
               "schemaVersion": 1,
-              "position": [2.2, 0.6, 1],
+              "position": [6, 0.45, 3.5],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.3, 0.6, 1.2]
+              "scale": [0.2, 0.45, 0.8]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -96,7 +96,7 @@
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
-              "halfExtents": [0.3, 0.6, 1.2],
+              "halfExtents": [0.2, 0.45, 0.8],
               "bodyKind": "static",
               "isSensor": false
             }
@@ -107,9 +107,9 @@
           "components": {
             "avarra.transform": {
               "schemaVersion": 1,
-              "position": [0.5, 0.4, 2.5],
+              "position": [2, 0.35, 5.5],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.4, 0.4, 0.4]
+              "scale": [0.35, 0.35, 0.35]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -117,14 +117,14 @@
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
-              "halfExtents": [0.4, 0.4, 0.4],
+              "halfExtents": [0.35, 0.35, 0.35],
               "bodyKind": "static",
               "isSensor": false
             },
             "avarra.interactable": {
               "schemaVersion": 1,
               "label": "Restore the ancient relay",
-              "range": 2.4
+              "range": 2.8
             },
             "avarra.interaction.set_persistent_flag": {
               "schemaVersion": 1,
@@ -142,9 +142,9 @@
           "components": {
             "avarra.transform": {
               "schemaVersion": 1,
-              "position": [1.65, 0.55, 3.4],
+              "position": [4.5, 0.45, 7],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.55, 0.55, 0.55]
+              "scale": [0.45, 0.45, 0.45]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -152,30 +152,30 @@
             },
             "avarra.physics.collider": {
               "schemaVersion": 1,
-              "halfExtents": [0.45, 0.5, 0.45],
+              "halfExtents": [0.38, 0.42, 0.38],
               "bodyKind": "character",
               "isSensor": false
             },
             "avarra.character_controller": {
               "schemaVersion": 1,
-              "moveSpeed": 1.35,
+              "moveSpeed": 1,
               "skinWidth": 0.03,
               "arrivalTolerance": 0.08
             },
             "avarra.health": {
               "schemaVersion": 1,
-              "maximumHealth": 50
+              "maximumHealth": 60
             },
             "avarra.combat.basic_attack": {
               "schemaVersion": 1,
-              "damage": 25,
-              "range": 1.1,
-              "cooldownSeconds": 0.65
+              "damage": 10,
+              "range": 1,
+              "cooldownSeconds": 1.1
             },
             "avarra.ai.guardian_behavior": {
               "schemaVersion": 1,
-              "perceptionRange": 4,
-              "leashRange": 6
+              "perceptionRange": 3.5,
+              "leashRange": 5
             }
           }
         }

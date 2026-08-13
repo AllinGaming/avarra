@@ -67,6 +67,11 @@ Verified on 2026-08-13:
   25-damage attacks, player defeat, and the guardian returning to `idle` after
   target death.
 
+The 25-damage value above records the initial Stage 11.2 gate. The Android
+playability follow-up changes only the bundled balance to 10 damage, a 1.1
+second cooldown, and 1.0 movement speed; guardian authority/state semantics are
+unchanged.
+
 The Windows build reports existing upstream Thermion C4005/C4251 warnings, and
 the Android build reports Thermion's future Kotlin Gradle Plugin migration.
 Neither warning blocks the current artifacts.

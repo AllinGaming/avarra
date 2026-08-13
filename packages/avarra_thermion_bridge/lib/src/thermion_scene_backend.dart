@@ -40,6 +40,7 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
   final ThermionAssetUriResolver _assetUriResolver;
   final ThermionEntityIndex _entityIndex = ThermionEntityIndex();
   final Map<EntityId, ThermionSceneObject> _objectsByEntityId = {};
+  final Map<AssetId, _ThermionAssetSource> _assetSources = {};
 
   EntityId? entityIdForThermionEntity(ThermionEntity thermionEntity) {
     return _entityIndex.lookup(thermionEntity);
@@ -130,11 +131,10 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
   }
 
   Future<ThermionSceneObject> _load(PresentationEntity entity) async {
-    final assetUri = _assetUriResolver.resolve(entity.renderAssetId);
-    final asset = await _viewer.loadGltf(assetUri);
+    final source = await _sourceFor(entity.renderAssetId);
+    final asset = await source.createInstance();
     try {
-      await asset.setCastShadows(true);
-      await asset.setReceiveShadows(true);
+      await _viewer.addToScene(asset);
       await asset.setTransform(
         presentationTransformToThermionMatrix(entity.transform),
       );
@@ -152,6 +152,22 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
       await _viewer.destroyAsset(asset);
       rethrow;
     }
+  }
+
+  Future<_ThermionAssetSource> _sourceFor(AssetId assetId) async {
+    final cached = _assetSources[assetId];
+    if (cached != null) {
+      return cached;
+    }
+    final assetUri = _assetUriResolver.resolve(assetId);
+    final owner = await _viewer.loadGltf(
+      assetUri,
+      addToScene: false,
+      releaseSourceData: false,
+    );
+    final source = _ThermionAssetSource(owner);
+    _assetSources[assetId] = source;
+    return source;
   }
 
   void _register(ThermionSceneObject object) {
@@ -189,6 +205,21 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     object
       ..opacity = nextOpacity
       ..selected = nextSelected;
+  }
+}
+
+final class _ThermionAssetSource {
+  _ThermionAssetSource(this.owner);
+
+  final ThermionAsset<dynamic> owner;
+  bool _initialInstanceAvailable = true;
+
+  Future<ThermionAsset<dynamic>> createInstance() async {
+    if (_initialInstanceAvailable) {
+      _initialInstanceAvailable = false;
+      return owner.getInstance(0);
+    }
+    return owner.createInstance();
   }
 }
 

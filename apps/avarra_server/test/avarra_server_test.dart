@@ -185,7 +185,7 @@ void main() {
     final client = await _connect(host, _primaryPlayerId);
     await client.waitForControlledEntity();
 
-    for (var index = 0; index < 16; index += 1) {
+    for (var index = 0; index < 40; index += 1) {
       final sequence = await client.sendMovementIntent(
         directionX: 1,
         directionZ: 0,
@@ -196,7 +196,7 @@ void main() {
     final player = client.entities.values.singleWhere(
       (entity) => entity.entityId == _playerEntityId,
     );
-    expect(player.transform.position[0], closeTo(1.5, 0.001));
+    expect(player.transform.position[0], closeTo(5.43, 0.001));
     expect(
       host.runtimeWorld.ecs.hasComponent<PhysicsColliderComponent>(
         host.runtimeWorld.ecs.handleFor(_playerEntityId)!,

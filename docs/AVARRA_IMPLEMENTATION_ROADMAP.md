@@ -605,11 +605,13 @@ Stage 11.2 status (implemented 2026-08-13):
 
 Stage 11.2 playability follow-up (implemented 2026-08-13):
 
-- simulation waits for the first synchronized renderer frame and then runs the
-  local presentation loop at 30 Hz with a short encounter grace period;
+- simulation waits for a post-texture-attachment orthographic renderer frame
+  and then runs a bounded, vsync-aligned 60 Hz fixed step with a four-second
+  encounter grace period;
 - save, streaming, and occlusion work is coalesced away from unchanged ticks;
-- the portrait HUD/camera/control layout exposes the playfield and movement is
-  camera-relative; and
+- repeated glTF assets use renderer instances rather than repeated parsing;
+- the portrait HUD/camera/control layout exposes a centered 8×8 arena and
+  movement is camera-relative; and
 - authored chunk bounds stop movement into empty space while legacy invalid
   saves recover to the authored spawn.
 

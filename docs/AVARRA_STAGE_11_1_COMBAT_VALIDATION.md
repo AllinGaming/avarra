@@ -28,6 +28,11 @@ combat-state persistence.
 - Cooldowns use caller-supplied simulation time rather than wall time.
 - The bundled Relay Zero player has 100 health and a 10-damage attack.
 - A 50-health guardian retaliates for 25 damage after each accepted player hit.
+
+These were the initial Stage 11.1 proof values. The Stage 11.2 Android
+playability follow-up rebalances the current bundled encounter to a 60-health
+guardian dealing 10 damage while the player deals 20; the deterministic combat
+rules are unchanged.
 - Game exposes Attack/Space controls, target and player health, failure status,
   and a restart action at the authored player spawn.
 - Dead combatants remain in ECS state but leave presentation and static
@@ -71,7 +76,8 @@ warnings and Android Kotlin-plugin migration warning; neither failed a build.
 
 1. Launch Game offline and select the guardian cube near the player.
 2. Press Space or tap **Attack** no faster than the displayed cooldown permits.
-3. Confirm target health drops by 10 and player health drops by 25.
+3. Confirm target health drops by 20 and player health drops by 10 in the
+   current bundled balance.
 4. Confirm the fourth accepted hit defeats the player and exposes **Restart**.
 5. Restart, select the guardian again, and land the final hit.
 6. Confirm the guardian disappears and the HUD reports the relay path secured.

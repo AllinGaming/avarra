@@ -507,10 +507,12 @@ also implemented: content schema v6 authors guardian perception/leash policy,
 and a pure-Dart state machine owns idle, pursuit, attack, return, and defeat
 while reusing movement, physics, and combat authority. Offline Game drives the
 guardian; connected combat/AI remains disabled until its host-authoritative
-slice. The follow-up playability pass gates simulation on renderer readiness,
-runs local presentation at 30 Hz, coalesces save/streaming work, makes controls
+slice. The follow-up playability pass gates simulation on post-attachment
+orthographic renderer readiness, uses a bounded vsync-aligned 60 Hz fixed step,
+pools repeated glTF instances, coalesces save/streaming work, makes controls
 camera-relative, contains movement to authored chunks, repairs legacy invalid
-saves, and replaces the portrait diagnostic wall with a compact HUD. Next is
+saves, and replaces the portrait diagnostic wall with a compact HUD. Relay
+Zero now uses an 8×8 centered arena and a survivable guardian balance. Next is
 three persistent stabilizers and an authored objective gate before item,
 co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
@@ -3184,8 +3186,9 @@ than accidentally streaming from a host camera.
 
 ## Game integration
 
-The bundled proof world is now world format v2 with a prototype chunk size of
-four world units. Game bootstrap loads the global player, activates the initial
+At the Stage 6 gate, the bundled proof world moved to world format v2 with a
+prototype chunk size of four world units. Game bootstrap loads the global
+player, activates the initial
 chunk asynchronously, and then constructs physics and presentation state.
 
 Movement refreshes streaming interest. When active chunk membership changes,
@@ -3251,7 +3254,9 @@ signal, not production frame-time evidence.
 
 ## Provisional limits
 
-- Four world units is proof content, not the OD-008 production chunk size.
+- Four world units was Stage 6 proof content, not the OD-008 production chunk
+  size. The Stage 11.2 Android playability follow-up re-authors the bundled
+  Relay Zero arena at eight units without closing OD-008.
 - The in-memory source decodes the full JSON document first; random-access
   archives and cooked chunks remain OD-019.
 - Streaming budgets currently count entity creation/destruction, not measured
@@ -4286,6 +4291,11 @@ combat-state persistence.
 - Cooldowns use caller-supplied simulation time rather than wall time.
 - The bundled Relay Zero player has 100 health and a 10-damage attack.
 - A 50-health guardian retaliates for 25 damage after each accepted player hit.
+
+These were the initial Stage 11.1 proof values. The Stage 11.2 Android
+playability follow-up rebalances the current bundled encounter to a 60-health
+guardian dealing 10 damage while the player deals 20; the deterministic combat
+rules are unchanged.
 - Game exposes Attack/Space controls, target and player health, failure status,
   and a restart action at the authored player spawn.
 - Dead combatants remain in ECS state but leave presentation and static
@@ -4329,7 +4339,8 @@ warnings and Android Kotlin-plugin migration warning; neither failed a build.
 
 1. Launch Game offline and select the guardian cube near the player.
 2. Press Space or tap **Attack** no faster than the displayed cooldown permits.
-3. Confirm target health drops by 10 and player health drops by 25.
+3. Confirm target health drops by 20 and player health drops by 10 in the
+   current bundled balance.
 4. Confirm the fourth accepted hit defeats the player and exposes **Restart**.
 5. Restart, select the guardian again, and land the final hit.
 6. Confirm the guardian disappears and the HUD reports the relay path secured.
@@ -4418,6 +4429,11 @@ Verified on 2026-08-13:
   25-damage attacks, player defeat, and the guardian returning to `idle` after
   target death.
 
+The 25-damage value above records the initial Stage 11.2 gate. The Android
+playability follow-up changes only the bundled balance to 10 damage, a 1.1
+second cooldown, and 1.0 movement speed; guardian authority/state semantics are
+unchanged.
+
 The Windows build reports existing upstream Thermion C4005/C4251 warnings, and
 the Android build reports Thermion's future Kotlin Gradle Plugin migration.
 Neither warning blocks the current artifacts.
@@ -4468,15 +4484,22 @@ Stage 11.3 is intentionally paused until this baseline is usable.
 
 - Thermion now signals when the first scene snapshot and camera are ready.
   Offline simulation and input remain paused until that signal.
-- The local gameplay/presentation loop runs at a deliberate 30 Hz instead of a
-  16 ms periodic timer competing with the mobile renderer.
-- Guardian activation has a two-second post-ready/restart grace period.
+- The local gameplay/presentation loop uses a vsync-aligned, bounded 60 Hz
+  fixed-step clock. It accumulates high-refresh display frames without
+  speeding simulation and drops excessive catch-up work after a stall.
+- Guardian activation has a four-second post-ready/restart grace period.
 - Save debounce is coalesced rather than cancelling and recreating a timer on
   every movement tick.
 - Streaming reconciliation is requested when the player's chunk changes, not
   on every movement tick.
 - Repeated identical occluder-opacity calls are suppressed in the Thermion
   viewport.
+- Repeated render assets are loaded once and represented by lightweight glTF
+  instances. Redundant asset-root shadow calls that emitted native `invalid
+  renderable` warnings are gone.
+- Android readiness waits for a forced post-texture-attachment orthographic
+  projection. This closes a race that randomly left the scene using Thermion's
+  default perspective camera after launch.
 - Portrait devices use a wider gameplay framing and a compact HUD. The full
   diagnostics remain available behind the information button.
 - Mobile controls reserve the bottom corners, omit redundant zoom buttons, and
@@ -4493,6 +4516,12 @@ Stage 11.3 is intentionally paused until this baseline is usable.
   actual authored player spawn and rewritten before streaming begins.
 - Post-ready frame averages/maxima are exposed in the diagnostics panel for
   both offline and hosted play.
+- Relay Zero's center arena is 8×8 instead of 4×4, the player starts near its
+  center, the portrait camera shows the arena at a 20-unit vertical span, and
+  guardian/player authored combat values provide an actual response window.
+- The re-authored bundled arena uses a new save slot. The old proof save remains
+  untouched so its four-unit local coordinates are never reinterpreted using
+  the new chunk scale.
 
 ## Regression coverage
 
@@ -4502,38 +4531,46 @@ Stage 11.3 is intentionally paused until this baseline is usable.
   out-of-bounds player save.
 - Widget tests verify that compact touch controls do not raise a long-press
   tooltip while a direction is held.
+- Fixed-step clock tests cover 60 Hz cadence, high-refresh accumulation,
+  bounded catch-up, and lifecycle reset.
 - Existing Game, Thermion bridge, movement, persistence, guardian, and host
   tests remain part of the consolidated gate.
 
 ## Device acceptance
 
-The final debug APK was installed on the configured Pixel 10 Pro Android
-17/API-37 emulator. The acceptance pass confirmed:
+The final profile APK was installed on the configured Pixel 10 Pro Android
+17/API-37 emulator. Profile mode is the performance acceptance configuration;
+debug mode remains useful for diagnosis but is not representative of native
+Thermion play. The acceptance pass confirmed:
 
 - the compact HUD and scene are visible before simulation/input begins;
 - attack works without manually selecting the moving guardian;
 - a held camera-relative direction remains active, respects collision/world
   bounds, and raises no long-press tooltip;
-- the post-ready Flutter frame sample reported 7.16 ms average and 53.62 ms
-  maximum during the interaction pass; and
+- an eight-second held-movement trace presented the native SurfaceView at a
+  16.66 ms p50 and 18.63 ms p95, with one interval over 20 ms and none over
+  34 ms; and
 - no fatal exception was present in the Android log.
 
-The consolidated gate passed 197 tests, repository analysis, an Android debug
-APK build, and a Windows debug build.
+Before the rescue changes, a profile cold start emitted 78- and 30-frame skip
+events plus ten `invalid renderable` messages while five copies of the cube
+asset were loaded. After pooling and the projection fix, three consecutive cold
+launches reached Android's displayed milestone in 1.111, 1.029, and 1.030
+seconds. All three reported zero skipped-frame events, zero invalid-renderable
+messages, and zero fatal exceptions. Their captures were byte-identical,
+confirming consistent camera projection/framing.
 
-A fresh debug cold start still logged one 56-frame main-thread stall while
-Thermion created native assets. Thermion also logs nonfatal `invalid
-renderable` messages from asset-wide shadow setup when native assets are
-created. Neither recurred as a continuous steady-state frame warning, but both
-remain renderer-integration work. Physical Android profiling remains a
-separate release gate.
+The final consolidated gate passed 200 tests: 160 pure-Dart/server and 40
+Flutter/renderer/application tests. Repository analysis was clean, the server
+compiled, Game built for Android and Windows debug, Forge built for Windows
+debug, and the Android x64 profile APK built and passed the device trace.
+Physical Android profiling remains a separate release gate.
 
 ## Remaining product limitations
 
 - Relay Zero still uses sparse cube-based proof art, not production level art.
-- Thermion debug cold start remains materially slower than steady-state play;
-  the native asset setup needs profiling before a release build can be signed
-  off.
+- Debug-mode timing remains materially worse than profile/release timing and is
+  not a performance acceptance signal.
 - The world is only three chunks and one combat encounter; Stage 11.3 must add
   the stabilizer objective sequence before this is a meaningful game session.
 - Host-authoritative combat/guardian AI remains deferred to the co-op slice.
@@ -8592,11 +8629,13 @@ Stage 11.2 status (implemented 2026-08-13):
 
 Stage 11.2 playability follow-up (implemented 2026-08-13):
 
-- simulation waits for the first synchronized renderer frame and then runs the
-  local presentation loop at 30 Hz with a short encounter grace period;
+- simulation waits for a post-texture-attachment orthographic renderer frame
+  and then runs a bounded, vsync-aligned 60 Hz fixed step with a four-second
+  encounter grace period;
 - save, streaming, and occlusion work is coalesced away from unchanged ticks;
-- the portrait HUD/camera/control layout exposes the playfield and movement is
-  camera-relative; and
+- repeated glTF assets use renderer instances rather than repeated parsing;
+- the portrait HUD/camera/control layout exposes a centered 8×8 arena and
+  movement is camera-relative; and
 - authored chunk bounds stop movement into empty space while legacy invalid
   saves recover to the authored spawn.
 

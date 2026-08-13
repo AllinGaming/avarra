@@ -143,7 +143,17 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
       _translationGizmo = gizmo;
       await _updateGizmoAttachment();
     }
+    // ViewerWidget invokes this callback before its Android texture is
+    // attached. Texture attachment can reset the camera projection, so do an
+    // initial configuration now, then force it once more after attachment
+    // before reporting the scene as playable.
     await _queueCameraConfiguration();
+    _cameraDebounce?.cancel();
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    if (!mounted) {
+      return;
+    }
+    await _forceCameraConfiguration();
     if (mounted && _error == null) {
       setState(() => _ready = true);
       if (!_didNotifyReady) {
@@ -151,7 +161,6 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
         widget.onReady?.call();
       }
     }
-    _scheduleCameraConfiguration();
   }
 
   Future<void> _queueSynchronization(PresentationSnapshot snapshot) {
@@ -324,9 +333,15 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
     _cameraDebounce?.cancel();
     _cameraDebounce = Timer(const Duration(milliseconds: 180), () {
       if (mounted) {
-        unawaited(_queueCameraConfiguration());
+        unawaited(_forceCameraConfiguration());
       }
     });
+  }
+
+  Future<void> _forceCameraConfiguration() {
+    _projectedViewportSize = Size.zero;
+    _projectedVerticalSpan = null;
+    return _queueCameraConfiguration();
   }
 
   Future<void> _handleTap(TapUpDetails details) async {

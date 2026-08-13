@@ -46,7 +46,7 @@ void main() {
       expect(definition.name, 'Relay Zero Prototype');
       expect(definition.worldFormatVersion, 2);
       expect(definition.contentSchemaVersion, 6);
-      expect(definition.chunkSize, 4);
+      expect(definition.chunkSize, 8);
       expect(definition.chunks, hasLength(3));
       expect(definition.allEntities, hasLength(9));
       expect(runtime.ecs.entityCount, 5);
@@ -62,20 +62,20 @@ void main() {
       );
       expect(
         runtime.ecs.component<BasicAttackComponent>(playerHandle).cooldown,
-        const Duration(milliseconds: 650),
+        const Duration(milliseconds: 450),
       );
       final guardianHandle = runtime.ecs.handleFor(
         EntityId.parse('01890f47-e8b8-7a68-8000-000000000009'),
       )!;
       expect(
         runtime.ecs.component<HealthComponent>(guardianHandle).currentHealth,
-        50,
+        60,
       );
       expect(
         runtime.ecs
             .component<GuardianBehaviorComponent>(guardianHandle)
             .perceptionRange,
-        4,
+        3.5,
       );
       expect(
         runtime.ecs
@@ -106,7 +106,7 @@ void main() {
       );
       expect(
         runtime.ecs.component<HealthComponent>(playerHandle).currentHealth,
-        75,
+        90,
       );
       final consoleHandle = runtime.ecs.handleFor(
         EntityId.parse('01890f47-e8b8-7a68-8000-000000000004'),

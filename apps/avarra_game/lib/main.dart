@@ -24,6 +24,7 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 import 'src/authored_interaction_effects.dart';
 import 'src/authored_world_movement_bounds.dart';
+import 'src/fixed_step_frame_clock.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
 import 'src/world_library_ui.dart';
@@ -31,9 +32,9 @@ import 'src/world_package_source_loader.dart';
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
 const _configuredWorldPath = String.fromEnvironment('AVARRA_WORLD_PATH');
-const _simulationStep = Duration(microseconds: 33333);
-const _fixedDeltaSeconds = 1 / 30;
-const _guardianWakeDelay = Duration(seconds: 2);
+const _simulationStep = Duration(microseconds: 16667);
+const _fixedDeltaSeconds = 1 / 60;
+const _guardianWakeDelay = Duration(seconds: 4);
 const _configuredMultiplayerHost = String.fromEnvironment(
   'AVARRA_MULTIPLAYER_HOST',
 );
@@ -49,7 +50,10 @@ const _configuredPlayerId = String.fromEnvironment(
   'AVARRA_PLAYER_ID',
   defaultValue: '01890f47-e8b8-7a68-8000-000000000402',
 );
-final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000401');
+// The arena rebalance changes authored chunk scale and spawn coordinates, so
+// it intentionally starts a new bundled-world slot. The prior proof save is
+// left untouched instead of decoding its local coordinates against new data.
+final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000411');
 
 typedef WorldPackageSourceLoader = Future<String> Function();
 typedef SaveStoreLoader = Future<SaveStore> Function();
@@ -407,7 +411,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
 
 class _PresentationBoundaryScreenState
     extends State<_PresentationBoundaryScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late PresentationSnapshot _presentation;
   late final ThermionAssetUriResolver _assetUriResolver;
   late DeterministicPhysicsCollisionWorld _collisionWorld;
@@ -427,10 +431,13 @@ class _PresentationBoundaryScreenState
   final MovementInputPacer _movementInputPacer = MovementInputPacer();
   final Map<EntityId, NetworkTransformInterpolator> _remoteInterpolators = {};
   final Stopwatch _movementClock = Stopwatch()..start();
+  final FixedStepFrameClock _frameClock = FixedStepFrameClock(
+    step: _simulationStep,
+  );
+  late final Ticker _gameLoopTicker;
   late IsometricCameraRig _cameraRig;
   EntityId? _selectedEntityId;
   SetGroundTargetIntent? _groundTarget;
-  Timer? _movementTimer;
   Timer? _saveTimer;
   Timer? _hostMetricsTimer;
   StreamSubscription<ReplicationClientEvent>? _replicationSubscription;
@@ -458,6 +465,7 @@ class _PresentationBoundaryScreenState
   @override
   void initState() {
     super.initState();
+    _gameLoopTicker = createTicker(_handleGameFrame);
     WidgetsBinding.instance.addObserver(this);
     _saveStatus = widget.restoredSave
         ? 'Restored revision ${widget.persistence.revision}'
@@ -500,7 +508,10 @@ class _PresentationBoundaryScreenState
       ecs: widget.runtimeWorld.ecs,
       persistence: widget.persistence,
     );
-    _cameraRig = IsometricCameraRig(target: _playerPosition);
+    _cameraRig = IsometricCameraRig(
+      target: _playerPosition,
+      maximumVerticalSpan: 24,
+    );
     _lastRequestedPlayerChunk = _currentChunkCoordinate;
     _assetUriResolver = MapThermionAssetUriResolver({
       for (final entry in widget.runtimeWorld.assetPaths.entries)
@@ -537,13 +548,13 @@ class _PresentationBoundaryScreenState
     _cameraFramingInitialized = true;
     final size = MediaQuery.sizeOf(context);
     if (size.width < size.height) {
-      _cameraRig = _cameraRig.copyWith(verticalSpan: 8);
+      _cameraRig = _cameraRig.copyWith(verticalSpan: 20);
     }
   }
 
   @override
   void dispose() {
-    _movementTimer?.cancel();
+    _gameLoopTicker.dispose();
     _saveTimer?.cancel();
     _hostMetricsTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_recordFrameTimings);
@@ -573,16 +584,14 @@ class _PresentationBoundaryScreenState
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      _movementTimer?.cancel();
-      _movementTimer = null;
+      _gameLoopTicker.stop();
+      _frameClock.reset();
       _saveTimer?.cancel();
       _saveTimer = null;
       unawaited(_flushSave());
       unawaited(_endHostedSession());
-    } else if (state == AppLifecycleState.resumed &&
-        _rendererReady &&
-        _movementTimer == null) {
-      _movementTimer = Timer.periodic(_simulationStep, (_) => _tickMovement());
+    } else if (state == AppLifecycleState.resumed && _rendererReady) {
+      _startGameLoop();
     }
   }
 
@@ -1152,7 +1161,22 @@ class _PresentationBoundaryScreenState
       _maximumFrameMicroseconds = 0;
       _interactionStatus = 'Ready · explore Relay Zero';
     });
-    _movementTimer = Timer.periodic(_simulationStep, (_) => _tickMovement());
+    _startGameLoop();
+  }
+
+  void _startGameLoop() {
+    if (_gameLoopTicker.isActive) {
+      return;
+    }
+    _frameClock.reset();
+    _gameLoopTicker.start();
+  }
+
+  void _handleGameFrame(Duration elapsed) {
+    final steps = _frameClock.advance(elapsed);
+    for (var index = 0; index < steps; index += 1) {
+      _tickMovement();
+    }
   }
 
   Vector3 get _playerPosition {

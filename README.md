@@ -70,7 +70,8 @@ deterministic perception, pursuit, attack, leash, return, and defeat. Three
 persistent stabilizers and their objective gate are next. A Stage 11.2
 playability follow-up gates simulation on renderer readiness, reduces the
 mobile update load, fixes camera-relative controls and authored-world bounds,
-and replaces the diagnostic wall with a compact gameplay HUD.
+replaces the diagnostic wall with a compact gameplay HUD, pools repeated glTF
+assets, and drives presentation from a bounded vsync-aligned 60 Hz fixed step.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -232,6 +233,16 @@ flutter test apps/avarra_forge
 
 CI additionally compiles the server and builds Game for Windows/Android and
 Forge for Windows.
+
+Run Android gameplay acceptance in profile mode from `apps/avarra_game`:
+
+```powershell
+flutter run --profile -d <android-device-id>
+```
+
+Thermion's native startup and frame behavior is materially different under the
+Flutter debugger. Debug mode is appropriate for diagnosis and hot reload, but
+profile/release mode is the Android performance gate.
 
 Run the finite deterministic server harness with:
 
