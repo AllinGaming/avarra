@@ -25,6 +25,9 @@ $sourcePaths = @(
     'docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md'
     'docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md'
     'docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md'
+    'docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md'
+    'docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md'
+    'docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md'
     'docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md'
     'docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md'
     'docs/AVARRA_WORLD_CONTENT_MODEL.md'
@@ -56,6 +59,8 @@ $sourcePaths = @(
     'docs/adr/ADR-024-playable-world-profile-and-interaction-effect.md'
     'docs/adr/ADR-025-forge-project-and-runtime-world-library.md'
     'docs/adr/ADR-026-schema-editor-inverse-history-and-shared-viewport.md'
+    'docs/adr/ADR-027-deterministic-authored-combat-runtime.md'
+    'docs/adr/ADR-028-authored-deterministic-guardian-state-machine.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

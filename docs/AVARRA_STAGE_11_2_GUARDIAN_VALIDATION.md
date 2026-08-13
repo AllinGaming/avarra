@@ -88,3 +88,6 @@ persistent stabilizers and a gate that opens from authored objective state.
 The relay-core item and minimal inventory follow that objective foundation.
 
 See ADR-028 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+The subsequent mobile playability/performance corrections are recorded in
+`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`.

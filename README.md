@@ -44,19 +44,20 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 19. `docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`
 20. `docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`
 21. `docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`
-22. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-23. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-24. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-25. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-26. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-27. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-28. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-29. `docs/AVARRA_OPEN_DECISIONS.md`
-30. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-31. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-32. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-33. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-34. ADRs under `docs/adr/`
+22. `docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`
+23. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+24. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+25. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+26. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+27. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+28. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+29. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+30. `docs/AVARRA_OPEN_DECISIONS.md`
+31. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+32. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+33. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+34. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+35. ADRs under `docs/adr/`
 
 ## Implementation status
 
@@ -66,7 +67,10 @@ recoverable project/runtime-import gate, and Stage 10.2's editor completion
 gate pass. Stage 11.1 supplies authored deterministic combat, death/restart,
 and the first playable Relay Zero guardian encounter. Stage 11.2 adds authored,
 deterministic perception, pursuit, attack, leash, return, and defeat. Three
-persistent stabilizers and their objective gate are next.
+persistent stabilizers and their objective gate are next. A Stage 11.2
+playability follow-up gates simulation on renderer readiness, reduces the
+mobile update load, fixes camera-relative controls and authored-world bounds,
+and replaces the diagnostic wall with a compact gameplay HUD.
 Physical Android runtime/performance validation remains open for the
 presentation, character, streaming, persistence, and direct-LAN multiplayer
 gates.
@@ -192,6 +196,7 @@ playable RPG slice still comes before AI/MCP expansion. See
 `docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

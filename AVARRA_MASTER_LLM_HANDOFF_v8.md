@@ -507,13 +507,18 @@ also implemented: content schema v6 authors guardian perception/leash policy,
 and a pure-Dart state machine owns idle, pursuit, attack, return, and defeat
 while reusing movement, physics, and combat authority. Offline Game drives the
 guardian; connected combat/AI remains disabled until its host-authoritative
-slice. Next is three persistent stabilizers and an authored objective gate,
-before item, co-op, persistence, or AI/MCP expansion. See
+slice. The follow-up playability pass gates simulation on renderer readiness,
+runs local presentation at 30 Hz, coalesces save/streaming work, makes controls
+camera-relative, contains movement to authored chunks, repairs legacy invalid
+saves, and replaces the portrait diagnostic wall with a compact HUD. Next is
+three persistent stabilizers and an authored objective gate before item,
+co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
 `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-028.
 
 ---
@@ -4246,6 +4251,299 @@ replace the separate physical-Android gameplay/performance gate.
 See ADR-026 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
 
 <!-- END AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_11_1_COMBAT_VALIDATION.md -->
+
+# AVARRA Stage 11.1 — Relay Zero Combat Validation
+
+**Status:** Implemented
+**Date:** 2026-08-13
+
+## Scope
+
+This slice turns Relay Zero from an interaction proof into its first playable
+combat loop:
+
+```text
+select guardian
+  → attack
+  → receive retaliation
+  → die and restart, or defeat the guardian
+  → continue to the relay objective
+```
+
+It intentionally stops before pursuit AI, combat networking, inventory, and
+combat-state persistence.
+
+## Implemented contract
+
+- Content schema v5 defines Forge-editable health and basic-attack components.
+- Runtime loading initializes full health and deterministic cooldown state.
+- The server-safe `CombatSystem` owns damage, death, range, line of sight,
+  cooldown rejection, and restart.
+- Cooldowns use caller-supplied simulation time rather than wall time.
+- The bundled Relay Zero player has 100 health and a 10-damage attack.
+- A 50-health guardian retaliates for 25 damage after each accepted player hit.
+- Game exposes Attack/Space controls, target and player health, failure status,
+  and a restart action at the authored player spawn.
+- Dead combatants remain in ECS state but leave presentation and static
+  collision queries.
+- Connected sessions explicitly defer attack input until the host-authoritative
+  combat protocol slice.
+
+## Automated evidence
+
+The focused tests cover:
+
+- content v5 decoding, bounds, editor metadata, and v4 exclusion;
+- deterministic damage, cooldown, lethal damage, dead-target rejection, and
+  restart;
+- range and obstruction rejection without consuming cooldown;
+- lifecycle-wide and per-ray collider exclusions;
+- bundled-world loading of authored player/guardian combat state; and
+- Game bootstrap status and the five-entity initial scene.
+
+The cohesive verification pass completed on 2026-08-13:
+
+- `dart analyze .`: clean;
+- 187 automated tests across 18 package/app suites: pass;
+- Forge export → move → Game import → original deletion → restart pipeline:
+  pass;
+- headless server executable compilation: pass;
+- Game Windows debug build: pass;
+- Game Android debug APK build: pass; and
+- Forge Windows debug build: pass.
+
+The Android debug build also installed and launched on the connected Android 17
+Pixel emulator with Thermion/Filament rendering active. That smoke exposed and
+then closed a streamed-HUD edge case: an authored guardian outside the active
+chunk is now reported as outside the active area, not defeated. A widget
+regression test covers the restored-player scenario.
+
+Flutter also reported its existing third-party Thermion Windows compiler
+warnings and Android Kotlin-plugin migration warning; neither failed a build.
+
+## Manual play check
+
+1. Launch Game offline and select the guardian cube near the player.
+2. Press Space or tap **Attack** no faster than the displayed cooldown permits.
+3. Confirm target health drops by 10 and player health drops by 25.
+4. Confirm the fourth accepted hit defeats the player and exposes **Restart**.
+5. Restart, select the guardian again, and land the final hit.
+6. Confirm the guardian disappears and the HUD reports the relay path secured.
+
+## Next slice
+
+Stage 11.2 subsequently delivered the deterministic guardian state machine with
+perception, pursuit, attack scheduling, leash/return behavior, and server-safe
+tests. It reuses `CombatSystem` and removes the temporary retaliation path. See
+`AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md` and ADR-028.
+
+See ADR-027 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+<!-- END AVARRA_STAGE_11_1_COMBAT_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md -->
+
+# AVARRA Stage 11.2 — Guardian Behavior Validation
+
+**Status:** Implemented
+**Date:** 2026-08-13
+
+## Scope
+
+This slice replaces Stage 11.1's stationary retaliation shortcut with the
+first autonomous Relay Zero enemy:
+
+```text
+idle
+  → perceive a living player with clear line of sight
+  → pursue with authoritative collision
+  → attack through the shared combat system
+  → return after target loss, death, or leash
+  → become idle at authored home
+```
+
+## Implemented contract
+
+- Content schema v6 defines Forge-editable guardian perception and leash range.
+- World validation requires a complete character/combat dependency set.
+- Runtime loading captures an authored home position and explicit AI phase.
+- The server-safe guardian system processes stable IDs deterministically.
+- Perception uses range and physics line of sight.
+- Pursuit and return reuse the character movement/collision system.
+- Attacks and cooldowns reuse `CombatSystem`; Game has no second enemy-damage
+  path.
+- A dead guardian becomes `defeated` and stops acting.
+- A dead or lost target causes uninterrupted return to home.
+- Player restart returns living active guardians home and clears cooldown.
+- Game exposes guardian phase and health in the HUD.
+- The bundled guardian starts in a collision-free approach lane, protected by a
+  real-world reachability regression that requires an accepted attack.
+- Connected clients still do not simulate combat or AI authority.
+
+## Automated coverage
+
+Focused tests cover:
+
+- schema-v6 decoding, leash/perception bounds, and v5 exclusion;
+- rejection of guardian behavior without complete runtime dependencies;
+- runtime initialization of authored behavior and home state;
+- perception, pursuit, attack scheduling, and cooldown;
+- line-of-sight obstruction;
+- leash, return, idle recovery, and deterministic reset; and
+- defeated guardians ceasing action.
+
+## Verification evidence
+
+Verified on 2026-08-13:
+
+- `dart analyze .` passed with no issues.
+- All 18 test suites passed: 159 pure-Dart/server tests plus 34 Flutter tests
+  (Thermion bridge 6, Game 19, Forge 9), for 193 tests total.
+- The Stage 10.1b Forge export -> delivery -> Game import -> restart-load
+  pipeline passed.
+- The headless server compiled to `build/avarra_server.exe`.
+- Debug builds passed for Game on Windows and Android and Forge on Windows.
+- The Android debug APK installed and launched on `emulator-5554`, an Android
+  17/API-37 virtual Pixel.
+- The first live chase exposed an authored spawn touching the relay console's
+  static collider. The spawn was moved to a clear lane and the bundled-world
+  regression was added before repeating the build and device check.
+- In the corrected live encounter, the HUD showed pursuit, repeated accepted
+  25-damage attacks, player defeat, and the guardian returning to `idle` after
+  target death.
+
+The Windows build reports existing upstream Thermion C4005/C4251 warnings, and
+the Android build reports Thermion's future Kotlin Gradle Plugin migration.
+Neither warning blocks the current artifacts.
+
+## Manual play check
+
+1. Start Relay Zero offline in chunk `0,0`.
+2. Confirm the HUD begins with `Guardian: idle`.
+3. Approach or remain visible and confirm it changes to `pursuing` and moves.
+4. Confirm `attacking` begins only after it reaches authored attack range.
+5. Move away until it leashes and confirm it returns toward its spawn.
+6. Die, restart, and confirm the guardian resets home.
+7. Defeat it and confirm it disappears and remains unable to act.
+
+## Next slice
+
+Stage 11.3 expands Relay Zero into a real objective sequence: author three
+persistent stabilizers and a gate that opens from authored objective state.
+The relay-core item and minimal inventory follow that objective foundation.
+
+See ADR-028 and `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`.
+
+The subsequent mobile playability/performance corrections are recorded in
+`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`.
+
+<!-- END AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md -->
+
+# AVARRA Stage 11.2 — Playability and Performance Follow-up
+
+**Status:** Implemented
+**Date:** 2026-08-13
+
+## Why this pass happened
+
+The Stage 11.2 rules worked, but the first complete Android encounter was not
+acceptably playable. A cold renderer launch could hide live simulation behind a
+black/loading frame, the diagnostic panel covered most of a portrait display,
+camera rotation changed the apparent meaning of the D-pad, and a held direction
+could leave the sparse authored chunk set and unload the encounter.
+
+Stage 11.3 is intentionally paused until this baseline is usable.
+
+## Implemented corrections
+
+- Thermion now signals when the first scene snapshot and camera are ready.
+  Offline simulation and input remain paused until that signal.
+- The local gameplay/presentation loop runs at a deliberate 30 Hz instead of a
+  16 ms periodic timer competing with the mobile renderer.
+- Guardian activation has a two-second post-ready/restart grace period.
+- Save debounce is coalesced rather than cancelling and recreating a timer on
+  every movement tick.
+- Streaming reconciliation is requested when the player's chunk changes, not
+  on every movement tick.
+- Repeated identical occluder-opacity calls are suppressed in the Thermion
+  viewport.
+- Portrait devices use a wider gameplay framing and a compact HUD. The full
+  diagnostics remain available behind the information button.
+- Mobile controls reserve the bottom corners, omit redundant zoom buttons, and
+  leave pinch zoom available.
+- Movement-button tooltips are suppressed on compact touch layouts so a held
+  direction cannot cover the play area.
+- WASD and D-pad input are transformed relative to the current isometric camera,
+  so screen-up remains screen-up after camera rotation.
+- Attack automatically targets the nearest living active guardian when no
+  attackable guardian is selected.
+- Player movement stops at the authored chunk boundary instead of entering an
+  empty unavailable chunk.
+- Legacy saves already outside the authored chunk set are recovered to the
+  actual authored player spawn and rewritten before streaming begins.
+- Post-ready frame averages/maxima are exposed in the diagnostics panel for
+  both offline and hosted play.
+
+## Regression coverage
+
+- Isometric tests verify movement mapping before and after camera rotation.
+- Game tests verify the Relay Zero authored chunk containment policy.
+- Widget tests verify automatic recovery and revision of a legacy
+  out-of-bounds player save.
+- Widget tests verify that compact touch controls do not raise a long-press
+  tooltip while a direction is held.
+- Existing Game, Thermion bridge, movement, persistence, guardian, and host
+  tests remain part of the consolidated gate.
+
+## Device acceptance
+
+The final debug APK was installed on the configured Pixel 10 Pro Android
+17/API-37 emulator. The acceptance pass confirmed:
+
+- the compact HUD and scene are visible before simulation/input begins;
+- attack works without manually selecting the moving guardian;
+- a held camera-relative direction remains active, respects collision/world
+  bounds, and raises no long-press tooltip;
+- the post-ready Flutter frame sample reported 7.16 ms average and 53.62 ms
+  maximum during the interaction pass; and
+- no fatal exception was present in the Android log.
+
+The consolidated gate passed 197 tests, repository analysis, an Android debug
+APK build, and a Windows debug build.
+
+A fresh debug cold start still logged one 56-frame main-thread stall while
+Thermion created native assets. Thermion also logs nonfatal `invalid
+renderable` messages from asset-wide shadow setup when native assets are
+created. Neither recurred as a continuous steady-state frame warning, but both
+remain renderer-integration work. Physical Android profiling remains a
+separate release gate.
+
+## Remaining product limitations
+
+- Relay Zero still uses sparse cube-based proof art, not production level art.
+- Thermion debug cold start remains materially slower than steady-state play;
+  the native asset setup needs profiling before a release build can be signed
+  off.
+- The world is only three chunks and one combat encounter; Stage 11.3 must add
+  the stabilizer objective sequence before this is a meaningful game session.
+- Host-authoritative combat/guardian AI remains deferred to the co-op slice.
+
+## Next
+
+After this pass holds its device gate, resume Stage 11.3: three persistent
+stabilizers and an authored objective gate.
+
+<!-- END AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md -->
 
 ---
 
@@ -8292,8 +8590,19 @@ Stage 11.2 status (implemented 2026-08-13):
 - offline Game drives the autonomous guardian and reports its phase/health,
   while connected clients wait for later host authority.
 
+Stage 11.2 playability follow-up (implemented 2026-08-13):
+
+- simulation waits for the first synchronized renderer frame and then runs the
+  local presentation loop at 30 Hz with a short encounter grace period;
+- save, streaming, and occlusion work is coalesced away from unchanged ticks;
+- the portrait HUD/camera/control layout exposes the playfield and movement is
+  camera-relative; and
+- authored chunk bounds stop movement into empty space while legacy invalid
+  saves recover to the authored spawn.
+
 Next: Stage 11.3 three persistent stabilizers and an authored objective gate.
-See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md` and ADR-028.
+See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`, and ADR-028.
 
 Gate:
 
@@ -10497,5 +10806,134 @@ presentation and converted back to chunk-local coordinates before authoring.
   handles with stable authored identity.
 
 <!-- END adr/ADR-026-schema-editor-inverse-history-and-shared-viewport.md -->
+
+---
+
+<!-- BEGIN adr/ADR-027-deterministic-authored-combat-runtime.md -->
+
+# ADR-027 — Deterministic Authored Combat Runtime
+
+**Status:** Accepted for Stage 11.1
+**Date:** 2026-08-13
+
+## Context
+
+Relay Zero needs its first playable failure-and-recovery loop without moving
+gameplay authority into Flutter, Thermion, or wall-clock callbacks. The same
+combat rules must later run in the headless host, while Forge must be able to
+author combatants through its existing schema-driven Inspector.
+
+## Decision
+
+Content schema v5 adds `avarra.health` and `avarra.combat.basic_attack`.
+Authored health stores a maximum; authored attacks store damage, range, and
+cooldown seconds. Runtime loading creates full `HealthComponent` state,
+immutable `BasicAttackComponent` statistics, and a separate
+`BasicAttackStateComponent` whose next-ready timestamp is expressed in
+simulation time.
+
+`CombatSystem` is a pure-Dart, server-safe authority. It validates attacker and
+target life state, self-targeting, cooldown, range, and line of sight before
+applying clamped damage and advancing cooldown. It accepts simulation time from
+its caller and does not read a system clock. Restart restores health, authored
+spawn transform, and attack readiness.
+
+Physics raycasts can ignore named collider IDs for an individual query, and
+collision-world construction can exclude dead entity IDs. Game also filters
+dead entities from its immutable presentation snapshot. These are lifecycle
+policies at the composition boundary; neither the renderer nor physics package
+depends on gameplay components.
+
+The first offline encounter used a stationary guardian that retaliated after a
+successful player attack. Stage 11.2 subsequently replaced that composition
+shortcut with the state machine in ADR-028. Connected Game sessions reject
+combat input with an explicit host-authority status until protocol commands and
+replication are implemented.
+
+## Consequences
+
+- Combat rules can run unchanged in Game, a listen host, or the headless server.
+- Cooldown tests are deterministic and do not sleep.
+- Forge automatically exposes both new authored components through schema
+  metadata and typed creator commands.
+- Player and guardian death update rendering and collision without destroying
+  stable ECS identity.
+- Combat health is runtime-only in this slice. Full adventure save/resume and
+  authoritative co-op combat remain explicit Stage 11 work.
+
+## Rejected alternatives
+
+- Flutter timers as combat authority would couple rules to a client lifecycle
+  and make headless behavior nondeterministic.
+- Removing dead ECS entities would discard stable identity and complicate
+  restart, persistence, and replication.
+- Teaching the renderer or physics package about `HealthComponent` would invert
+  the gameplay dependency boundary.
+- Extending the multiplayer protocol before proving the local combat loop would
+  combine two separately testable risks.
+
+<!-- END adr/ADR-027-deterministic-authored-combat-runtime.md -->
+
+---
+
+<!-- BEGIN adr/ADR-028-authored-deterministic-guardian-state-machine.md -->
+
+# ADR-028 — Authored Deterministic Guardian State Machine
+
+**Status:** Accepted for Stage 11.2
+**Date:** 2026-08-13
+
+## Context
+
+Stage 11.1 proved damage, death, and restart with a stationary guardian whose
+retaliation was triggered in the Flutter Game composition. Relay Zero now needs
+an enemy that perceives, pursues, attacks, leashes, and returns under the same
+rules in offline Game and, later, authoritative hosts.
+
+## Decision
+
+Content schema v6 adds `avarra.ai.guardian_behavior` with perception and leash
+ranges. Its declared dependencies require transform, non-sensor character
+physics, character controller, health, and basic attack. Runtime loading
+captures the transformed authored position as immutable home state and starts
+the guardian in `idle`.
+
+`GuardianBehaviorSystem` is a pure-Dart fixed-step state machine with explicit
+`idle`, `pursuing`, `attacking`, `returning`, and `defeated` phases. It receives
+simulation time and delta from its caller, uses physics raycasts for perception,
+delegates movement to `CharacterMovementSystem`, and delegates all damage and
+cooldown rules to `CombatSystem`. Guardians are processed in stable entity-ID
+order.
+
+An idle guardian acquires a living target in perception range with clear line
+of sight. It pursues until attack range, attacks on the authored cooldown, and
+returns home when it loses the target, loses line of sight, reaches its leash,
+or the target dies. Return is uninterrupted until home. Player restart returns
+active living guardians home and clears their attack readiness.
+
+Game runs this system only in offline local-authority mode in this slice. A
+connected client does not simulate guardian authority. The multiplayer combat
+and AI host loop remains a later Stage 11 slice.
+
+## Consequences
+
+- UI input no longer owns or triggers enemy damage.
+- The same deterministic behavior code is server-safe and ready to compose into
+  the host simulation without depending on Flutter or rendering.
+- Forge exposes guardian tuning through the existing schema-driven Inspector.
+- Current navigation is direct kinematic pursuit with collision and sliding,
+  not pathfinding. Complex obstacle routing remains future work.
+- Guardian health and AI phase remain runtime-only until the full adventure
+  persistence slice.
+
+## Rejected alternatives
+
+- A Flutter timer/state machine would duplicate future server behavior.
+- A second attack implementation inside AI would risk different damage and
+  cooldown semantics from player combat.
+- A generic behavior tree framework is unnecessary for one concrete guardian
+  and would expand scope before Relay Zero proves the required behaviors.
+
+<!-- END adr/ADR-028-authored-deterministic-guardian-state-machine.md -->
 
 ---

@@ -9,6 +9,10 @@
   "stage_3_validation": "docs/AVARRA_STAGE_3_ISOMETRIC_VALIDATION.md",
   "stage_10_1a_validation": "docs/AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md",
   "stage_10_1b_validation": "docs/AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md",
+  "stage_10_2_validation": "docs/AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md",
+  "stage_11_1_validation": "docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md",
+  "stage_11_2_validation": "docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md",
+  "stage_11_2_playability_validation": "docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md",
   "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
   "adrs": [
     "ADR-008-build-avarra-not-an-engine.md",
@@ -28,7 +32,10 @@
     "ADR-022-stage-9-android-listen-host.md",
     "ADR-023-stage-10-forge-command-foundation.md",
     "ADR-024-playable-world-profile-and-interaction-effect.md",
-    "ADR-025-forge-project-and-runtime-world-library.md"
+    "ADR-025-forge-project-and-runtime-world-library.md",
+    "ADR-026-schema-editor-inverse-history-and-shared-viewport.md",
+    "ADR-027-deterministic-authored-combat-runtime.md",
+    "ADR-028-authored-deterministic-guardian-state-machine.md"
   ],
   "ai_creator_docs": [
     "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",
@@ -36,7 +43,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through Stage 10.1B; recoverable Forge project and runtime Game import implemented.",
+  "review_status": "Consistency-reviewed through the Stage 11.2 guardian and playability gates; Relay Zero stabilizers are next.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

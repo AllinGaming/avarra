@@ -84,4 +84,29 @@ void main() {
     await forward.cancel();
     expect(active, isEmpty);
   });
+
+  testWidgets('can suppress long-press tooltips on touch layouts', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HoldDirectionButton(
+          label: 'Move forward (W)',
+          direction: Vector3(0, 0, -1),
+          icon: const Icon(Icons.keyboard_arrow_up),
+          showTooltip: false,
+          onPointerDown: (_, _) {},
+          onPointerEnd: (_) {},
+          onSemanticTap: (_) {},
+        ),
+      ),
+    );
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byType(HoldDirectionButton)),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Move forward (W)'), findsNothing);
+    await gesture.up();
+  });
 }

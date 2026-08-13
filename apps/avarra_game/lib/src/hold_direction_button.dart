@@ -10,6 +10,7 @@ final class HoldDirectionButton extends StatefulWidget {
     required this.onPointerDown,
     required this.onPointerEnd,
     required this.onSemanticTap,
+    this.showTooltip = true,
     super.key,
   });
 
@@ -19,6 +20,7 @@ final class HoldDirectionButton extends StatefulWidget {
   final void Function(int pointer, Vector3 direction) onPointerDown;
   final ValueChanged<int> onPointerEnd;
   final ValueChanged<Vector3> onSemanticTap;
+  final bool showTooltip;
 
   @override
   State<HoldDirectionButton> createState() => _HoldDirectionButtonState();
@@ -44,40 +46,41 @@ final class _HoldDirectionButtonState extends State<HoldDirectionButton> {
   Widget build(BuildContext context) {
     final pressed = _activePointers.isNotEmpty;
     final colorScheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: widget.label,
-      child: Semantics(
-        button: true,
-        label: widget.label,
-        onTap: () => widget.onSemanticTap(widget.direction),
-        child: Listener(
-          behavior: HitTestBehavior.opaque,
-          onPointerDown: _handlePointerDown,
-          onPointerUp: _handlePointerEnd,
-          onPointerCancel: _handlePointerEnd,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 70),
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: pressed
-                  ? colorScheme.primary.withValues(alpha: 0.24)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            width: 48,
-            height: 48,
-            child: Center(
-              child: IconTheme.merge(
-                data: IconThemeData(
-                  size: 24,
-                  color: pressed ? colorScheme.primary : null,
-                ),
-                child: widget.icon,
+    final button = Semantics(
+      button: true,
+      label: widget.label,
+      onTap: () => widget.onSemanticTap(widget.direction),
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handlePointerDown,
+        onPointerUp: _handlePointerEnd,
+        onPointerCancel: _handlePointerEnd,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 70),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: pressed
+                ? colorScheme.primary.withValues(alpha: 0.24)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          width: 48,
+          height: 48,
+          child: Center(
+            child: IconTheme.merge(
+              data: IconThemeData(
+                size: 24,
+                color: pressed ? colorScheme.primary : null,
               ),
+              child: widget.icon,
             ),
           ),
         ),
       ),
     );
+    if (!widget.showTooltip) {
+      return button;
+    }
+    return Tooltip(message: widget.label, child: button);
   }
 }

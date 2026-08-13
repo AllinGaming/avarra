@@ -498,13 +498,18 @@ also implemented: content schema v6 authors guardian perception/leash policy,
 and a pure-Dart state machine owns idle, pursuit, attack, return, and defeat
 while reusing movement, physics, and combat authority. Offline Game drives the
 guardian; connected combat/AI remains disabled until its host-authoritative
-slice. Next is three persistent stabilizers and an authored objective gate,
-before item, co-op, persistence, or AI/MCP expansion. See
+slice. The follow-up playability pass gates simulation on renderer readiness,
+runs local presentation at 30 Hz, coalesces save/streaming work, makes controls
+camera-relative, contains movement to authored chunks, repairs legacy invalid
+saves, and replaces the portrait diagnostic wall with a compact HUD. Next is
+three persistent stabilizers and an authored objective gate before item,
+co-op, persistence, or AI/MCP expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_11_1_COMBAT_VALIDATION.md`,
 `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-028.
 
 ---

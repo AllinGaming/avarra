@@ -147,6 +147,50 @@ void main() {
     );
   });
 
+  testWidgets('recovers a legacy save outside the authored chunk set', (
+    tester,
+  ) async {
+    final store = MemorySaveStore();
+    final worldSource = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    await SaveRepository(store: store).save(
+      WorldSave(
+        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000401'),
+        worldId: WorldId.parse('01890f47-e8b8-7a68-8000-000000000010'),
+        sourceWorldFormatVersion: 2,
+        revision: 3,
+        savedAtUtc: DateTime.utc(2026, 8, 13),
+        entities: const [],
+        players: [
+          PlayerSave(
+            playerId: PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402'),
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
+            position: SaveWorldPosition(
+              chunkX: -1,
+              chunkZ: -1,
+              localX: 1,
+              localY: 0.45,
+              localZ: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => store,
+        worldPackageSourceLoader: () async => worldSource!,
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+
+    expect(find.text('Chunk 0,0 · 1/3 active'), findsOneWidget);
+    expect(find.text('Save r4 · Restored revision 4'), findsOneWidget);
+  });
+
   testWidgets('surfaces malformed world packages', (tester) async {
     await tester.pumpWidget(
       AvarraGameApp(

@@ -603,8 +603,19 @@ Stage 11.2 status (implemented 2026-08-13):
 - offline Game drives the autonomous guardian and reports its phase/health,
   while connected clients wait for later host authority.
 
+Stage 11.2 playability follow-up (implemented 2026-08-13):
+
+- simulation waits for the first synchronized renderer frame and then runs the
+  local presentation loop at 30 Hz with a short encounter grace period;
+- save, streaming, and occlusion work is coalesced away from unchanged ticks;
+- the portrait HUD/camera/control layout exposes the playfield and movement is
+  camera-relative; and
+- authored chunk bounds stop movement into empty space while legacy invalid
+  saves recover to the authored spawn.
+
 Next: Stage 11.3 three persistent stabilizers and an authored objective gate.
-See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md` and ADR-028.
+See `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
+`AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`, and ADR-028.
 
 Gate:
 

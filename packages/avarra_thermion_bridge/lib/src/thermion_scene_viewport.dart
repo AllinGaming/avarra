@@ -23,6 +23,7 @@ final class AvarraThermionViewport extends StatefulWidget {
     this.occlusionTargetEntityId,
     Set<EntityId> occluderEntityIds = const {},
     this.occludedOpacity = 0.28,
+    this.onReady,
     this.onPick,
     this.onZoom,
     this.selectedEntityId,
@@ -47,6 +48,7 @@ final class AvarraThermionViewport extends StatefulWidget {
   final EntityId? occlusionTargetEntityId;
   final Set<EntityId> occluderEntityIds;
   final double occludedOpacity;
+  final VoidCallback? onReady;
   final ValueChanged<IsometricPickResult>? onPick;
   final ValueChanged<double>? onZoom;
   final EntityId? selectedEntityId;
@@ -72,6 +74,7 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   late final LatestAsyncValueQueue<_CameraConfiguration> _cameraQueue;
   late final LatestAsyncValueQueue<_OcclusionUpdate> _occlusionQueue;
   Set<EntityId> _managedOccluderEntityIds = {};
+  final Map<EntityId, double> _appliedOccluderOpacities = {};
   Timer? _cameraDebounce;
   Object? _error;
   EntityId? _selectedEntityId;
@@ -81,6 +84,7 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   double _lastGestureScale = 1;
   int _pickSerial = 0;
   bool _ready = false;
+  bool _didNotifyReady = false;
   TransformationGizmo? _translationGizmo;
   Future<void> _gizmoPointerSequence = Future.value();
   bool _gizmoDragging = false;
@@ -140,6 +144,13 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
       await _updateGizmoAttachment();
     }
     await _queueCameraConfiguration();
+    if (mounted && _error == null) {
+      setState(() => _ready = true);
+      if (!_didNotifyReady) {
+        _didNotifyReady = true;
+        widget.onReady?.call();
+      }
+    }
     _scheduleCameraConfiguration();
   }
 
@@ -163,7 +174,9 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
       if (mounted) {
         setState(() {
           _error = null;
-          _ready = true;
+          if (_didNotifyReady) {
+            _ready = true;
+          }
         });
       }
     } on Object catch (error) {
@@ -279,8 +292,14 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
                 occludedEntityIds.contains(entityId)
             ? occludedOpacity
             : 1.0;
-        await backend.setEntityOpacity(entityId, opacity);
+        if (_appliedOccluderOpacities[entityId] != opacity) {
+          await backend.setEntityOpacity(entityId, opacity);
+          _appliedOccluderOpacities[entityId] = opacity;
+        }
       }
+      _appliedOccluderOpacities.removeWhere(
+        (entityId, _) => !occluderEntityIds.contains(entityId),
+      );
       _managedOccluderEntityIds = Set.of(occluderEntityIds);
     } on Object catch (error, stack) {
       FlutterError.reportError(

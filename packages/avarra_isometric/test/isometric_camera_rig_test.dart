@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
 import 'package:test/test.dart';
@@ -33,6 +35,26 @@ void main() {
       expect(rig.zoomBy(100).verticalSpan, 3);
       expect(rig.zoomBy(0.01).verticalSpan, 12);
       expect(() => rig.zoomBy(0), throwsArgumentError);
+    });
+
+    test('maps movement to the current screen orientation', () {
+      final rig = IsometricCameraRig();
+      final up = rig.worldDirectionForScreenMovement(Vector3(0, 0, -1));
+      final right = rig.worldDirectionForScreenMovement(Vector3(1, 0, 0));
+      final rotatedUp = rig
+          .rotateBy(1)
+          .worldDirectionForScreenMovement(Vector3(0, 0, -1));
+
+      expect(up.x, closeTo(-math.sqrt1_2, 1e-9));
+      expect(up.z, closeTo(-math.sqrt1_2, 1e-9));
+      expect(right.x, closeTo(math.sqrt1_2, 1e-9));
+      expect(right.z, closeTo(-math.sqrt1_2, 1e-9));
+      expect(rotatedUp.x, closeTo(-math.sqrt1_2, 1e-9));
+      expect(rotatedUp.z, closeTo(math.sqrt1_2, 1e-9));
+      expect(
+        () => rig.worldDirectionForScreenMovement(Vector3(double.nan, 0, 0)),
+        throwsArgumentError,
+      );
     });
 
     test('projects the viewport center onto the camera target', () {

@@ -150,6 +150,27 @@ final class IsometricCameraRig {
     );
   }
 
+  /// Maps screen-space movement onto the ground plane for this camera angle.
+  ///
+  /// [screenDirection].x is horizontal (left/right) and
+  /// [screenDirection].z is vertical (negative is toward the top of screen).
+  Vector3 worldDirectionForScreenMovement(Vector3 screenDirection) {
+    if (!screenDirection.storage.every((value) => value.isFinite)) {
+      throw ArgumentError.value(
+        screenDirection,
+        'screenDirection',
+        'Must be finite.',
+      );
+    }
+    final forward = Vector3(-math.sin(yawRadians), 0, -math.cos(yawRadians));
+    final right = Vector3(math.cos(yawRadians), 0, -math.sin(yawRadians));
+    final world = (right * screenDirection.x) + (forward * -screenDirection.z);
+    if (world.length > 1) {
+      world.normalize();
+    }
+    return world;
+  }
+
   IsometricRay screenPointToRay({
     required double x,
     required double y,

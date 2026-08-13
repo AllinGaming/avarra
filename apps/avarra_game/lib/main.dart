@@ -23,6 +23,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 import 'src/authored_interaction_effects.dart';
+import 'src/authored_world_movement_bounds.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
 import 'src/world_library_ui.dart';
@@ -30,7 +31,9 @@ import 'src/world_package_source_loader.dart';
 
 const _proofWorldAssetPath = 'assets/worlds/isometric_proof.avarra';
 const _configuredWorldPath = String.fromEnvironment('AVARRA_WORLD_PATH');
-const _fixedDeltaSeconds = 1 / 60;
+const _simulationStep = Duration(microseconds: 33333);
+const _fixedDeltaSeconds = 1 / 30;
+const _guardianWakeDelay = Duration(seconds: 2);
 const _configuredMultiplayerHost = String.fromEnvironment(
   'AVARRA_MULTIPLAYER_HOST',
 );
@@ -260,7 +263,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       ),
     );
     final restoreResult = await persistence.restore();
-    final playerPosition = runtimeWorld.ecs
+    var playerPosition = runtimeWorld.ecs
         .component<TransformComponent>(player.handle)
         .position;
     final streaming = ChunkStreamingController(
@@ -275,6 +278,24 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       unloadGuard: DirtyStateChunkUnloadGuard(persistence.dirtyState),
       onEntityActivated: persistence.applyEntity,
     );
+    final restoredCoordinate = streaming.index.coordinateForPosition(
+      worldX: playerPosition.x,
+      worldZ: playerPosition.z,
+    );
+    if (streaming.index.chunkAt(restoredCoordinate) == null) {
+      final authoredTransform = definition.entities
+          .singleWhere((entity) => entity.id == player.entityId)
+          .component<TransformDefinition>()!;
+      runtimeWorld.ecs.replaceComponent<TransformComponent>(
+        player.handle,
+        _runtimeTransform(authoredTransform),
+      );
+      persistence.markPlayerDirty(configuredPlayerId);
+      await persistence.saveIfDirty();
+      playerPosition = runtimeWorld.ecs
+          .component<TransformComponent>(player.handle)
+          .position;
+    }
     streaming.reconcile([
       ChunkStreamingRequest(
         coordinate: streaming.index.coordinateForPosition(
@@ -395,6 +416,7 @@ class _PresentationBoundaryScreenState
   late CombatSystem _combatSystem;
   late GuardianBehaviorSystem _guardianBehaviorSystem;
   late AuthoredInteractionEffectExecutor _interactionEffects;
+  late final AuthoredWorldMovementBounds _movementBounds;
   late final EntityId _playerEntityId;
   late final TransformComponent _playerSpawnTransform;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
@@ -425,7 +447,12 @@ class _PresentationBoundaryScreenState
   int _maximumFrameMicroseconds = 0;
   bool _hostEnding = false;
   bool _inputSubmissionPaused = false;
+  bool _rendererReady = false;
+  bool _cameraFramingInitialized = false;
+  bool _showDiagnostics = false;
+  bool _worldEdgeMovementBlocked = false;
   Duration _simulationTime = Duration.zero;
+  WorldChunkCoordinate? _lastRequestedPlayerChunk;
   String _interactionStatus = 'Select a world object, then interact';
 
   @override
@@ -446,11 +473,8 @@ class _PresentationBoundaryScreenState
     if (multiplayerClient != null) {
       _applyReplicatedEntities(multiplayerClient);
     }
-    _playerSpawnTransform = widget.runtimeWorld.ecs
-        .component<TransformComponent>(
-          widget.runtimeWorld.ecs.handleFor(_playerEntityId)!,
-        )
-        .copyWith();
+    _movementBounds = AuthoredWorldMovementBounds(widget.streaming.index);
+    _playerSpawnTransform = _authoredPlayerSpawn(authoredPlayerEntityId);
     _presentation = _extractPresentation();
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
@@ -477,6 +501,7 @@ class _PresentationBoundaryScreenState
       persistence: widget.persistence,
     );
     _cameraRig = IsometricCameraRig(target: _playerPosition);
+    _lastRequestedPlayerChunk = _currentChunkCoordinate;
     _assetUriResolver = MapThermionAssetUriResolver({
       for (final entry in widget.runtimeWorld.assetPaths.entries)
         entry.key: 'asset://${entry.value}',
@@ -493,19 +518,26 @@ class _PresentationBoundaryScreenState
         },
       );
     }
-    if (widget.enableRenderer) {
-      _movementTimer = Timer.periodic(
-        const Duration(milliseconds: 16),
-        (_) => _tickMovement(),
-      );
-    }
     if (widget.multiplayerHost != null) {
-      SchedulerBinding.instance.addTimingsCallback(_recordFrameTimings);
       _hostMetricsTimer = Timer.periodic(
         const Duration(seconds: 1),
         (_) => unawaited(_sampleHostMetrics()),
       );
       unawaited(_sampleHostMetrics());
+    }
+    SchedulerBinding.instance.addTimingsCallback(_recordFrameTimings);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_cameraFramingInitialized) {
+      return;
+    }
+    _cameraFramingInitialized = true;
+    final size = MediaQuery.sizeOf(context);
+    if (size.width < size.height) {
+      _cameraRig = _cameraRig.copyWith(verticalSpan: 8);
     }
   }
 
@@ -514,9 +546,7 @@ class _PresentationBoundaryScreenState
     _movementTimer?.cancel();
     _saveTimer?.cancel();
     _hostMetricsTimer?.cancel();
-    if (widget.multiplayerHost != null) {
-      SchedulerBinding.instance.removeTimingsCallback(_recordFrameTimings);
-    }
+    SchedulerBinding.instance.removeTimingsCallback(_recordFrameTimings);
     final replicationSubscription = _replicationSubscription;
     if (replicationSubscription != null) {
       unawaited(replicationSubscription.cancel());
@@ -543,77 +573,87 @@ class _PresentationBoundaryScreenState
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
+      _movementTimer?.cancel();
+      _movementTimer = null;
       _saveTimer?.cancel();
+      _saveTimer = null;
       unawaited(_flushSave());
       unawaited(_endHostedSession());
+    } else if (state == AppLifecycleState.resumed &&
+        _rendererReady &&
+        _movementTimer == null) {
+      _movementTimer = Timer.periodic(_simulationStep, (_) => _tickMovement());
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final status = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(avarraProductName, style: textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        const Text('Stage 11.2 · Relay Zero Guardian'),
-        Text(widget.runtimeWorld.definition.name),
-        Text(
-          'World source: ${widget.sourceLabel}',
-          key: const Key('world_source_status'),
-        ),
-        TextButton.icon(
-          key: const Key('open_world_library'),
-          onPressed: widget.onOpenWorldLibrary,
-          icon: const Icon(Icons.public, size: 18),
-          label: const Text('World library'),
-        ),
-        Text('${_presentation.length} ECS entities bound to the scene'),
-        Text(
-          'World v${widget.runtimeWorld.definition.worldFormatVersion} · '
-          'content v${widget.runtimeWorld.definition.contentSchemaVersion}',
-          key: const Key('world_version_status'),
-        ),
-        Text(
-          'Chunk $_currentChunkCoordinate · '
-          '${widget.streaming.snapshot.activeChunkCount}/'
-          '${widget.streaming.totalChunkCount} active',
-          key: const Key('streaming_status'),
-        ),
-        Text(
-          'Save r${widget.persistence.revision} · $_saveStatus',
-          key: const Key('save_status'),
-        ),
-        Text(
-          'Network: $_multiplayerStatus · '
-          '${widget.multiplayerClient?.entities.length ?? 0} entities',
-          key: const Key('multiplayer_status'),
-        ),
-        if (widget.multiplayerHost != null) ...[
-          Text(_hostStatus, key: const Key('host_status')),
-          Text(_hostPerformanceStatus, key: const Key('host_performance')),
-          Text(_hostDeviceStatus, key: const Key('host_device_status')),
-        ],
-        Text(
-          authoredInteractionObjectiveStatus(
-            widget.runtimeWorld.ecs,
-            widget.persistence,
-          ),
-          key: const Key('authored_objective_status'),
-        ),
-        Text(
-          'Camera ${_cameraRig.quarterTurns + 1}/4 · '
-          'span ${_cameraRig.verticalSpan.toStringAsFixed(1)}',
-          key: const Key('camera_status'),
-        ),
-        Text(_selectionStatus, key: const Key('selection_status')),
-        Text(_playerCombatStatus, key: const Key('player_health_status')),
-        Text(_guardianStatus, key: const Key('guardian_status')),
-        Text(_interactionStatus, key: const Key('interaction_status')),
-      ],
-    );
+    final compactLayout = MediaQuery.sizeOf(context).width < 700;
+    final status = !widget.enableRenderer || _showDiagnostics
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(avarraProductName, style: textTheme.headlineMedium),
+              const SizedBox(height: 4),
+              const Text('Stage 11.2 · Relay Zero Guardian'),
+              Text(widget.runtimeWorld.definition.name),
+              Text(
+                'World source: ${widget.sourceLabel}',
+                key: const Key('world_source_status'),
+              ),
+              TextButton.icon(
+                key: const Key('open_world_library'),
+                onPressed: widget.onOpenWorldLibrary,
+                icon: const Icon(Icons.public, size: 18),
+                label: const Text('World library'),
+              ),
+              Text('${_presentation.length} ECS entities bound to the scene'),
+              Text(
+                'World v${widget.runtimeWorld.definition.worldFormatVersion} · '
+                'content v${widget.runtimeWorld.definition.contentSchemaVersion}',
+                key: const Key('world_version_status'),
+              ),
+              Text(
+                'Chunk $_currentChunkCoordinate · '
+                '${widget.streaming.snapshot.activeChunkCount}/'
+                '${widget.streaming.totalChunkCount} active',
+                key: const Key('streaming_status'),
+              ),
+              Text(
+                'Save r${widget.persistence.revision} · $_saveStatus',
+                key: const Key('save_status'),
+              ),
+              Text(
+                'Network: $_multiplayerStatus · '
+                '${widget.multiplayerClient?.entities.length ?? 0} entities',
+                key: const Key('multiplayer_status'),
+              ),
+              Text(_performanceStatus, key: const Key('host_performance')),
+              if (widget.multiplayerHost != null) ...[
+                Text(_hostStatus, key: const Key('host_status')),
+                Text(_hostDeviceStatus, key: const Key('host_device_status')),
+              ],
+              Text(
+                authoredInteractionObjectiveStatus(
+                  widget.runtimeWorld.ecs,
+                  widget.persistence,
+                ),
+                key: const Key('authored_objective_status'),
+              ),
+              Text(
+                'Camera ${_cameraRig.quarterTurns + 1}/4 · '
+                'span ${_cameraRig.verticalSpan.toStringAsFixed(1)}',
+                key: const Key('camera_status'),
+              ),
+              Text(_selectionStatus, key: const Key('selection_status')),
+              Text(_playerCombatStatus, key: const Key('player_health_status')),
+              Text(_guardianStatus, key: const Key('guardian_status')),
+              Text(_interactionStatus, key: const Key('interaction_status')),
+            ],
+          )
+        : const SizedBox.shrink();
 
     if (!widget.enableRenderer) {
       return Scaffold(body: Center(child: status));
@@ -632,23 +672,22 @@ class _PresentationBoundaryScreenState
               assetUriResolver: _assetUriResolver,
               cameraRig: _cameraRig,
               occlusionTargetEntityId: _playerEntityId,
+              occludedOpacity: 0.12,
               occluderEntityIds: {
                 ...widget.runtimeWorld.isometricOccluderEntityIds,
                 ...widget.streaming.activeOccluderEntityIds,
               },
+              selectedEntityId: _selectedEntityId,
+              onReady: _handleRendererReady,
               onPick: _handlePick,
               onZoom: (factor) => _dispatchIntent(ZoomCameraIntent(factor)),
             ),
             SafeArea(
               child: Align(
                 alignment: Alignment.topLeft,
-                child: Card(
-                  margin: const EdgeInsets.all(16),
-                  color: Colors.black.withValues(alpha: 0.72),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: status,
-                  ),
+                child: _gameplayHud(
+                  diagnostics: status,
+                  compactLayout: compactLayout,
                 ),
               ),
             ),
@@ -679,6 +718,130 @@ class _PresentationBoundaryScreenState
     );
   }
 
+  Widget _gameplayHud({
+    required Widget diagnostics,
+    required bool compactLayout,
+  }) {
+    final health = _healthFor(_playerEntityId);
+    final healthText = health == null
+        ? 'HP --'
+        : 'HP ${_formatHealth(health.currentHealth)}/'
+              '${_formatHealth(health.maximumHealth)}';
+    final objective = authoredInteractionObjectiveStatus(
+      widget.runtimeWorld.ecs,
+      widget.persistence,
+    );
+    return Card(
+      key: const Key('gameplay_hud'),
+      margin: EdgeInsets.all(compactLayout ? 10 : 16),
+      color: Colors.black.withValues(alpha: 0.78),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: compactLayout ? 320 : 420),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 10),
+          child: _showDiagnostics
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 520),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: _diagnosticsToggle,
+                        ),
+                        diagnostics,
+                      ],
+                    ),
+                  ),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'AVARRA · RELAY ZERO',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        _diagnosticsToggle,
+                      ],
+                    ),
+                    Text(
+                      _rendererReady ? objective : 'Preparing 3D scene…',
+                      key: const Key('compact_objective_status'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _statusPill(
+                          key: const Key('compact_player_health'),
+                          icon: Icons.favorite,
+                          label: healthText,
+                        ),
+                        _statusPill(
+                          key: const Key('compact_guardian_status'),
+                          icon: Icons.shield,
+                          label: _compactGuardianStatus,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _interactionStatus,
+                      key: const Key('compact_interaction_status'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget get _diagnosticsToggle => IconButton(
+    key: const Key('toggle_diagnostics'),
+    tooltip: _showDiagnostics ? 'Hide diagnostics' : 'Show diagnostics',
+    visualDensity: VisualDensity.compact,
+    constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+    padding: EdgeInsets.zero,
+    onPressed: () => setState(() => _showDiagnostics = !_showDiagnostics),
+    icon: Icon(_showDiagnostics ? Icons.close : Icons.info_outline, size: 20),
+  );
+
+  Widget _statusPill({
+    required Key key,
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14),
+          const SizedBox(width: 4),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+
   Widget get _actionControls {
     if (_isPlayerDead) {
       return FilledButton.icon(
@@ -688,6 +851,8 @@ class _PresentationBoundaryScreenState
         label: const Text('Restart'),
       );
     }
+    final compactLayout = MediaQuery.sizeOf(context).width < 700;
+    final attackTargetId = _attackTargetId;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -695,24 +860,26 @@ class _PresentationBoundaryScreenState
       children: [
         FilledButton.icon(
           key: const Key('basic_attack'),
-          onPressed: _selectedEntityId == null ? null : _attackSelected,
+          onPressed: !_rendererReady || attackTargetId == null
+              ? null
+              : _attackSelected,
           icon: const Icon(Icons.flash_on),
-          label: const Text('Attack (Space)'),
+          label: Text(compactLayout ? 'Attack' : 'Attack (Space)'),
         ),
         OutlinedButton.icon(
           key: const Key('interact'),
-          onPressed: _selectedEntityId == null
+          onPressed: !_rendererReady || _selectedEntityId == null
               ? null
               : () => _dispatchIntent(InteractEntityIntent(_selectedEntityId!)),
           icon: const Icon(Icons.touch_app),
-          label: const Text('Interact'),
+          label: Text(compactLayout ? 'Use' : 'Interact'),
         ),
       ],
     );
   }
 
   Widget get _movementControls => Card(
-    margin: const EdgeInsets.all(16),
+    margin: EdgeInsets.all(MediaQuery.sizeOf(context).width < 700 ? 10 : 16),
     color: Colors.black.withValues(alpha: 0.72),
     child: Padding(
       padding: const EdgeInsets.all(6),
@@ -722,6 +889,7 @@ class _PresentationBoundaryScreenState
           HoldDirectionButton(
             key: const Key('move_forward'),
             label: 'Move forward (W)',
+            showTooltip: MediaQuery.sizeOf(context).width >= 700,
             direction: Vector3(0, 0, -1),
             icon: const Icon(Icons.keyboard_arrow_up),
             onPointerDown: _beginTouchMovement,
@@ -734,6 +902,7 @@ class _PresentationBoundaryScreenState
               HoldDirectionButton(
                 key: const Key('move_left'),
                 label: 'Move left (A)',
+                showTooltip: MediaQuery.sizeOf(context).width >= 700,
                 direction: Vector3(-1, 0, 0),
                 icon: const Icon(Icons.keyboard_arrow_left),
                 onPointerDown: _beginTouchMovement,
@@ -743,6 +912,7 @@ class _PresentationBoundaryScreenState
               HoldDirectionButton(
                 key: const Key('move_back'),
                 label: 'Move back (S)',
+                showTooltip: MediaQuery.sizeOf(context).width >= 700,
                 direction: Vector3(0, 0, 1),
                 icon: const Icon(Icons.keyboard_arrow_down),
                 onPointerDown: _beginTouchMovement,
@@ -752,6 +922,7 @@ class _PresentationBoundaryScreenState
               HoldDirectionButton(
                 key: const Key('move_right'),
                 label: 'Move right (D)',
+                showTooltip: MediaQuery.sizeOf(context).width >= 700,
                 direction: Vector3(1, 0, 0),
                 icon: const Icon(Icons.keyboard_arrow_right),
                 onPointerDown: _beginTouchMovement,
@@ -765,39 +936,44 @@ class _PresentationBoundaryScreenState
     ),
   );
 
-  Widget get _cameraControls => Card(
-    margin: const EdgeInsets.all(16),
-    color: Colors.black.withValues(alpha: 0.72),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          key: const Key('rotate_camera_left'),
-          tooltip: 'Rotate camera left',
-          onPressed: () => _dispatchIntent(const RotateCameraIntent(-1)),
-          icon: const Icon(Icons.rotate_left),
-        ),
-        IconButton(
-          key: const Key('zoom_camera_out'),
-          tooltip: 'Zoom out',
-          onPressed: () => _dispatchIntent(ZoomCameraIntent(1 / 1.2)),
-          icon: const Icon(Icons.zoom_out),
-        ),
-        IconButton(
-          key: const Key('zoom_camera_in'),
-          tooltip: 'Zoom in',
-          onPressed: () => _dispatchIntent(ZoomCameraIntent(1.2)),
-          icon: const Icon(Icons.zoom_in),
-        ),
-        IconButton(
-          key: const Key('rotate_camera_right'),
-          tooltip: 'Rotate camera right',
-          onPressed: () => _dispatchIntent(const RotateCameraIntent(1)),
-          icon: const Icon(Icons.rotate_right),
-        ),
-      ],
-    ),
-  );
+  Widget get _cameraControls {
+    final compactLayout = MediaQuery.sizeOf(context).width < 700;
+    return Card(
+      margin: EdgeInsets.all(compactLayout ? 10 : 16),
+      color: Colors.black.withValues(alpha: 0.72),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: const Key('rotate_camera_left'),
+            tooltip: 'Rotate camera left',
+            onPressed: () => _dispatchIntent(const RotateCameraIntent(-1)),
+            icon: const Icon(Icons.rotate_left),
+          ),
+          if (!compactLayout) ...[
+            IconButton(
+              key: const Key('zoom_camera_out'),
+              tooltip: 'Zoom out',
+              onPressed: () => _dispatchIntent(ZoomCameraIntent(1 / 1.2)),
+              icon: const Icon(Icons.zoom_out),
+            ),
+            IconButton(
+              key: const Key('zoom_camera_in'),
+              tooltip: 'Zoom in',
+              onPressed: () => _dispatchIntent(ZoomCameraIntent(1.2)),
+              icon: const Icon(Icons.zoom_in),
+            ),
+          ],
+          IconButton(
+            key: const Key('rotate_camera_right'),
+            tooltip: 'Rotate camera right',
+            onPressed: () => _dispatchIntent(const RotateCameraIntent(1)),
+            icon: const Icon(Icons.rotate_right),
+          ),
+        ],
+      ),
+    );
+  }
 
   String get _selectionStatus {
     final selectedEntityId = _selectedEntityId;
@@ -866,6 +1042,22 @@ class _PresentationBoundaryScreenState
         '${_formatHealth(health.maximumHealth)} health';
   }
 
+  String get _compactGuardianStatus {
+    final guardians = widget.runtimeWorld.ecs
+        .query<GuardianBehaviorStateComponent>();
+    if (guardians.isEmpty) {
+      return _authoredCombatantEntityIds.isEmpty ? 'No guardian' : 'Guardian —';
+    }
+    final guardian = guardians.first;
+    final health = _healthFor(guardian.entityId);
+    if (health?.isDead ?? false) {
+      return 'Guardian defeated';
+    }
+    return '${guardian.component.phase.name} '
+        '${_formatHealth(health!.currentHealth)}/'
+        '${_formatHealth(health.maximumHealth)}';
+  }
+
   String get _hostStatus {
     final host = widget.multiplayerHost!;
     final metrics = _hostMetrics ?? host.metrics;
@@ -877,14 +1069,18 @@ class _PresentationBoundaryScreenState
         '${metrics.entityCount} authoritative entities';
   }
 
-  String get _hostPerformanceStatus {
-    final metrics = _hostMetrics ?? widget.multiplayerHost!.metrics;
+  String get _performanceStatus {
     final averageFrame = _frameCount == 0
         ? '-'
         : (_totalFrameMicroseconds / _frameCount / 1000).toStringAsFixed(2);
     final maximumFrame = _frameCount == 0
         ? '-'
         : (_maximumFrameMicroseconds / 1000).toStringAsFixed(2);
+    final host = widget.multiplayerHost;
+    if (host == null) {
+      return 'Perf: frame $averageFrame/$maximumFrame ms avg/max';
+    }
+    final metrics = _hostMetrics ?? host.metrics;
     return 'Perf: frame $averageFrame/$maximumFrame ms avg/max · '
         'tick ${metrics.averageTickMilliseconds.toStringAsFixed(2)}/'
         '${metrics.maximumTickMilliseconds.toStringAsFixed(2)} ms';
@@ -945,11 +1141,33 @@ class _PresentationBoundaryScreenState
     }
   }
 
+  void _handleRendererReady() {
+    if (!mounted || _rendererReady) {
+      return;
+    }
+    setState(() {
+      _rendererReady = true;
+      _frameCount = 0;
+      _totalFrameMicroseconds = 0;
+      _maximumFrameMicroseconds = 0;
+      _interactionStatus = 'Ready · explore Relay Zero';
+    });
+    _movementTimer = Timer.periodic(_simulationStep, (_) => _tickMovement());
+  }
+
   Vector3 get _playerPosition {
     final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId)!;
     return widget.runtimeWorld.ecs
         .component<TransformComponent>(handle)
         .position;
+  }
+
+  TransformComponent _authoredPlayerSpawn(EntityId authoredPlayerEntityId) {
+    final authoredPlayer = widget.runtimeWorld.definition.entities.singleWhere(
+      (entity) => entity.id == authoredPlayerEntityId,
+    );
+    final transform = authoredPlayer.component<TransformDefinition>()!;
+    return _runtimeTransform(transform);
   }
 
   HealthComponent? _healthFor(EntityId entityId) {
@@ -972,6 +1190,38 @@ class _PresentationBoundaryScreenState
           entity.component<HealthDefinition>() != null)
         entity.id,
   };
+
+  EntityId? get _attackTargetId {
+    final selected = _selectedEntityId;
+    if (selected != null &&
+        _authoredCombatantEntityIds.contains(selected) &&
+        !(_healthFor(selected)?.isDead ?? true)) {
+      return selected;
+    }
+    final playerPosition = _playerPosition;
+    final candidates =
+        widget.runtimeWorld.ecs
+            .query<GuardianBehaviorStateComponent>()
+            .where((entry) => !(_healthFor(entry.entityId)?.isDead ?? true))
+            .toList()
+          ..sort((left, right) {
+            final leftPosition = widget.runtimeWorld.ecs
+                .component<TransformComponent>(left.handle)
+                .position;
+            final rightPosition = widget.runtimeWorld.ecs
+                .component<TransformComponent>(right.handle)
+                .position;
+            final leftOffset = leftPosition - playerPosition;
+            final rightOffset = rightPosition - playerPosition;
+            final distanceOrder = leftOffset.length2.compareTo(
+              rightOffset.length2,
+            );
+            return distanceOrder != 0
+                ? distanceOrder
+                : left.entityId.value.compareTo(right.entityId.value);
+          });
+    return candidates.firstOrNull?.entityId;
+  }
 
   PresentationSnapshot _extractPresentation() {
     final deadEntityIds = _deadEntityIds;
@@ -997,10 +1247,13 @@ class _PresentationBoundaryScreenState
   }
 
   void _attackSelected() {
-    final targetId = _selectedEntityId;
+    if (widget.enableRenderer && !_rendererReady) {
+      return;
+    }
+    final targetId = _attackTargetId;
     if (targetId == null) {
       setState(() {
-        _interactionStatus = 'Select the guardian before attacking';
+        _interactionStatus = 'No living guardian is in the active area';
       });
       return;
     }
@@ -1021,6 +1274,7 @@ class _PresentationBoundaryScreenState
     );
     final status = _combatAttackStatus(result);
     if (result.accepted) {
+      _selectedEntityId = targetId;
       if (result.targetKilled) {
         _selectedEntityId = null;
       }
@@ -1069,6 +1323,7 @@ class _PresentationBoundaryScreenState
     _pressedKeys.clear();
     _touchMovementByPointer.clear();
     _groundTarget = null;
+    _simulationTime = Duration.zero;
     _guardianBehaviorSystem.resetActiveGuardians();
     _rebuildGameplayQueries();
     setState(() {
@@ -1090,6 +1345,12 @@ class _PresentationBoundaryScreenState
   }
 
   void _dispatchIntent(IsometricInputIntent intent) {
+    if (widget.enableRenderer && !_rendererReady) {
+      setState(() {
+        _interactionStatus = 'Preparing 3D scene…';
+      });
+      return;
+    }
     if (intent case MoveCharacterIntent(:final direction)) {
       if (_isPlayerDead) {
         setState(() {
@@ -1098,23 +1359,29 @@ class _PresentationBoundaryScreenState
         return;
       }
       final multiplayerClient = widget.multiplayerClient;
+      final worldDirection = _cameraRig.worldDirectionForScreenMovement(
+        direction,
+      );
       if (multiplayerClient != null) {
         setState(() {
           _groundTarget = null;
           _interactionStatus = 'Direct movement';
         });
-        _sendMultiplayerMovement(multiplayerClient, direction);
+        _sendMultiplayerMovement(multiplayerClient, worldDirection);
         return;
       }
       setState(() {
         _groundTarget = null;
-        _applyMovement(
-          _movementSystem.moveDirection(
+        final result = _movePlayerWithinAuthoredWorld(
+          () => _movementSystem.moveDirection(
             entityId: _playerEntityId,
-            direction: direction,
+            direction: worldDirection,
             deltaSeconds: 1 / 15,
           ),
         );
+        if (result != null) {
+          _applyMovement(result);
+        }
       });
       return;
     }
@@ -1182,7 +1449,7 @@ class _PresentationBoundaryScreenState
   }
 
   void _beginTouchMovement(int pointer, Vector3 direction) {
-    if (_isPlayerDead) {
+    if (!_rendererReady || _isPlayerDead) {
       return;
     }
     _touchMovementByPointer[pointer] = direction;
@@ -1202,10 +1469,10 @@ class _PresentationBoundaryScreenState
   }
 
   void _tickMovement() {
-    if (!mounted) {
+    if (!mounted || (widget.enableRenderer && !_rendererReady)) {
       return;
     }
-    _simulationTime += const Duration(microseconds: 16667);
+    _simulationTime += _simulationStep;
     _updateRemotePlayerInterpolation();
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
@@ -1237,24 +1504,30 @@ class _PresentationBoundaryScreenState
     if (!_isPlayerDead) {
       final direction = _directMovementDirection;
       if (direction.length > 1e-9) {
-        result = _movementSystem.moveDirection(
-          entityId: _playerEntityId,
-          direction: direction,
-          deltaSeconds: _fixedDeltaSeconds,
+        result = _movePlayerWithinAuthoredWorld(
+          () => _movementSystem.moveDirection(
+            entityId: _playerEntityId,
+            direction: direction,
+            deltaSeconds: _fixedDeltaSeconds,
+          ),
         );
       } else if (_groundTarget != null) {
-        result = _movementSystem.moveToPoint(
-          entityId: _playerEntityId,
-          target: _groundTarget!.position,
-          deltaSeconds: _fixedDeltaSeconds,
+        result = _movePlayerWithinAuthoredWorld(
+          () => _movementSystem.moveToPoint(
+            entityId: _playerEntityId,
+            target: _groundTarget!.position,
+            deltaSeconds: _fixedDeltaSeconds,
+          ),
         );
       }
     }
-    final guardianResults = _guardianBehaviorSystem.tickAll(
-      targetId: _playerEntityId,
-      simulationTime: _simulationTime,
-      deltaSeconds: _fixedDeltaSeconds,
-    );
+    final guardianResults = _simulationTime < _guardianWakeDelay
+        ? const <GuardianBehaviorTickResult>[]
+        : _guardianBehaviorSystem.tickAll(
+            targetId: _playerEntityId,
+            simulationTime: _simulationTime,
+            deltaSeconds: _fixedDeltaSeconds,
+          );
     final guardianChanged = guardianResults.any((entry) => entry.changed);
     if (result == null && !guardianChanged) {
       return;
@@ -1291,12 +1564,39 @@ class _PresentationBoundaryScreenState
     _presentation = _extractPresentation();
     _cameraRig = _cameraRig.copyWith(target: result.position);
     if (result.collidedEntityIds.isNotEmpty) {
-      _interactionStatus =
-          'Movement blocked by ${result.collidedEntityIds.first.value}';
+      _interactionStatus = 'Path blocked';
     }
-    widget.persistence.markPlayerDirty(widget.localPlayerId);
-    _scheduleSave();
-    _scheduleStreamingRefresh();
+    if (!_worldEdgeMovementBlocked) {
+      widget.persistence.markPlayerDirty(widget.localPlayerId);
+      _scheduleSave();
+      _scheduleStreamingRefreshIfChunkChanged();
+    }
+  }
+
+  CharacterMovementResult? _movePlayerWithinAuthoredWorld(
+    CharacterMovementResult Function() movement,
+  ) {
+    final playerHandle = widget.runtimeWorld.ecs.handleFor(_playerEntityId)!;
+    final before = widget.runtimeWorld.ecs
+        .component<TransformComponent>(playerHandle)
+        .copyWith();
+    final result = movement();
+    if (_movementBounds.contains(result.position)) {
+      _worldEdgeMovementBlocked = false;
+      return result;
+    }
+    widget.runtimeWorld.ecs.replaceComponent(playerHandle, before);
+    _groundTarget = null;
+    if (_worldEdgeMovementBlocked) {
+      return null;
+    }
+    _worldEdgeMovementBlocked = true;
+    _interactionStatus = 'Reached the authored world edge';
+    return CharacterMovementResult(
+      position: before.position,
+      arrived: false,
+      collidedEntityIds: const {},
+    );
   }
 
   void _sendMultiplayerMovement(ReplicationClient client, Vector3 direction) {
@@ -1357,20 +1657,24 @@ class _PresentationBoundaryScreenState
     if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) == null) {
       return;
     }
-    final result = _movementSystem.moveDirection(
-      entityId: _playerEntityId,
-      direction: direction,
-      deltaSeconds: 1 / tickRateHz,
+    final result = _movePlayerWithinAuthoredWorld(
+      () => _movementSystem.moveDirection(
+        entityId: _playerEntityId,
+        direction: direction,
+        deltaSeconds: 1 / tickRateHz,
+      ),
     );
+    if (result == null) {
+      return;
+    }
     setState(() {
       _presentation = _extractPresentation();
       _cameraRig = _cameraRig.copyWith(target: result.position);
       if (result.collidedEntityIds.isNotEmpty) {
-        _interactionStatus =
-            'Movement blocked by ${result.collidedEntityIds.first.value}';
+        _interactionStatus = 'Path blocked';
       }
     });
-    _scheduleStreamingRefresh();
+    _scheduleStreamingRefreshIfChunkChanged();
   }
 
   void _handleReplicationEvent(ReplicationClientEvent event) {
@@ -1583,11 +1887,10 @@ class _PresentationBoundaryScreenState
 
   void _scheduleSave() {
     _saveStatus = 'Unsaved changes';
-    _saveTimer?.cancel();
-    _saveTimer = Timer(
-      const Duration(milliseconds: 500),
-      () => unawaited(_flushSave()),
-    );
+    _saveTimer ??= Timer(const Duration(milliseconds: 500), () {
+      _saveTimer = null;
+      unawaited(_flushSave());
+    });
   }
 
   Future<void> _flushSave() async {
@@ -1618,11 +1921,7 @@ class _PresentationBoundaryScreenState
     } finally {
       _saveInFlight = false;
       if (widget.persistence.dirtyState.hasDirtyState && mounted) {
-        _saveTimer?.cancel();
-        _saveTimer = Timer(
-          const Duration(milliseconds: 100),
-          () => unawaited(_flushSave()),
-        );
+        _scheduleSave();
       }
     }
   }
@@ -1644,11 +1943,21 @@ class _PresentationBoundaryScreenState
     unawaited(_drainStreaming());
   }
 
+  void _scheduleStreamingRefreshIfChunkChanged() {
+    final coordinate = _currentChunkCoordinate;
+    if (coordinate == _lastRequestedPlayerChunk) {
+      return;
+    }
+    _lastRequestedPlayerChunk = coordinate;
+    _scheduleStreamingRefresh();
+  }
+
   Future<void> _drainStreaming() async {
     try {
       while (_streamingDirty && mounted) {
         _streamingDirty = false;
         final currentCoordinate = _currentChunkCoordinate;
+        _lastRequestedPlayerChunk = currentCoordinate;
         final activeBefore = widget.streaming.activeChunkIds;
         final requests = <ChunkStreamingRequest>[
           ChunkStreamingRequest(
@@ -1768,8 +2077,25 @@ class _PresentationBoundaryScreenState
     if (direction.length > 1) {
       direction.normalize();
     }
-    return direction;
+    return _cameraRig.worldDirectionForScreenMovement(direction);
   }
+}
+
+TransformComponent _runtimeTransform(TransformDefinition transform) {
+  return TransformComponent(
+    position: Vector3(
+      transform.position.x,
+      transform.position.y,
+      transform.position.z,
+    ),
+    rotation: Quaternion(
+      transform.rotation.x,
+      transform.rotation.y,
+      transform.rotation.z,
+      transform.rotation.w,
+    ),
+    scale: Vector3(transform.scale.x, transform.scale.y, transform.scale.z),
+  );
 }
 
 TransformComponent _transformFromNetwork(NetworkTransform value) {
