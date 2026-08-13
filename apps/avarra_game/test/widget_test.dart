@@ -28,11 +28,11 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 11.3 · Relay Stabilizers'), findsOneWidget);
+    expect(find.text('Stage 11.4 · Recover the Relay Core'), findsOneWidget);
     expect(find.text('Relay Zero Prototype'), findsOneWidget);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);
-    expect(find.text('8 ECS entities bound to the scene'), findsOneWidget);
+    expect(find.text('9 ECS entities bound to the scene'), findsOneWidget);
     expect(
       find.text(
         'Tap ground or use the movement pad · WASD/arrow keys supported',
@@ -63,6 +63,8 @@ void main() {
     );
     expect(find.byKey(const Key('multiplayer_status')), findsOneWidget);
     expect(find.byKey(const Key('authored_objective_status')), findsOneWidget);
+    expect(find.text('Inventory · Empty'), findsOneWidget);
+    expect(find.byKey(const Key('inventory_status')), findsOneWidget);
   });
 
   testWidgets('restores a persistent entity overlay during chunk activation', (
@@ -143,14 +145,119 @@ void main() {
 
     expect(find.text('Save r7 · Restored revision 7'), findsOneWidget);
     expect(
-      find.text('Objectives · 3/3 complete · Core chamber gate open'),
+      find.text('Objective · Defeat the guardian and recover Relay Core'),
       findsOneWidget,
     );
     expect(
-      find.text('7 ECS entities bound to the scene'),
+      find.text('8 ECS entities bound to the scene'),
       findsOneWidget,
       reason: 'The opened gate must be removed from presentation on restore.',
     );
+  });
+
+  testWidgets('restores the relay core in player inventory', (tester) async {
+    final store = MemorySaveStore();
+    final worldSource = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    await SaveRepository(store: store).save(
+      WorldSave(
+        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000421'),
+        worldId: WorldId.parse('01890f47-e8b8-7a68-8000-000000000010'),
+        sourceWorldFormatVersion: 2,
+        revision: 8,
+        savedAtUtc: DateTime.utc(2026, 8, 13),
+        entities: [
+          for (final suffix in ['004', '005', '010'])
+            EntitySaveState(
+              entityId: EntityId.parse(
+                '01890f47-e8b8-7a68-8000-000000000$suffix',
+              ),
+              flags: const {'activated': true},
+            ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000015'),
+            flags: const {'collected': true},
+          ),
+        ],
+        players: [
+          PlayerSave(
+            playerId: PlayerId.parse('01890f47-e8b8-7a68-8000-000000000402'),
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
+            position: SaveWorldPosition(
+              chunkX: 0,
+              chunkZ: 0,
+              localX: 4,
+              localY: 0.4,
+              localZ: 4,
+            ),
+            inventoryItemIds: const {'relay.core'},
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => store,
+        worldPackageSourceLoader: () async => worldSource!,
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+
+    expect(
+      find.text('Objective · Return Relay Core to the control console'),
+      findsOneWidget,
+    );
+    expect(find.text('Inventory · Relay Core'), findsOneWidget);
+  });
+
+  testWidgets('restores the persisted mission-complete state', (tester) async {
+    final store = MemorySaveStore();
+    final worldSource = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    await SaveRepository(store: store).save(
+      WorldSave(
+        saveId: SaveId.parse('01890f47-e8b8-7a68-8000-000000000421'),
+        worldId: WorldId.parse('01890f47-e8b8-7a68-8000-000000000010'),
+        sourceWorldFormatVersion: 2,
+        revision: 9,
+        savedAtUtc: DateTime.utc(2026, 8, 13),
+        entities: [
+          for (final suffix in ['004', '005', '010'])
+            EntitySaveState(
+              entityId: EntityId.parse(
+                '01890f47-e8b8-7a68-8000-000000000$suffix',
+              ),
+              flags: const {'activated': true},
+            ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000015'),
+            flags: const {'collected': true},
+          ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000014'),
+            flags: const {'signal.transmitted': true},
+          ),
+        ],
+        players: const [],
+      ),
+    );
+
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => store,
+        worldPackageSourceLoader: () async => worldSource!,
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+
+    expect(find.text('Mission complete · Signal transmitted'), findsOneWidget);
+    expect(find.text('Inventory · Empty'), findsOneWidget);
+    expect(find.text('8 ECS entities bound to the scene'), findsOneWidget);
   });
 
   testWidgets('does not report an unloaded guardian as defeated', (
@@ -452,5 +559,5 @@ Future<void> _pumpUntilSaveReady(WidgetTester tester) async {
       fail('Game bootstrap failed: $errorText');
     }
   }
-  fail('Game bootstrap did not expose Stage 11.3 status.');
+  fail('Game bootstrap did not expose Stage 11.4 status.');
 }

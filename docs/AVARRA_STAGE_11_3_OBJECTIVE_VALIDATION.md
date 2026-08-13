@@ -79,9 +79,9 @@ performance are intentionally still tracked as a separate release gate.
 
 ## Remaining boundary
 
-This slice opens the chamber but does not yet add the collectible relay core,
-inventory, final return-console completion, or host-authoritative objective
-commands. Those are the next Stage 11 slices. Physical Android remains the
+Stage 11.4 subsequently adds the collectible Relay Core, persisted inventory,
+and final return-console completion. Host-authoritative combat/objective/item
+commands remain the next Stage 11 slice. Physical Android remains the
 release input/performance/lifecycle gate; emulator evidence is a development
 gate only.
 

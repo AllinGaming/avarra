@@ -115,7 +115,12 @@ final class WorldSaveCodec {
 
   PlayerSave _player(Object? encoded, String path) {
     final data = _object(encoded, path);
-    _onlyFields(data, const {'playerId', 'entityId', 'position'}, path);
+    _onlyFields(data, const {
+      'playerId',
+      'entityId',
+      'position',
+      'inventoryItemIds',
+    }, path);
     final positionData = _object(data['position'], '$path.position');
     _onlyFields(positionData, const {'chunk', 'local'}, '$path.position');
     final chunk = _list(positionData['chunk'], '$path.position.chunk');
@@ -130,6 +135,10 @@ final class WorldSaveCodec {
         local.any((value) => value is! num || !value.toDouble().isFinite)) {
       _invalid('$path.position.local', 'Saved local position is invalid.');
     }
+    final inventory = _list(data['inventoryItemIds'], '$path.inventoryItemIds');
+    if (inventory.any((value) => value is! String)) {
+      _invalid('$path.inventoryItemIds', 'Inventory item IDs must be strings.');
+    }
     return PlayerSave(
       playerId: _playerId(data['playerId'], '$path.playerId'),
       entityId: _entityId(data['entityId'], '$path.entityId'),
@@ -140,6 +149,7 @@ final class WorldSaveCodec {
         localY: (local[1] as num).toDouble(),
         localZ: (local[2] as num).toDouble(),
       ),
+      inventoryItemIds: inventory.cast<String>(),
     );
   }
 

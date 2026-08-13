@@ -507,8 +507,11 @@ Zero now uses an 8×8 centered arena and a survivable guardian balance. Content
 schema v7 and Stage 11.3 add three persistent stabilizers evaluated world-wide
 from authored defaults plus save overlays. Their authored group opens a derived
 solid gate without product entity-ID rules, and the guardian now streams from
-the chamber beyond it. Next is the relay-core item, minimal inventory, and
-final completion before co-op authority or AI/MCP expansion. See
+the chamber beyond it. Content schema v8, save format v2, and Stage 11.4 add a
+guardian-gated Relay Core, player-owned single-quantity inventory, an authored
+return-console turn-in, derived mission feedback, and restored completion.
+Next is host-authoritative combat/objective/item commands before AI/MCP
+expansion. See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
@@ -516,7 +519,8 @@ final completion before co-op authority or AI/MCP expansion. See
 `AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md`,
 `AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md`,
 `AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-029.
+`AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`,
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-030.
 
 ---
 

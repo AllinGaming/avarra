@@ -60,6 +60,9 @@ final class WorldSaveSession {
     DateTime Function()? clock,
   }) : players = Map.unmodifiable(players),
        knownPersistentEntityIds = Set.unmodifiable(knownPersistentEntityIds),
+       _playerInventories = {
+         for (final playerId in players.keys) playerId: <String>{},
+       },
        _clock = clock ?? DateTime.now {
     if (!chunkSize.isFinite || chunkSize <= 0) {
       throw AvarraException(
@@ -78,6 +81,7 @@ final class WorldSaveSession {
   final double chunkSize;
   final Map<PlayerId, EntityId> players;
   final Set<EntityId> knownPersistentEntityIds;
+  final Map<PlayerId, Set<String>> _playerInventories;
   final DateTime Function() _clock;
   WorldSave? _loadedSave;
   Map<EntityId, EntitySaveState> _savedEntities = const {};
@@ -157,6 +161,38 @@ final class WorldSaveSession {
     return true;
   }
 
+  Set<String> inventoryFor(PlayerId playerId) {
+    _requirePlayer(playerId);
+    return Set.unmodifiable(_playerInventories[playerId]!);
+  }
+
+  bool hasItem(PlayerId playerId, String itemId) {
+    _validateItemId(itemId);
+    return inventoryFor(playerId).contains(itemId);
+  }
+
+  /// Grants one single-quantity authored item to a registered player.
+  bool addItem(PlayerId playerId, String itemId) {
+    _validateItemId(itemId);
+    _requirePlayer(playerId);
+    final changed = _playerInventories[playerId]!.add(itemId);
+    if (changed) {
+      markPlayerDirty(playerId);
+    }
+    return changed;
+  }
+
+  /// Removes an authored item during an accepted turn-in.
+  bool removeItem(PlayerId playerId, String itemId) {
+    _validateItemId(itemId);
+    _requirePlayer(playerId);
+    final changed = _playerInventories[playerId]!.remove(itemId);
+    if (changed) {
+      markPlayerDirty(playerId);
+    }
+    return changed;
+  }
+
   void markPlayerDirty(PlayerId playerId) {
     final entityId = players[playerId];
     if (entityId == null) {
@@ -184,7 +220,7 @@ final class WorldSaveSession {
     final dirtySnapshot = dirtyState.snapshot();
     final next = _capture();
     await repository.save(next);
-    _cache(next);
+    _cache(next, restoreInventories: false);
     dirtyState.markPersisted(dirtySnapshot);
     return next;
   }
@@ -229,6 +265,7 @@ final class WorldSaveSession {
           worldZ: position.z,
           chunkSize: chunkSize,
         ),
+        inventoryItemIds: _playerInventories[entry.key]!,
       );
     }
 
@@ -304,7 +341,7 @@ final class WorldSaveSession {
     }
   }
 
-  void _cache(WorldSave save) {
+  void _cache(WorldSave save, {bool restoreInventories = true}) {
     _loadedSave = save;
     _savedEntities = Map.unmodifiable({
       for (final entity in save.entities) entity.entityId: entity,
@@ -312,5 +349,32 @@ final class WorldSaveSession {
     _savedPlayers = Map.unmodifiable({
       for (final player in save.players) player.playerId: player,
     });
+    if (restoreInventories) {
+      for (final playerId in players.keys) {
+        _playerInventories[playerId] = {
+          ...?_savedPlayers[playerId]?.inventoryItemIds,
+        };
+      }
+    }
+  }
+
+  void _requirePlayer(PlayerId playerId) {
+    if (!players.containsKey(playerId)) {
+      throw AvarraException(
+        code: PersistenceErrorCodes.invalidSaveData,
+        message: 'Player is not registered with this save session.',
+        context: {'playerId': playerId.value},
+      );
+    }
+  }
+
+  void _validateItemId(String itemId) {
+    if (!isValidInventoryItemKey(itemId)) {
+      throw AvarraException(
+        code: PersistenceErrorCodes.invalidSaveData,
+        message: 'Inventory item ID is invalid.',
+        context: {'itemId': itemId},
+      );
+    }
   }
 }

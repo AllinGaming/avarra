@@ -17,6 +17,8 @@ final class SaveMigrationRegistry {
     Iterable<SaveMigration> migrations = const [],
     this.targetVersion = currentSaveFormatVersion,
   }) : _migrations = Map.unmodifiable({
+         for (final migration in _builtInSaveMigrations)
+           migration.fromVersion: migration,
          for (final migration in migrations) migration.fromVersion: migration,
        });
 
@@ -53,5 +55,40 @@ final class SaveMigrationRegistry {
       message: 'The save format version is not supported.',
       context: {'version': version, 'targetVersion': targetVersion},
     );
+  }
+}
+
+const List<SaveMigration> _builtInSaveMigrations = [SaveFormat1To2()];
+
+/// Adds the player-owned single-quantity inventory introduced by Stage 11.4.
+final class SaveFormat1To2 implements SaveMigration {
+  const SaveFormat1To2();
+
+  @override
+  int get fromVersion => 1;
+
+  @override
+  int get toVersion => 2;
+
+  @override
+  Map<String, dynamic> migrate(Map<String, dynamic> source) {
+    final players = source['players'];
+    if (players is! List<dynamic>) {
+      throw AvarraException(
+        code: PersistenceErrorCodes.invalidSaveData,
+        message: 'Save players must be a list before inventory migration.',
+      );
+    }
+    return {
+      ...source,
+      'saveFormatVersion': 2,
+      'players': [
+        for (final player in players)
+          if (player is Map<String, dynamic>)
+            {...player, 'inventoryItemIds': <String>[]}
+          else
+            player,
+      ],
+    };
   }
 }

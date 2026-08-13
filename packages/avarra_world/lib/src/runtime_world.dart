@@ -167,6 +167,25 @@ final class RuntimeEntityLoader {
               value: component.value,
             ),
           );
+        case CollectibleItemDefinition():
+          ecs.addComponent(
+            handle,
+            CollectibleItemComponent(
+              itemId: component.itemId,
+              itemLabel: component.itemLabel,
+              collectedFlagKey: component.collectedFlagKey,
+              guardedByEntityId: component.guardedByEntityId,
+            ),
+          );
+        case ItemTurnInDefinition():
+          ecs.addComponent(
+            handle,
+            ItemTurnInComponent(
+              requiredItemId: component.requiredItemId,
+              completionFlagKey: component.completionFlagKey,
+              completionLabel: component.completionLabel,
+            ),
+          );
         case ObjectiveDefinition() || ObjectiveGateDefinition():
           // Objective grouping and gates remain authored definition state.
           // Their runtime result is derived from persisted objective progress.

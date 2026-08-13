@@ -324,6 +324,123 @@ void main() {
     );
   });
 
+  test('validates and instantiates guarded item turn-in graphs', () {
+    final json = _validWorldJson();
+    final entities = json['entities']! as List<dynamic>;
+    final guardian = entities.first as Map<String, dynamic>;
+    final guardianComponents = guardian['components']! as Map<String, dynamic>;
+    guardianComponents
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.4, 0.4, 0.4],
+        'bodyKind': 'character',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.characterController] = {
+        'schemaVersion': 1,
+        'moveSpeed': 1,
+        'skinWidth': 0.03,
+        'arrivalTolerance': 0.08,
+      }
+      ..[AvarraComponentType.health] = {'schemaVersion': 1, 'maximumHealth': 20}
+      ..[AvarraComponentType.basicAttack] = {
+        'schemaVersion': 1,
+        'damage': 5,
+        'range': 1,
+        'cooldownSeconds': 1,
+      }
+      ..[AvarraComponentType.guardianBehavior] = {
+        'schemaVersion': 1,
+        'perceptionRange': 3,
+        'leashRange': 5,
+      };
+    final collectible = entities.last as Map<String, dynamic>;
+    final collectibleComponents =
+        collectible['components']! as Map<String, dynamic>;
+    collectibleComponents
+      ..remove(AvarraComponentType.isometricOccluder)
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.3, 0.3, 0.3],
+        'bodyKind': 'static',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.interactable] = {
+        'schemaVersion': 1,
+        'label': 'Recover core',
+        'range': 2,
+      }
+      ..[AvarraComponentType.collectibleItem] = {
+        'schemaVersion': 1,
+        'itemId': 'relay.core',
+        'itemLabel': 'Relay Core',
+        'collectedFlagKey': 'collected',
+        'guardedByEntityId': _targetEntityId,
+      }
+      ..[AvarraComponentType.persistentFlags] = {
+        'schemaVersion': 1,
+        'flags': {'collected': false},
+      };
+    entities.add({
+      'id': _turnInEntityId,
+      'components': {
+        AvarraComponentType.transform: {
+          'schemaVersion': 1,
+          'position': [4, 0.5, 4],
+          'rotation': [0, 0, 0, 1],
+          'scale': [0.5, 0.5, 0.5],
+        },
+        AvarraComponentType.physicsCollider: {
+          'schemaVersion': 1,
+          'halfExtents': [0.5, 0.5, 0.5],
+          'bodyKind': 'static',
+          'isSensor': false,
+        },
+        AvarraComponentType.interactable: {
+          'schemaVersion': 1,
+          'label': 'Transmit signal',
+          'range': 2,
+        },
+        AvarraComponentType.itemTurnIn: {
+          'schemaVersion': 1,
+          'requiredItemId': 'relay.core',
+          'completionFlagKey': 'signal.transmitted',
+          'completionLabel': 'Signal transmitted',
+        },
+        AvarraComponentType.persistentFlags: {
+          'schemaVersion': 1,
+          'flags': {'signal.transmitted': false},
+        },
+      },
+    });
+
+    final runtime = const RuntimeWorldLoader().load(
+      codec.decode(jsonEncode(json)),
+    );
+    final coreHandle = runtime.ecs.handleFor(
+      EntityId.parse(_occluderEntityId),
+    )!;
+    expect(
+      runtime.ecs.component<CollectibleItemComponent>(coreHandle).itemId,
+      'relay.core',
+    );
+    final consoleHandle = runtime.ecs.handleFor(
+      EntityId.parse(_turnInEntityId),
+    )!;
+    expect(
+      runtime.ecs.component<ItemTurnInComponent>(consoleHandle).requiredItemId,
+      'relay.core',
+    );
+
+    (collectibleComponents[AvarraComponentType.collectibleItem]!
+            as Map<String, dynamic>)['guardedByEntityId'] =
+        _turnInEntityId;
+    expect(
+      () => codec.decode(jsonEncode(json)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
+
   test('rejects duplicate stable IDs', () {
     final json = _validWorldJson();
     final entities = json['entities']! as List<dynamic>;
@@ -463,6 +580,7 @@ const _firstChunkId = '01890f47-e8b8-7a68-8000-000000000101';
 const _secondChunkId = '01890f47-e8b8-7a68-8000-000000000102';
 const _firstChunkEntityId = '01890f47-e8b8-7a68-8000-000000000201';
 const _secondChunkEntityId = '01890f47-e8b8-7a68-8000-000000000202';
+const _turnInEntityId = '01890f47-e8b8-7a68-8000-000000000203';
 
 String _validWorldSource({bool reverseEntities = false}) {
   final json = _validWorldJson();

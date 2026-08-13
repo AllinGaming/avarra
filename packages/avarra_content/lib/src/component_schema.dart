@@ -578,6 +578,86 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.collectibleItem,
+          version: 1,
+          introducedInContentSchemaVersion: 8,
+          editorLabel: 'Collectible Item',
+          editorOrder: 67,
+          help:
+              'Grants one inventory item after its authored guardian is defeated.',
+          requiredComponentTypes: const {
+            AvarraComponentType.transform,
+            AvarraComponentType.renderableReference,
+            AvarraComponentType.interactable,
+            AvarraComponentType.persistentFlags,
+          },
+          creatableWithoutContext: false,
+          fields: const [
+            ComponentFieldSchema(
+              name: 'itemId',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Item ID',
+              defaultValue: 'relay.core',
+              maximumLength: 64,
+            ),
+            ComponentFieldSchema(
+              name: 'itemLabel',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Item label',
+              defaultValue: 'Relay Core',
+              maximumLength: 80,
+            ),
+            ComponentFieldSchema(
+              name: 'collectedFlagKey',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Collected flag',
+              defaultValue: 'collected',
+              maximumLength: 64,
+            ),
+            ComponentFieldSchema(
+              name: 'guardedByEntityId',
+              kind: ComponentFieldKind.stableId,
+              editorLabel: 'Guardian entity',
+              stableIdDomain: StableIdDomain.entity,
+            ),
+          ],
+        ),
+        ComponentSchema(
+          type: AvarraComponentType.itemTurnIn,
+          version: 1,
+          introducedInContentSchemaVersion: 8,
+          editorLabel: 'Item Turn-in',
+          editorOrder: 68,
+          help: 'Consumes an inventory item and records a completion flag.',
+          requiredComponentTypes: const {
+            AvarraComponentType.interactable,
+            AvarraComponentType.persistentFlags,
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'requiredItemId',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Required item ID',
+              defaultValue: 'relay.core',
+              maximumLength: 64,
+            ),
+            ComponentFieldSchema(
+              name: 'completionFlagKey',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Completion flag',
+              defaultValue: 'signal.transmitted',
+              maximumLength: 64,
+            ),
+            ComponentFieldSchema(
+              name: 'completionLabel',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Completion label',
+              defaultValue: 'Signal transmitted',
+              maximumLength: 80,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.persistentFlags,
           version: 1,
           introducedInContentSchemaVersion: 3,
@@ -697,6 +777,8 @@ final class ComponentSchemaRegistry {
         _decodeSetPersistentFlagOnInteract(data),
       AvarraComponentType.objective => _decodeObjective(data),
       AvarraComponentType.objectiveGate => _decodeObjectiveGate(data),
+      AvarraComponentType.collectibleItem => _decodeCollectibleItem(data),
+      AvarraComponentType.itemTurnIn => _decodeItemTurnIn(data),
       AvarraComponentType.persistentFlags => _decodePersistentFlags(data),
       _ => throw StateError('Validated component type has no decoder: $type'),
     };
@@ -838,9 +920,70 @@ final class ComponentSchemaRegistry {
     );
   }
 
+  CollectibleItemDefinition _decodeCollectibleItem(Map<String, Object?> data) {
+    final itemId = data['itemId']! as String;
+    final itemLabel = data['itemLabel']! as String;
+    final collectedFlagKey = data['collectedFlagKey']! as String;
+    _validateStateKey(
+      itemId,
+      AvarraComponentType.collectibleItem,
+      'Collectible item ID',
+    );
+    _validateStateKey(
+      collectedFlagKey,
+      AvarraComponentType.collectibleItem,
+      'Collectible flag key',
+    );
+    if (itemLabel.trim().isEmpty || itemLabel.length > 80) {
+      _invalidComponent(
+        AvarraComponentType.collectibleItem,
+        'Collectible item label is invalid.',
+      );
+    }
+    return CollectibleItemDefinition(
+      itemId: itemId,
+      itemLabel: itemLabel,
+      collectedFlagKey: collectedFlagKey,
+      guardedByEntityId: EntityId.parse(data['guardedByEntityId']! as String),
+    );
+  }
+
+  ItemTurnInDefinition _decodeItemTurnIn(Map<String, Object?> data) {
+    final requiredItemId = data['requiredItemId']! as String;
+    final completionFlagKey = data['completionFlagKey']! as String;
+    final completionLabel = data['completionLabel']! as String;
+    _validateStateKey(
+      requiredItemId,
+      AvarraComponentType.itemTurnIn,
+      'Turn-in item ID',
+    );
+    _validateStateKey(
+      completionFlagKey,
+      AvarraComponentType.itemTurnIn,
+      'Turn-in completion flag',
+    );
+    if (completionLabel.trim().isEmpty || completionLabel.length > 80) {
+      _invalidComponent(
+        AvarraComponentType.itemTurnIn,
+        'Turn-in completion label is invalid.',
+      );
+    }
+    return ItemTurnInDefinition(
+      requiredItemId: requiredItemId,
+      completionFlagKey: completionFlagKey,
+      completionLabel: completionLabel,
+    );
+  }
+
   void _validateObjectiveGroup(String group, String componentType) {
     if (!RegExp(r'^[a-z][a-z0-9_.-]{0,63}$').hasMatch(group)) {
       _invalidComponent(componentType, 'Objective group key is invalid.');
+    }
+  }
+
+  void _validateStateKey(String value, String componentType, String label) {
+    if (!RegExp(r'^[a-z][a-z0-9_.-]{0,63}$').hasMatch(value)) {
+      _invalidComponent(componentType, '$label is invalid.');
     }
   }
 

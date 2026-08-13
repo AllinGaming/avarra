@@ -388,6 +388,63 @@ final class ObjectiveGateDefinition extends ContentComponentDefinition {
   };
 }
 
+/// A single-quantity authored item collected into player-owned inventory.
+final class CollectibleItemDefinition extends ContentComponentDefinition {
+  const CollectibleItemDefinition({
+    required this.itemId,
+    required this.itemLabel,
+    required this.collectedFlagKey,
+    required this.guardedByEntityId,
+  });
+
+  final String itemId;
+  final String itemLabel;
+  final String collectedFlagKey;
+  final EntityId guardedByEntityId;
+
+  @override
+  String get type => AvarraComponentType.collectibleItem;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'itemId': itemId,
+    'itemLabel': itemLabel,
+    'collectedFlagKey': collectedFlagKey,
+    'guardedByEntityId': guardedByEntityId.value,
+  };
+}
+
+/// An authored console that consumes one item and records mission completion.
+final class ItemTurnInDefinition extends ContentComponentDefinition {
+  const ItemTurnInDefinition({
+    required this.requiredItemId,
+    required this.completionFlagKey,
+    required this.completionLabel,
+  });
+
+  final String requiredItemId;
+  final String completionFlagKey;
+  final String completionLabel;
+
+  @override
+  String get type => AvarraComponentType.itemTurnIn;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'requiredItemId': requiredItemId,
+    'completionFlagKey': completionFlagKey,
+    'completionLabel': completionLabel,
+  };
+}
+
 final class PersistentFlagsDefinition extends ContentComponentDefinition {
   PersistentFlagsDefinition(Map<String, bool> flags)
     : flags = Map.unmodifiable(SplayTreeMap.of(flags));

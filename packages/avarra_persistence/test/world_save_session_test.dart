@@ -12,6 +12,8 @@ void main() {
     final firstRuntime = _runtime();
     final first = _session(firstRuntime, store);
     expect(first.setFlag(_persistentEntity, 'activated', true), isTrue);
+    expect(first.addItem(_player, 'relay.core'), isTrue);
+    expect(first.addItem(_player, 'relay.core'), isFalse);
     firstRuntime.ecs.replaceComponent(
       firstRuntime.playerHandle,
       firstRuntime.ecs
@@ -39,6 +41,7 @@ void main() {
         .position;
     expect(position.x, 1);
     expect(position.z, -0.5);
+    expect(second.inventoryFor(_player), {'relay.core'});
   });
 
   test(
@@ -85,6 +88,31 @@ void main() {
       await session.save();
       expect(session.dirtyState.hasDirtyState, isFalse);
       expect(session.revision, 2);
+    },
+  );
+
+  test(
+    'does not lose inventory mutations made during an atomic write',
+    () async {
+      final store = _ControlledStore();
+      final runtime = _runtime();
+      final session = _session(runtime, store);
+      session.addItem(_player, 'relay.core');
+
+      final pendingSave = session.save();
+      await store.writeStarted.future;
+      session.addItem(_player, 'relay.archive');
+      store.completeWrite();
+      await pendingSave;
+
+      expect(session.inventoryFor(_player), {'relay.archive', 'relay.core'});
+      expect(session.dirtyState.isDirty(_playerEntity), isTrue);
+      await session.save();
+      final stored = await SaveRepository(store: store).load(_save);
+      expect(stored!.players.single.inventoryItemIds, {
+        'relay.archive',
+        'relay.core',
+      });
     },
   );
 

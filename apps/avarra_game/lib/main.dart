@@ -50,9 +50,8 @@ const _configuredPlayerId = String.fromEnvironment(
   'AVARRA_PLAYER_ID',
   defaultValue: '01890f47-e8b8-7a68-8000-000000000402',
 );
-// Stage 11.3 replaces the single relay flag with a three-objective graph and
-// physical gate, so it intentionally starts a new bundled-world save slot.
-// Earlier proof and arena saves remain untouched.
+// Stage 11.4 preserves the Stage 11.3 slot. Save-format migration adds an empty
+// inventory without discarding existing stabilizer progress.
 final _proofSaveId = SaveId.parse('01890f47-e8b8-7a68-8000-000000000421');
 
 typedef WorldPackageSourceLoader = Future<String> Function();
@@ -486,7 +485,7 @@ class _PresentationBoundaryScreenState
     _presentation = _extractPresentation();
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
-      excludedEntityIds: {..._deadEntityIds, ..._openObjectiveGateEntityIds},
+      excludedEntityIds: _excludedGameplayEntityIds,
     );
     _movementSystem = CharacterMovementSystem(
       ecs: widget.runtimeWorld.ecs,
@@ -507,6 +506,7 @@ class _PresentationBoundaryScreenState
     _interactionEffects = AuthoredInteractionEffectExecutor(
       ecs: widget.runtimeWorld.ecs,
       persistence: widget.persistence,
+      playerId: widget.localPlayerId,
     );
     _cameraRig = IsometricCameraRig(
       target: _playerPosition,
@@ -606,7 +606,7 @@ class _PresentationBoundaryScreenState
             children: [
               Text(avarraProductName, style: textTheme.headlineMedium),
               const SizedBox(height: 4),
-              const Text('Stage 11.3 · Relay Stabilizers'),
+              const Text('Stage 11.4 · Recover the Relay Core'),
               Text(widget.runtimeWorld.definition.name),
               Text(
                 'World source: ${widget.sourceLabel}',
@@ -645,11 +645,12 @@ class _PresentationBoundaryScreenState
                 Text(_hostDeviceStatus, key: const Key('host_device_status')),
               ],
               Text(
-                authoredInteractionObjectiveStatus(
-                  widget.runtimeWorld.definition,
-                  widget.persistence,
-                ),
+                _adventureProgress.status(widget.runtimeWorld.definition),
                 key: const Key('authored_objective_status'),
+              ),
+              Text(
+                _adventureProgress.inventoryStatus,
+                key: const Key('inventory_status'),
               ),
               Text(
                 'Camera ${_cameraRig.quarterTurns + 1}/4 · '
@@ -736,14 +737,14 @@ class _PresentationBoundaryScreenState
         ? 'HP --'
         : 'HP ${_formatHealth(health.currentHealth)}/'
               '${_formatHealth(health.maximumHealth)}';
-    final objective = authoredInteractionObjectiveStatus(
-      widget.runtimeWorld.definition,
-      widget.persistence,
-    );
+    final adventure = _adventureProgress;
+    final objective = adventure.status(widget.runtimeWorld.definition);
     return Card(
       key: const Key('gameplay_hud'),
       margin: EdgeInsets.all(compactLayout ? 10 : 16),
-      color: Colors.black.withValues(alpha: 0.78),
+      color: adventure.isMissionComplete
+          ? Colors.green.shade900.withValues(alpha: 0.92)
+          : Colors.black.withValues(alpha: 0.78),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: compactLayout ? 320 : 420),
         child: Padding(
@@ -801,6 +802,19 @@ class _PresentationBoundaryScreenState
                           icon: Icons.shield,
                           label: _compactGuardianStatus,
                         ),
+                        _statusPill(
+                          key: const Key('compact_inventory_status'),
+                          icon: Icons.inventory_2,
+                          label: adventure.inventoryItemIds.isEmpty
+                              ? 'Empty'
+                              : adventure.inventoryItemIds
+                                    .map(
+                                      (itemId) =>
+                                          adventure.itemLabels[itemId] ??
+                                          itemId,
+                                    )
+                                    .join(', '),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -852,6 +866,29 @@ class _PresentationBoundaryScreenState
   }
 
   Widget get _actionControls {
+    final adventure = _adventureProgress;
+    if (adventure.isMissionComplete) {
+      return Semantics(
+        liveRegion: true,
+        child: Card(
+          key: const Key('mission_complete_prompt'),
+          color: Colors.green.shade800,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'MISSION COMPLETE',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                Text(adventure.turnIns.last.completionLabel),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     if (_isPlayerDead) {
       return Semantics(
         liveRegion: true,
@@ -1262,8 +1299,23 @@ class _PresentationBoundaryScreenState
     widget.persistence,
   );
 
+  AuthoredAdventureProgress get _adventureProgress => authoredAdventureProgress(
+    widget.runtimeWorld.definition,
+    widget.persistence,
+    widget.localPlayerId,
+  );
+
   Set<EntityId> get _openObjectiveGateEntityIds =>
       _objectiveProgress.openedGateEntityIds(widget.runtimeWorld.definition);
+
+  Set<EntityId> get _collectedItemEntityIds =>
+      _adventureProgress.collectedItemEntityIds;
+
+  Set<EntityId> get _excludedGameplayEntityIds => {
+    ..._deadEntityIds,
+    ..._openObjectiveGateEntityIds,
+    ..._collectedItemEntityIds,
+  };
 
   bool get _hasLockedObjectiveGate => widget.runtimeWorld.definition.allEntities
       .map((entity) => entity.component<ObjectiveGateDefinition>())
@@ -1310,16 +1362,13 @@ class _PresentationBoundaryScreenState
   }
 
   PresentationSnapshot _extractPresentation() {
-    final deadEntityIds = _deadEntityIds;
-    final openGateEntityIds = _openObjectiveGateEntityIds;
+    final excludedEntityIds = _excludedGameplayEntityIds;
     final extracted = const PresentationExtractor().extract(
       widget.runtimeWorld.ecs,
     );
     return PresentationSnapshot(
       extracted.entities.where(
-        (entity) =>
-            !deadEntityIds.contains(entity.entityId) &&
-            !openGateEntityIds.contains(entity.entityId),
+        (entity) => !excludedEntityIds.contains(entity.entityId),
       ),
     );
   }
@@ -1501,30 +1550,55 @@ class _PresentationBoundaryScreenState
             final openGatesBefore = _openObjectiveGateEntityIds;
             final effect = _interactionEffects.apply(entityId);
             if (effect.handled) {
-              _interactionStatus = effect.changed
-                  ? '${result.label}: objective updated and queued for save'
-                  : '${result.label}: objective already complete';
-              if (effect.changed) {
+              if (effect.blocked) {
+                _interactionStatus = switch (effect.rejection!) {
+                  AuthoredInteractionEffectRejection.guardianNotDefeated =>
+                    'The guardian must be defeated before taking '
+                        '${effect.itemLabel}',
+                  AuthoredInteractionEffectRejection.requiredItemMissing =>
+                    'The control console requires '
+                        '${_adventureProgress.itemLabels[effect.itemId] ?? effect.itemId}',
+                };
+              } else if (!effect.changed) {
+                _interactionStatus = switch (effect.kind!) {
+                  AuthoredInteractionEffectKind.persistentFlag =>
+                    '${result.label}: objective already complete',
+                  AuthoredInteractionEffectKind.collectibleItem =>
+                    '${effect.itemLabel}: already recovered',
+                  AuthoredInteractionEffectKind.itemTurnIn =>
+                    '${effect.completionLabel}: already complete',
+                };
+              } else {
                 final openGatesAfter = _openObjectiveGateEntityIds;
                 final newlyOpenedGateIds = openGatesAfter.difference(
                   openGatesBefore,
                 );
                 _rebuildGameplayQueries();
                 _presentation = _extractPresentation();
-                if (newlyOpenedGateIds.isNotEmpty) {
-                  final gate = widget.runtimeWorld.definition.allEntities
-                      .firstWhere(
-                        (entity) => newlyOpenedGateIds.contains(entity.id),
-                      )
-                      .component<ObjectiveGateDefinition>()!;
-                  _selectedEntityId = null;
-                  _interactionStatus =
-                      '${result.label}: online · ${gate.label} opened';
-                } else {
-                  final progress = _objectiveProgress;
-                  _interactionStatus =
-                      '${result.label}: online · '
-                      '${progress.completedCount}/${progress.totalCount} complete';
+                switch (effect.kind!) {
+                  case AuthoredInteractionEffectKind.persistentFlag:
+                    if (newlyOpenedGateIds.isNotEmpty) {
+                      final gate = widget.runtimeWorld.definition.allEntities
+                          .firstWhere(
+                            (entity) => newlyOpenedGateIds.contains(entity.id),
+                          )
+                          .component<ObjectiveGateDefinition>()!;
+                      _selectedEntityId = null;
+                      _interactionStatus =
+                          '${result.label}: online · ${gate.label} opened';
+                    } else {
+                      final progress = _objectiveProgress;
+                      _interactionStatus =
+                          '${result.label}: online · '
+                          '${progress.completedCount}/${progress.totalCount} complete';
+                    }
+                  case AuthoredInteractionEffectKind.collectibleItem:
+                    _selectedEntityId = null;
+                    _interactionStatus =
+                        '${effect.itemLabel} recovered · added to inventory';
+                  case AuthoredInteractionEffectKind.itemTurnIn:
+                    _interactionStatus =
+                        '${effect.completionLabel} · mission complete';
                 }
                 _scheduleSave();
               }
@@ -2137,7 +2211,7 @@ class _PresentationBoundaryScreenState
     final previousCollisionWorld = _collisionWorld;
     _collisionWorld = DeterministicPhysicsCollisionWorld.fromEcs(
       widget.runtimeWorld.ecs,
-      excludedEntityIds: {..._deadEntityIds, ..._openObjectiveGateEntityIds},
+      excludedEntityIds: _excludedGameplayEntityIds,
     );
     _movementSystem = CharacterMovementSystem(
       ecs: widget.runtimeWorld.ecs,

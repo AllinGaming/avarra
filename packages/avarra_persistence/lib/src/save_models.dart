@@ -6,11 +6,14 @@ import 'persistence_error_codes.dart';
 
 const String avarraSaveFormat = 'avarra.save';
 const int minimumSaveFormatVersion = 1;
-const int currentSaveFormatVersion = 1;
+const int currentSaveFormatVersion = 2;
 
 final RegExp _flagKeyPattern = RegExp(r'^[a-z][a-z0-9_.-]{0,63}$');
+final RegExp _inventoryItemKeyPattern = RegExp(r'^[a-z][a-z0-9_.-]{0,63}$');
 
 bool isValidPersistentFlagKey(String key) => _flagKeyPattern.hasMatch(key);
+bool isValidInventoryItemKey(String key) =>
+    _inventoryItemKeyPattern.hasMatch(key);
 
 /// Chunk-relative persisted position used instead of one giant global float.
 final class SaveWorldPosition {
@@ -83,20 +86,32 @@ final class EntitySaveState {
 
 /// Per-player save data kept distinct from creator-authored world state.
 final class PlayerSave {
-  const PlayerSave({
+  PlayerSave({
     required this.playerId,
     required this.entityId,
     required this.position,
-  });
+    Iterable<String> inventoryItemIds = const [],
+  }) : inventoryItemIds = Set.unmodifiable(
+         SplayTreeSet<String>.of(inventoryItemIds),
+       ) {
+    if (this.inventoryItemIds.length > 64 ||
+        this.inventoryItemIds.any(
+          (itemId) => !isValidInventoryItemKey(itemId),
+        )) {
+      _invalid('Player inventory item IDs or count are invalid.');
+    }
+  }
 
   final PlayerId playerId;
   final EntityId entityId;
   final SaveWorldPosition position;
+  final Set<String> inventoryItemIds;
 
   Map<String, Object?> toJson() => {
     'playerId': playerId.value,
     'entityId': entityId.value,
     'position': position.toJson(),
+    'inventoryItemIds': inventoryItemIds.toList(),
   };
 }
 

@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 7,
+  "contentSchemaVersion": 8,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero Prototype",
@@ -248,6 +248,42 @@
               "requiredCount": 3
             }
           }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000014",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4, 0.45, 6.8],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.45, 0.45, 0.45]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.45, 0.45, 0.45],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Transmit recovered core",
+              "range": 2.8
+            },
+            "avarra.objective.item_turn_in": {
+              "schemaVersion": 1,
+              "requiredItemId": "relay.core",
+              "completionFlagKey": "signal.transmitted",
+              "completionLabel": "Signal transmitted"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"signal.transmitted": false}
+            }
+          }
         }
       ]
     },
@@ -397,6 +433,43 @@
               "schemaVersion": 1,
               "perceptionRange": 3.5,
               "leashRange": 5
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000015",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [5, 0.3, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.3, 0.3, 0.3]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000001"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.3, 0.3, 0.3],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Recover Relay Core",
+              "range": 2.4
+            },
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "relay.core",
+              "itemLabel": "Relay Core",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000009"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"collected": false}
             }
           }
         }

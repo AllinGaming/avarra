@@ -46,11 +46,11 @@ void main() {
 
       expect(definition.name, 'Relay Zero Prototype');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 7);
+      expect(definition.contentSchemaVersion, 8);
       expect(definition.chunkSize, 8);
       expect(definition.chunks, hasLength(3));
-      expect(definition.allEntities, hasLength(13));
-      expect(runtime.ecs.entityCount, 8);
+      expect(definition.allEntities, hasLength(15));
+      expect(runtime.ecs.entityCount, 9);
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
       expect(streaming.activeOccluderEntityIds, hasLength(1));
@@ -87,6 +87,12 @@ void main() {
           .single;
       expect(gate.label, 'Core chamber gate');
       expect(gate.requiredCount, 3);
+      final turnIn = definition.allEntities
+          .map((entity) => entity.component<ItemTurnInDefinition>())
+          .whereType<ItemTurnInDefinition>()
+          .single;
+      expect(turnIn.requiredItemId, 'relay.core');
+      expect(turnIn.completionFlagKey, 'signal.transmitted');
 
       streaming.reconcile([
         ChunkStreamingRequest(
@@ -96,6 +102,11 @@ void main() {
       ]);
       await streaming.pumpUntilStable();
       final guardianHandle = runtime.ecs.handleFor(guardianId)!;
+      final coreId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000015');
+      final coreHandle = runtime.ecs.handleFor(coreId)!;
+      final core = runtime.ecs.component<CollectibleItemComponent>(coreHandle);
+      expect(core.itemId, 'relay.core');
+      expect(core.guardedByEntityId, guardianId);
       expect(
         runtime.ecs.component<HealthComponent>(guardianHandle).currentHealth,
         60,

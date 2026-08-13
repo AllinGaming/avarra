@@ -574,10 +574,10 @@ player/enemy health and damage                    COMPLETE (Stage 11.1)
 one basic attack and death/restart                COMPLETE (Stage 11.1)
 one pursuing/attacking guardian                   COMPLETE (Stage 11.2)
 three persistent relay stabilizer objectives         COMPLETE (Stage 11.3)
-one relay-core item and minimal inventory
-objective gate and completion state                  PARTIAL (gate complete)
+one relay-core item and minimal inventory             COMPLETE (Stage 11.4)
+objective gate and completion state                  COMPLETE (Stages 11.3–11.4)
 authoritative co-op combat/objective commands
-save/resume across the full adventure
+save/resume across the full adventure                PARTIAL (solo state complete)
 ```
 
 Stage 11.1 status (implemented 2026-08-13):
@@ -625,8 +625,20 @@ Stage 11.3 status (implemented 2026-08-13):
   order; and
 - the guardian now streams from the chamber beyond that gate.
 
-Next: Stage 11.4 relay-core item, minimal inventory, and return-console
-completion. See `AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md` and ADR-029.
+Stage 11.4 status (implemented 2026-08-13):
+
+- content schema v8 authors guarded single-quantity collectibles and item
+  turn-in completion without Game-side stable-ID rules;
+- save format v2 adds sorted player inventory with automatic v1 migration;
+- the Relay Core can be recovered only after its authored guardian is defeated
+  and disappears from presentation/collision after pickup;
+- the authored entry console consumes the core, persists signal transmission,
+  and exposes a clear mission-complete state; and
+- pickup, inventory, turn-in, completion, and restored progress use the same
+  serialized save queue as existing world/player state.
+
+Next: Stage 11.5 host-authoritative combat, objective, pickup, and turn-in
+commands. See `AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md` and ADR-030.
 
 Gate:
 

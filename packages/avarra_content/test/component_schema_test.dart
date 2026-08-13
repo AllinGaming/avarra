@@ -20,8 +20,10 @@ void main() {
           AvarraComponentType.setPersistentFlagOnInteract,
           AvarraComponentType.isometricOccluder,
           AvarraComponentType.isometricOcclusionTarget,
+          AvarraComponentType.collectibleItem,
           AvarraComponentType.objective,
           AvarraComponentType.objectiveGate,
+          AvarraComponentType.itemTurnIn,
           AvarraComponentType.persistentFlags,
           AvarraComponentType.physicsCollider,
           AvarraComponentType.playerControlled,
@@ -225,6 +227,49 @@ void main() {
         'range': 2.25,
         'cooldownSeconds': 0.5,
       }, contentSchemaVersion: 4),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes collectible and turn-in contracts in content v8', () {
+    final collectible = registry.decode(AvarraComponentType.collectibleItem, {
+      'schemaVersion': 1,
+      'itemId': 'relay.core',
+      'itemLabel': 'Relay Core',
+      'collectedFlagKey': 'collected',
+      'guardedByEntityId': '01890f47-e8b8-7a68-8000-000000000009',
+    });
+    final turnIn = registry.decode(AvarraComponentType.itemTurnIn, {
+      'schemaVersion': 1,
+      'requiredItemId': 'relay.core',
+      'completionFlagKey': 'signal.transmitted',
+      'completionLabel': 'Signal transmitted',
+    });
+
+    expect((collectible as CollectibleItemDefinition).itemId, 'relay.core');
+    expect(collectible.itemLabel, 'Relay Core');
+    expect(collectible.collectedFlagKey, 'collected');
+    expect(collectible.guardedByEntityId.value, endsWith('0009'));
+    expect((turnIn as ItemTurnInDefinition).requiredItemId, 'relay.core');
+    expect(turnIn.completionFlagKey, 'signal.transmitted');
+    expect(turnIn.completionLabel, 'Signal transmitted');
+    expect(
+      () => registry.decode(AvarraComponentType.collectibleItem, {
+        'schemaVersion': 1,
+        'itemId': 'Invalid Item',
+        'itemLabel': 'Relay Core',
+        'collectedFlagKey': 'collected',
+        'guardedByEntityId': '01890f47-e8b8-7a68-8000-000000000009',
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.itemTurnIn, {
+        'schemaVersion': 1,
+        'requiredItemId': 'relay.core',
+        'completionFlagKey': 'signal.transmitted',
+        'completionLabel': 'Signal transmitted',
+      }, contentSchemaVersion: 7),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

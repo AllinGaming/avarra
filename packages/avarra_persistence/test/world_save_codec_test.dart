@@ -16,6 +16,7 @@ void main() {
     expect(decoded.worldId, WorldId.parse(_worldId));
     expect(decoded.entities.single.flags, {'activated': true});
     expect(decoded.players.single.position.chunkZ, -1);
+    expect(decoded.players.single.inventoryItemIds, {'relay.core'});
   });
 
   test('rejects malformed, unknown, and invalid save data', () {
@@ -41,7 +42,7 @@ void main() {
     );
   });
 
-  test('runs registered migrations sequentially and fails closed on gaps', () {
+  test('runs built-in and registered migrations and fails closed on gaps', () {
     final source = _save().toJson()..['saveFormatVersion'] = 0;
     final codec = WorldSaveCodec(
       migrations: SaveMigrationRegistry(
@@ -50,17 +51,29 @@ void main() {
     );
 
     final migrated = codec.decode(jsonEncode(source));
-    expect(migrated.saveFormatVersion, 1);
+    expect(migrated.saveFormatVersion, 2);
+    expect(migrated.players.single.inventoryItemIds, isEmpty);
 
     expect(
       () => WorldSaveCodec().decode(jsonEncode(source)),
       _throwsCode(PersistenceErrorCodes.unsupportedSaveVersion),
     );
-    final future = _save().toJson()..['saveFormatVersion'] = 2;
+    final future = _save().toJson()..['saveFormatVersion'] = 3;
     expect(
       () => codec.decode(jsonEncode(future)),
       _throwsCode(PersistenceErrorCodes.unsupportedSaveVersion),
     );
+  });
+
+  test('migrates save-format v1 players to an empty inventory', () {
+    final source = _save().toJson()..['saveFormatVersion'] = 1;
+    final players = source['players']! as List<dynamic>;
+    (players.single as Map<String, Object?>).remove('inventoryItemIds');
+
+    final migrated = WorldSaveCodec().decode(jsonEncode(source));
+
+    expect(migrated.saveFormatVersion, 2);
+    expect(migrated.players.single.inventoryItemIds, isEmpty);
   });
 }
 
@@ -102,6 +115,7 @@ WorldSave _save() => WorldSave(
         localY: 0.45,
         localZ: 3.5,
       ),
+      inventoryItemIds: const {'relay.core'},
     ),
   ],
 );

@@ -1,6 +1,6 @@
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Stage 11 in progress; combat and guardian slices implemented
+**Status:** Solo adventure loop implemented; co-op authority remains
 
 **Date:** 2026-08-12
 
@@ -83,8 +83,16 @@ solid core-chamber gate from both collision and presentation; the guardian is
 streamed from the chamber beyond it. World-wide progress includes inactive
 saved chunks and contains no Game-side entity-ID rules.
 
-This is not yet the complete adventure. It intentionally reuses the current
-cube assets while the gameplay contract is made reliable.
+Stage 11.4 completes the solo objective loop with content schema v8 and save
+format v2. A guardian-gated Relay Core enters player-owned, single-quantity
+inventory; pickup removes its presentation and collision; an authored return
+console consumes it and persists the mission-complete state. Existing v1 saves
+migrate with empty inventory while retaining their world overlays.
+
+The complete solo loop now exists, but co-op combat/objective/item authority
+and final physical-Android acceptance are still open. The adventure
+intentionally reuses the current cube assets while the gameplay contract is
+made reliable.
 
 ## Delivery sequence
 
@@ -94,8 +102,9 @@ cube assets while the gameplay contract is made reliable.
    selection, transform gizmo, and bounded history.
 4. **In progress:** implement the Stage 11 gameplay loop in thin vertical
    slices. Health/basic attack/death/restart, guardian AI, three persistent
-   stabilizers, and their objective gate are complete; next is item/core →
-   final completion → co-op authority → full save/resume.
+   stabilizers, their objective gate, guarded Relay Core, minimal inventory,
+   return-console completion, and restore are complete; next is co-op authority
+   → complete cross-platform save/resume acceptance.
 5. Replace proof geometry incrementally after the loop is fun and measurable.
 6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
    physical Android.

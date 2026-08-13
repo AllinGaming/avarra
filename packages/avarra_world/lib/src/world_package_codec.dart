@@ -121,6 +121,7 @@ final class WorldPackageCodec {
     ];
     _validateReferences(assets, allEntities);
     _validateObjectiveGroups(allEntities);
+    _validateAdventureItems(allEntities);
 
     return WorldDefinition(
       id: worldId,
@@ -389,6 +390,21 @@ final class WorldPackageCodec {
         );
       }
     }
+    final interactionEffectTypes = {
+      AvarraComponentType.setPersistentFlagOnInteract,
+      AvarraComponentType.collectibleItem,
+      AvarraComponentType.itemTurnIn,
+    }.intersection(types);
+    if (interactionEffectTypes.length > 1) {
+      _invalid(
+        '$path.components',
+        'An interactable entity may define only one authored effect.',
+        context: {
+          'entityId': entityId.value,
+          'effectTypes': interactionEffectTypes.toList()..sort(),
+        },
+      );
+    }
     if (types.contains(AvarraComponentType.objective) &&
         !types.contains(AvarraComponentType.setPersistentFlagOnInteract)) {
       _invalid(
@@ -407,6 +423,47 @@ final class WorldPackageCodec {
         'An objective gate requires renderable, non-sensor static geometry.',
         context: {'entityId': entityId.value},
       );
+    }
+    final collectible = components
+        .whereType<CollectibleItemDefinition>()
+        .firstOrNull;
+    if (collectible != null) {
+      final persistent = components
+          .whereType<PersistentFlagsDefinition>()
+          .firstOrNull;
+      if (!types.contains(AvarraComponentType.renderableReference) ||
+          !types.contains(AvarraComponentType.interactable) ||
+          persistent == null ||
+          !persistent.flags.containsKey(collectible.collectedFlagKey)) {
+        _invalid(
+          '$path.components',
+          'A collectible requires renderable interaction geometry and its '
+              'declared collected flag.',
+          context: {
+            'entityId': entityId.value,
+            'flagKey': collectible.collectedFlagKey,
+          },
+        );
+      }
+    }
+    final turnIn = components.whereType<ItemTurnInDefinition>().firstOrNull;
+    if (turnIn != null) {
+      final persistent = components
+          .whereType<PersistentFlagsDefinition>()
+          .firstOrNull;
+      if (!types.contains(AvarraComponentType.interactable) ||
+          persistent == null ||
+          !persistent.flags.containsKey(turnIn.completionFlagKey)) {
+        _invalid(
+          '$path.components',
+          'An item turn-in requires interaction geometry and its declared '
+              'completion flag.',
+          context: {
+            'entityId': entityId.value,
+            'flagKey': turnIn.completionFlagKey,
+          },
+        );
+      }
     }
   }
 
@@ -437,6 +494,51 @@ final class WorldPackageCodec {
             'objectiveGroup': gate.group,
             'requiredCount': gate.requiredCount,
             'availableCount': available,
+          },
+        );
+      }
+    }
+  }
+
+  void _validateAdventureItems(List<WorldEntityDefinition> entities) {
+    final entitiesById = {for (final entity in entities) entity.id: entity};
+    final collectiblesByItemId = <String, WorldEntityDefinition>{};
+    for (final entity in entities) {
+      final collectible = entity.component<CollectibleItemDefinition>();
+      if (collectible == null) {
+        continue;
+      }
+      if (collectiblesByItemId.containsKey(collectible.itemId)) {
+        _invalid(
+          r'$.entities|$.chunks[*].entities',
+          'Collectible item IDs must be unique within a world.',
+          context: {'itemId': collectible.itemId},
+        );
+      }
+      collectiblesByItemId[collectible.itemId] = entity;
+      final guardian = entitiesById[collectible.guardedByEntityId];
+      if (guardian == null ||
+          guardian.component<GuardianBehaviorDefinition>() == null) {
+        _invalid(
+          r'$.entities|$.chunks[*].entities',
+          'A collectible guardian reference must target authored guardian behavior.',
+          context: {
+            'entityId': entity.id.value,
+            'guardianEntityId': collectible.guardedByEntityId.value,
+          },
+        );
+      }
+    }
+    for (final entity in entities) {
+      final turnIn = entity.component<ItemTurnInDefinition>();
+      if (turnIn != null &&
+          !collectiblesByItemId.containsKey(turnIn.requiredItemId)) {
+        _invalid(
+          r'$.entities|$.chunks[*].entities',
+          'An item turn-in must reference one authored collectible item.',
+          context: {
+            'entityId': entity.id.value,
+            'requiredItemId': turnIn.requiredItemId,
           },
         );
       }

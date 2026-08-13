@@ -1,3 +1,4 @@
+export 'src/authored_adventure_progress.dart';
 export 'src/authored_objectives.dart';
 export 'src/playable_world_profile.dart';
 export 'src/runtime_world.dart';
