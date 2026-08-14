@@ -1,7 +1,7 @@
 {
   "architecture_version": "v8-reviewed",
-  "date": "2026-08-13",
-  "current_direction": "Finish the creator-to-game loop and Relay Zero playable slice before AI expansion; no standalone custom engine requirement.",
+  "date": "2026-08-14",
+  "current_direction": "Stage 12.2 available-target acceptance is complete. Keep physical Android as the release gate, then continue animation/content polish or the typed Creator API; no standalone custom engine requirement.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
@@ -13,6 +13,12 @@
   "stage_11_1_validation": "docs/AVARRA_STAGE_11_1_COMBAT_VALIDATION.md",
   "stage_11_2_validation": "docs/AVARRA_STAGE_11_2_GUARDIAN_VALIDATION.md",
   "stage_11_2_playability_validation": "docs/AVARRA_STAGE_11_2_PLAYABILITY_VALIDATION.md",
+  "stage_11_3_validation": "docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md",
+  "stage_11_4_validation": "docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md",
+  "stage_11_5_validation": "docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md",
+  "stage_11_6_validation": "docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md",
+  "stage_12_1_validation": "docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md",
+  "stage_12_2_validation": "docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md",
   "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
   "adrs": [
     "ADR-008-build-avarra-not-an-engine.md",
@@ -35,7 +41,11 @@
     "ADR-025-forge-project-and-runtime-world-library.md",
     "ADR-026-schema-editor-inverse-history-and-shared-viewport.md",
     "ADR-027-deterministic-authored-combat-runtime.md",
-    "ADR-028-authored-deterministic-guardian-state-machine.md"
+    "ADR-028-authored-deterministic-guardian-state-machine.md",
+    "ADR-029-authored-objective-groups-and-derived-gates.md",
+    "ADR-030-player-inventory-and-authored-item-turn-ins.md",
+    "ADR-031-host-authoritative-adventure-commands.md",
+    "ADR-032-durable-host-saves-and-player-retention.md"
   ],
   "ai_creator_docs": [
     "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",
@@ -43,7 +53,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through the Stage 11.2 guardian and playability gates; Relay Zero stabilizers are next.",
+  "review_status": "Consistency-reviewed through Stage 12.2 available-target product acceptance; physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }
