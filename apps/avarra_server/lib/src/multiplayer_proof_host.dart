@@ -429,8 +429,14 @@ final class MultiplayerProofHost {
         }
         final intent = replication.takeLatestMovementIntent(connectionId);
         if (intent != null) {
+          final handle = runtimeWorld.ecs.handleFor(entityId)!;
+          final previousPosition = runtimeWorld.ecs
+              .component<TransformComponent>(handle)
+              .position;
           final position = _applyMovement(entityId, intent);
-          adventureState.markPlayerDirty(playerId);
+          if ((position - previousPosition).length2 > 1e-18) {
+            adventureState.markPlayerDirty(playerId);
+          }
           _events.add(
             'input:${connectionId.value}:${intent.sequence}:'
             '${position.x.toStringAsFixed(3)},${position.z.toStringAsFixed(3)}',

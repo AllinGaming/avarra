@@ -102,3 +102,9 @@ Windows Game reverse-client confirmation, and the final 10–15 minute solo/co-o
 product playtest remain open.
 
 See ADR-032.
+
+Stage 12.2 subsequently completed the full emulator mission/ten-minute soak,
+cold-restore check, and native Windows Game reverse-client gate, and fixed the
+idle zero-vector autosave amplification exposed by that run. See
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`; the 223-test result above remains the
+historical Stage 12.1 baseline.

@@ -1,8 +1,8 @@
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Solo and session-authoritative co-op implemented; device and durable-save acceptance remain
+**Status:** Available-target solo/co-op acceptance complete; physical Android release gate remains
 
-**Date:** 2026-08-12
+**Date:** 2026-08-14
 
 ## Purpose
 
@@ -108,6 +108,13 @@ before disconnect/shutdown, and restores stable position/inventory records on
 reconnect or host restart. Unfinished encounter health and AI phase still
 reset, matching the intentional solo save boundary.
 
+Stage 12.2 completes the available-target product pass. An API 37 Pixel 10 Pro
+emulator listen host completed every authored objective with a second stable
+player, survived a ten-minute connected soak, exposed the expected canonical
+save, and restored mission completion after a cold launch. A packaged Windows
+Game client also joined the native headless host and passed held-key movement.
+The soak exposed and closed idle zero-vector autosave amplification.
+
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle
 acceptance is still open. The CC0 cube remains only as a renderer fixture and
@@ -124,11 +131,13 @@ geometry source for the original assembled prototype models.
    stabilizers, their objective gate, guarded Relay Core, minimal inventory,
    return-console completion, solo restore, session-authoritative co-op,
    action-target controls, enemy drops, and the first original art pass are
-   complete; next is cross-platform durable save/resume acceptance.
+   complete; the available-target cross-platform durable save/resume gate also
+   passes.
 5. Replace and animate prototype geometry incrementally after the Stage 12
    device/performance baseline is measured.
-6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
-   physical Android.
+6. **Available targets complete:** automated mission, ten-minute emulator soak,
+   save/cold-restore, and native Windows connection/movement. Repeat the human
+   10–15 minute solo/co-op gate on physical Android before release sign-off.
 
 AI/MCP work follows the playable slice. This ensures future creator tools are
 grounded in the actual schemas and workflows creators need.

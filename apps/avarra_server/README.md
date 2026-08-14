@@ -47,4 +47,18 @@ dart run bin/multiplayer_client_probe.dart `
 
 The probe performs the content handshake, waits for its controlled entity,
 sends movement input, requires an authoritative acknowledgment, reports byte
-and tick evidence, and then disconnects cleanly.
+and tick evidence, and then disconnects cleanly. Add
+`--complete-relay-zero` to complete the full authoritative mission and
+`--soak-seconds=600` for a ten-minute acknowledged connection soak:
+
+```powershell
+dart run bin/multiplayer_client_probe.dart `
+  --world=../avarra_game/assets/worlds/isometric_proof.avarra `
+  --host=127.0.0.1 `
+  --port=45454 `
+  --complete-relay-zero `
+  --soak-seconds=600
+```
+
+Zero-vector soak traffic no longer creates save revisions. Host player state
+is marked dirty only when authoritative movement changes position.

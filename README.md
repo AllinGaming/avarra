@@ -2,7 +2,7 @@
 
 **Status:** Repository guide  
 **Architecture generation:** v8 reviewed  
-**Date:** 2026-08-13
+**Date:** 2026-08-14
 
 AVARRA is a cross-platform, isometric-first sandbox RPG platform built primarily with Dart and Flutter.
 
@@ -48,19 +48,22 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 23. `docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`
 24. `docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`
 25. `docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`
-26. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-27. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-28. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-29. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-30. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-31. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-32. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-33. `docs/AVARRA_OPEN_DECISIONS.md`
-34. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-35. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-36. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-37. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-38. ADRs under `docs/adr/`
+26. `docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`
+27. `docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`
+28. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+29. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+30. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+31. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+32. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+33. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+34. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+35. `docs/AVARRA_OPEN_DECISIONS.md`
+36. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+37. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+38. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+39. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+40. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
+41. ADRs under `docs/adr/`
 
 ## Implementation status
 
@@ -75,9 +78,12 @@ mobile update load, fixes camera-relative controls and authored-world bounds,
 replaces the diagnostic wall with a compact gameplay HUD, pools repeated glTF
 assets, and drives presentation from a bounded vsync-aligned 60 Hz fixed step.
 Stage 12.1 adds canonical durable host saves plus stable disconnect/reconnect
-retention. Its 223-test and API 37 Android-emulator gate passes in both network
-directions; physical Android runtime/performance validation remains
-consolidated into the Stage 12 device passes.
+retention. Stage 12.2 completes the authoritative mission on an API 37 Pixel
+10 Pro emulator host, holds a ten-minute co-op soak, restores completion after
+cold launch, passes native Windows Game join/held movement, and closes idle
+autosave write amplification. The analyzer and 224-test matrix pass. Physical
+Android direct-LAN, touch, performance, battery/thermal, and human playability
+remain the named release boundary.
 
 ```text
 apps/
@@ -324,3 +330,5 @@ but does not directly own or rewrite canonical project state.
 - `docs/AVARRA_DOCUMENTATION_REVIEW.md` — consistency/completeness review.
 - `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md` — current implementation risks, priorities, and next-work gates.
 - `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md` — concrete built-in adventure and gameplay acceptance gate.
+- `docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md` — latest available-target product evidence and remaining physical gate.
+- `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md` — final verification and safe remote-publish commands.

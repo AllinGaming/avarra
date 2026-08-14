@@ -22,6 +22,18 @@ Thumbs.db
 *.log
 *.swp
 
+# Local configuration, credentials, and signing material
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+key.properties
+
+# Runtime save data
+**/.avarra_saves/
+*.avsave
+
 # Android build outputs
 **/android/app/debug/
 **/android/app/profile/

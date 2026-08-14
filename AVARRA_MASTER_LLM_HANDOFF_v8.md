@@ -535,12 +535,13 @@ Stage 12.1 replaces transient host adventure state with the canonical
 `WorldSaveSession`. Two-second autosave plus disconnect/shutdown flush preserve
 authored progression, player position, and inventory; remote avatars despawn
 while stable player records remain for reconnect and complete host restart.
-The 223-test matrix, server AOT compile, Windows/Android profile builds, API 37
-emulator lifecycle, Windows-host → Android-Game join/durable disconnect, and
-Android-listen-host → Windows headless movement/acknowledgment probe pass. The
-cross-role run also closed a late replication-event race when a loaded world is
-replaced. Physical Android and the complete native-shell product playtest remain
-open before AI/MCP expansion. See
+Stage 12.2 extends this to a complete authoritative Relay Zero mission and
+ten-minute API 37 emulator soak, canonical save inspection, mission-complete
+cold restore, and a packaged Windows Game join plus held-key movement gate. It
+also fixes zero-vector input marking unchanged player state dirty. The analyzer
+and 224-test matrix pass. Physical Android direct-LAN, real touch/frame/thermal
+evidence, and the human product playtest remain open before release sign-off.
+See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
 `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
@@ -552,6 +553,7 @@ open before AI/MCP expansion. See
 `AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
 
 ---
@@ -5187,7 +5189,168 @@ product playtest remain open.
 
 See ADR-032.
 
+Stage 12.2 subsequently completed the full emulator mission/ten-minute soak,
+cold-restore check, and native Windows Game reverse-client gate, and fixed the
+idle zero-vector autosave amplification exposed by that run. See
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`; the 223-test result above remains the
+historical Stage 12.1 baseline.
+
 <!-- END AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md -->
+
+# AVARRA Stage 12.2 — Available-Target Product Acceptance
+
+**Status:** Emulator and native Windows gates complete; physical Android gate open
+
+**Date:** 2026-08-14
+
+## Scope
+
+Stage 12.2 exercises Relay Zero as a product rather than as isolated systems:
+
+```text
+Android listen host
+  -> second stable player joins through the real protocol
+  -> complete all three relays, guardian, core pickup, and turn-in
+  -> remain connected for a ten-minute soak
+  -> verify canonical save contents
+  -> force-stop and cold-launch
+  -> confirm mission-complete restore
+```
+
+It also repeats the packaged Windows client path against a local headless host
+and validates held keyboard movement through the real native Game shell.
+
+## Acceptance tooling
+
+`apps/avarra_server/bin/multiplayer_client_probe.dart` now supports:
+
+- `--complete-relay-zero` to navigate the authored collision layout, activate
+  all three stabilizers, defeat the guardian, recover the Relay Core, and
+  transmit it at the control console through protocol-v3 commands;
+- `--soak-seconds=<0..1800>` to maintain acknowledged traffic and report
+  minute-by-minute tick/entity/network telemetry; and
+- the existing exact content handshake, stable player identity, controlled
+  entity, authoritative input acknowledgment, and clean disconnect checks.
+
+This is deterministic acceptance tooling. It does not replace a human
+playability, touch-quality, visual-quality, or accessibility review.
+
+## Android emulator evidence
+
+Target: `emulator-5554`, Pixel 10 Pro AVD, Android API 37 x64. No physical
+Android device was visible during this pass.
+
+The Android Game ran as listen host. Stable remote player `…403` completed the
+entire authoritative mission, then held the connection for a 600-second soak.
+The final probe record was:
+
+```text
+connection=2
+entities=11
+tick=19095
+ack=4916
+bytes sent=548420
+bytes received=28224171
+```
+
+The probe emitted success for Relay Alpha, Beta, Gamma, guardian defeat, Relay
+Core recovery, mission completion, all nine complete minute reports, soak
+completion, and its final connection assertion. The Game UI independently
+reported `Mission complete · Signal transmitted`, player health `100/100`, an
+open core gate, and enabled touch controls.
+
+Observed emulator process data across the complete run:
+
+```text
+initial PSS       153147 KiB
+final PSS         161478 KiB
+initial RSS       263296 KiB
+final RSS         275780 KiB
+temperature       25.0 C (emulated sensor)
+battery           100% (emulated value)
+relevant errors   0
+```
+
+Android's generic `gfxinfo` path reported zero frames for this
+Flutter/Thermion SurfaceTexture composition, so this pass does not claim a
+frame-latency number. Renderer-specific or in-app frame telemetry must be used
+for the physical performance gate.
+
+The canonical save was decoded after the soak. It contained save format 2,
+the expected world identity, both player records, all three activated relay
+flags, `signal.transmitted=true`, and the collected Relay Core state. After
+backgrounding, force-stop, and cold launch, a new Game process restored the
+mission-complete HUD, `100/100` health, open gate, and usable touch controls.
+
+## Idle-write correction
+
+The first soak reached revision 307 because every acknowledged zero-vector
+intent marked player state dirty even when position did not change. The
+authoritative host now compares the pre/post movement position and marks the
+player dirty only when movement actually changes state.
+
+A focused regression sends repeated zero-vector intents across several short
+autosave intervals and asserts revision zero with no `saved:` event. It then
+sends real movement and requires `saved:autosave:1`. A native post-movement
+idle observation also held the save-event count stable at three across the
+observation window.
+
+## Native Windows Game evidence
+
+A fresh Windows release was built with an explicit client role, exact Relay
+Zero world path, loopback host, port `45455`, and stable player `…403`. Against
+the standalone Dart host:
+
+- `AVARRA Game` remained responsive;
+- the TCP session remained `Established`;
+- the host recorded `joined:1:…403` with package hash
+  `eaae4cd15cef4d8ad3c4e2a68d90cbe77c6b4665d9b61a0e5eefc69a046ef1f9`;
+- a two-second held `W` generated 53 authoritative input records; and
+- position changed from `(3.941, 3.941)` to `(0.877, 0.877)` while the session
+  remained established.
+
+This closes the native Windows reverse-client confirmation that Stage 12.1
+left open.
+
+## Automated gate
+
+Final source result on 2026-08-14:
+
+```text
+dart analyze .                         clean
+pure Dart and server tests             174 passed
+Thermion bridge Flutter tests            6 passed
+Game Flutter tests                      35 passed
+Forge Flutter tests                      9 passed
+total                                  224 passed
+server AOT compile                     passed
+mission/soak probe AOT compile         passed
+Windows configured release build       passed
+Android host profile build (85.0 MiB)  passed
+```
+
+## Remaining release boundary
+
+Stage 12 is not a physical-mobile release sign-off. The following still require
+a real Android device on direct LAN:
+
+- full touch/control feel and accessibility review;
+- sustained renderer frame/tick measurements using valid telemetry;
+- battery and thermal behavior from real sensors;
+- background/resume, interruption, and storage behavior;
+- Android host to Windows client and Windows host to Android client without
+  ADB forwarding; and
+- a human 10–15 minute solo/co-op playability pass.
+
+The available-target implementation is stable enough to continue with
+animation/content polish or the typed Creator API. Physical Android acceptance
+must remain a named release gate rather than being inferred from emulator data.
+
+<!-- END AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md -->
 
 ---
 
@@ -5195,9 +5358,9 @@ See ADR-032.
 
 # AVARRA — First Playable: Relay Zero
 
-**Status:** Solo and session-authoritative co-op implemented; device and durable-save acceptance remain
+**Status:** Available-target solo/co-op acceptance complete; physical Android release gate remains
 
-**Date:** 2026-08-12
+**Date:** 2026-08-14
 
 ## Purpose
 
@@ -5303,6 +5466,13 @@ before disconnect/shutdown, and restores stable position/inventory records on
 reconnect or host restart. Unfinished encounter health and AI phase still
 reset, matching the intentional solo save boundary.
 
+Stage 12.2 completes the available-target product pass. An API 37 Pixel 10 Pro
+emulator listen host completed every authored objective with a second stable
+player, survived a ten-minute connected soak, exposed the expected canonical
+save, and restored mission completion after a cold launch. A packaged Windows
+Game client also joined the native headless host and passed held-key movement.
+The soak exposed and closed idle zero-vector autosave amplification.
+
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle
 acceptance is still open. The CC0 cube remains only as a renderer fixture and
@@ -5319,11 +5489,13 @@ geometry source for the original assembled prototype models.
    stabilizers, their objective gate, guarded Relay Core, minimal inventory,
    return-console completion, solo restore, session-authoritative co-op,
    action-target controls, enemy drops, and the first original art pass are
-   complete; next is cross-platform durable save/resume acceptance.
+   complete; the available-target cross-platform durable save/resume gate also
+   passes.
 5. Replace and animate prototype geometry incrementally after the Stage 12
    device/performance baseline is measured.
-6. Run the complete 10–15 minute solo/co-op save-and-resume gate on Windows and
-   physical Android.
+6. **Available targets complete:** automated mission, ten-minute emulator soak,
+   save/cold-restore, and native Windows connection/movement. Repeat the human
+   10–15 minute solo/co-op gate on physical Android before release sign-off.
 
 AI/MCP work follows the playable slice. This ensures future creator tools are
 grounded in the actual schemas and workflows creators need.
@@ -9259,7 +9431,7 @@ objective gate and completion state                  COMPLETE (Stages 11.3–11.
 authoritative co-op combat/objective commands       COMPLETE (Stage 11.5)
 click/tap pursuit, repeated attacks, and auto-use    COMPLETE (Stage 11.6)
 original gothic models, materials, floors, and loot COMPLETE (Stage 11.6)
-save/resume across the full adventure                PARTIAL (solo state complete)
+save/resume across the full adventure                COMPLETE (Stage 12.2 available targets)
 ```
 
 Stage 11.1 status (implemented 2026-08-13):
@@ -9343,9 +9515,9 @@ Stage 11.6 status (implemented 2026-08-14):
   materials replace cube presentation while retaining the CC0 cube mesh only
   as their small geometry source and renderer fixture.
 
-Stage 12.1 durable host save/resume, stable-player retention, and the grouped
-Android-emulator gate are complete. Next is physical-Android and complete
-solo/co-op product acceptance. See
+Stage 12.2 completes the full authoritative mission, ten-minute emulator soak,
+cold save restore, idle-write correction, and native Windows Game join/movement
+gate. Next is physical-Android direct-LAN and human product acceptance. See
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`. The Stage 11.6 pass adds no
 new architecture ADR; it composes the accepted input, gameplay, content,
 renderer, and authority boundaries from ADR-010, ADR-027 through ADR-031.
@@ -9408,10 +9580,26 @@ Stage 12.1 status (implemented and emulator-validated 2026-08-14):
   and closed a late replication-event/world-replacement race in Game.
 
 Automated persistence/loopback and grouped Android-emulator acceptance are
-complete. Physical Android sustained-play, touch, thermal/battery, direct-LAN,
-native Windows Game reverse-client confirmation, and the complete 10–15 minute
+complete.
+
+Stage 12.2 status (available-target gate completed 2026-08-14):
+
+- the remote probe completes all three stabilizers, guardian combat, Relay
+  Core pickup, return-console turn-in, and a bounded network soak;
+- an Android API 37 Pixel 10 Pro emulator host completed the mission, held a
+  ten-minute co-op connection, persisted both players and mission state, and
+  restored completion after cold launch with zero relevant platform errors;
+- a packaged Windows Game release joined the exact headless world and a held W
+  key produced 53 authoritative movement records over an established socket;
+- the soak exposed idle zero-vector autosave amplification; the host now marks
+  movement dirty only when position changes, with a focused regression; and
+- the analyzer and 224-test matrix pass.
+
+Physical Android sustained play, touch quality, valid frame telemetry,
+thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
-`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md` and ADR-032.
+`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`, and ADR-032.
 
 Polish:
 
@@ -10041,6 +10229,71 @@ An AI assistant or MCP adapter must call the same validated creator commands use
 Do not add live LLM integration before the underlying Forge command/schema/validation architecture exists.
 
 <!-- END AVARRA_LLM_IMPLEMENTATION_PROMPT.md -->
+
+---
+
+<!-- BEGIN AVARRA_GIT_UPLOAD_CHECKLIST.md -->
+
+# AVARRA Git Upload Checklist
+
+**Status:** Maintainer checklist
+
+**Date:** 2026-08-14
+
+Use this checklist from the repository root before publishing a branch.
+
+## Verification
+
+```powershell
+flutter pub get
+dart analyze .
+dart test packages/avarra_core
+# Run the remaining package/app tests listed in README.md.
+git status --short
+git diff --check
+```
+
+Build outputs, Dart/Flutter caches, logs, Android intermediates, editor state,
+and symbol/map artifacts are excluded by `.gitignore`. Do not add application
+support saves, device captures, signing keys, API keys, or local environment
+files.
+
+## Review the commit
+
+```powershell
+git diff --stat HEAD
+git diff HEAD
+git log -1 --oneline
+```
+
+Confirm that generated `AVARRA_MASTER_LLM_HANDOFF_v8.md` matches its source
+documents by running:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool/build_master_handoff.ps1
+git status --short
+```
+
+## Publish
+
+After creating an empty remote repository, substitute its URL below:
+
+```powershell
+git remote add origin <repository-url>
+git push -u origin HEAD
+```
+
+If `origin` already exists, inspect it before changing anything:
+
+```powershell
+git remote -v
+git push -u origin HEAD
+```
+
+Never commit credentials to make a push work. Authenticate with the Git host's
+credential manager, SSH agent, or approved CLI instead.
+
+<!-- END AVARRA_GIT_UPLOAD_CHECKLIST.md -->
 
 ---
 

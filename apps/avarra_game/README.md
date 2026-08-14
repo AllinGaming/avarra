@@ -61,9 +61,13 @@ acknowledgment and clean disconnect.
 The Stage 9 reverse direction also passed functionally: an Android emulator
 listen host accepted the Windows Game client, displayed two independent
 players, acknowledged local host input, and closed the session on background.
-The Stage 12.1 API 37 emulator repeat passed durable Windows-host → Android-Game
-disconnect and Android-listen-host → Windows headless movement acknowledgment;
-the full native-shell product repeat remains part of the physical/manual gate.
+The Stage 12.2 API 37 emulator repeat completed the full authoritative Relay
+Zero mission, held a ten-minute co-op soak, decoded the canonical save, and
+restored mission completion after a cold launch. A freshly configured native
+Windows release also joined a headless host and converted a two-second held W
+key into 53 authoritative inputs while remaining connected. Physical Android
+direct-LAN, touch-quality, battery/thermal, and human playability remain the
+manual release gate.
 The follow-up release reduced captured single-client emulator frame time from
 roughly 100 ms to 9–11 ms average by coalescing renderer work and skipping
 unchanged native updates; a 1.2-second held direction produced 36 authoritative

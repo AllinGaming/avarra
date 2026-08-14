@@ -579,7 +579,7 @@ objective gate and completion state                  COMPLETE (Stages 11.3–11.
 authoritative co-op combat/objective commands       COMPLETE (Stage 11.5)
 click/tap pursuit, repeated attacks, and auto-use    COMPLETE (Stage 11.6)
 original gothic models, materials, floors, and loot COMPLETE (Stage 11.6)
-save/resume across the full adventure                PARTIAL (solo state complete)
+save/resume across the full adventure                COMPLETE (Stage 12.2 available targets)
 ```
 
 Stage 11.1 status (implemented 2026-08-13):
@@ -663,9 +663,9 @@ Stage 11.6 status (implemented 2026-08-14):
   materials replace cube presentation while retaining the CC0 cube mesh only
   as their small geometry source and renderer fixture.
 
-Stage 12.1 durable host save/resume, stable-player retention, and the grouped
-Android-emulator gate are complete. Next is physical-Android and complete
-solo/co-op product acceptance. See
+Stage 12.2 completes the full authoritative mission, ten-minute emulator soak,
+cold save restore, idle-write correction, and native Windows Game join/movement
+gate. Next is physical-Android direct-LAN and human product acceptance. See
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`. The Stage 11.6 pass adds no
 new architecture ADR; it composes the accepted input, gameplay, content,
 renderer, and authority boundaries from ADR-010, ADR-027 through ADR-031.
@@ -728,10 +728,26 @@ Stage 12.1 status (implemented and emulator-validated 2026-08-14):
   and closed a late replication-event/world-replacement race in Game.
 
 Automated persistence/loopback and grouped Android-emulator acceptance are
-complete. Physical Android sustained-play, touch, thermal/battery, direct-LAN,
-native Windows Game reverse-client confirmation, and the complete 10–15 minute
+complete.
+
+Stage 12.2 status (available-target gate completed 2026-08-14):
+
+- the remote probe completes all three stabilizers, guardian combat, Relay
+  Core pickup, return-console turn-in, and a bounded network soak;
+- an Android API 37 Pixel 10 Pro emulator host completed the mission, held a
+  ten-minute co-op connection, persisted both players and mission state, and
+  restored completion after cold launch with zero relevant platform errors;
+- a packaged Windows Game release joined the exact headless world and a held W
+  key produced 53 authoritative movement records over an established socket;
+- the soak exposed idle zero-vector autosave amplification; the host now marks
+  movement dirty only when position changes, with a focused regression; and
+- the analyzer and 224-test matrix pass.
+
+Physical Android sustained play, touch quality, valid frame telemetry,
+thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
-`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md` and ADR-032.
+`AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`, and ADR-032.
 
 Polish:
 

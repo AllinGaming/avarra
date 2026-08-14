@@ -110,6 +110,38 @@ void main() {
     await host.close();
   });
 
+  test('zero movement intents do not create idle autosaves', () async {
+    final host = await MultiplayerProofHost.start(
+      worldPackageSource: _findProofWorld().readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+      saveStore: MemorySaveStore(),
+      saveId: _hostSaveId,
+      autosaveInterval: const Duration(milliseconds: 50),
+    );
+    final events = <String>[];
+    final hostEvents = host.events.listen(events.add);
+    final client = await _connect(host, _primaryPlayerId);
+    await client.waitForControlledEntity();
+
+    for (var index = 0; index < 5; index += 1) {
+      await client.sendMovementIntent(directionX: 0, directionZ: 0);
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+
+    expect(host.saveRevision, 0);
+    expect(events.where((event) => event.startsWith('saved:')), isEmpty);
+
+    await client.sendMovementIntent(directionX: 0, directionZ: -1);
+    await _waitUntil(() => host.saveRevision > 0);
+    expect(events, contains('saved:autosave:1'));
+
+    await client.close();
+    await hostEvents.cancel();
+    await host.close();
+  });
+
   test('rejects a decoded world outside the shared playable profile', () async {
     final json =
         jsonDecode(_findProofWorld().readAsStringSync())
