@@ -135,17 +135,31 @@ not be inferred from this decision. See ADR-025.
 
 # 7. Test Play
 
-Long-term:
+Implemented in Stage 12.6:
 
 ```text
 edit
  ↓
-test play
+validate and write isolated temporary .avarra
+ ↓
+launch the real Avarra Game process
+ ↓
+play with an in-memory save store
+ ↓
+child exit deletes the temporary package
  ↓
 return to edit state
 ```
 
-Avoid making the editor mutate source state with runtime mutations.
+Forge owns validation, temporary-file lifetime, executable discovery, and
+process launch through an injectable service. Game owns package decoding,
+simulation, rendering, saves, hosting, and player UI. The only shared launch
+contract is the process-argument prefix exported by `avarra_core`.
+
+Test Play never marks the source project saved and runtime mutations remain in a
+fresh memory store. It is currently a new Windows Game process per launch;
+live process management, return-state inspection, and multiplayer orchestration
+remain open.
 
 ---
 
@@ -290,11 +304,24 @@ The required delivery order is:
 6. **Complete:** bound/batch command history using measured creator fixtures;
 7. **Complete:** integrate the shared Thermion-backed editing viewport and
    translation gizmo;
-8. build the Relay Zero RPG slice;
-9. only then add Stage 10A transactions, permissions, semantic diff, and agent
-   adapters.
+8. **Complete:** build the Relay Zero RPG slice;
+9. **Complete:** add the first typed Object palette and renderer-neutral
+   click-to-place loop;
+10. **Complete:** add explicit declared-asset catalog selection and atomic floor
+    paint/erase strokes;
+11. **Complete:** add temporary-export Game test play;
+12. **Complete:** add first-class persistent objective switches and count-based
+    gates through existing runtime schemas; and
+13. only after the human creator loop works, add Stage 10A transactions,
+    permissions, semantic diff, and agent adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
 behavior without closing the final project/archive decisions. Detailed findings
-and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-026,
-and `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
+`AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
+`AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
+`AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
+ADR-026, and
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

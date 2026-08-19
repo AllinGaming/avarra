@@ -530,8 +530,42 @@ Stage 12.2 extends this to a complete authoritative Relay Zero mission and
 ten-minute API 37 emulator soak, canonical save inspection, mission-complete
 cold restore, and a packaged Windows Game join plus held-key movement gate. It
 also fixes zero-vector input marking unchanged player state dirty. The analyzer
-and 224-test matrix pass. Physical Android direct-LAN, real touch/frame/thermal
-evidence, and the human product playtest remain open before release sign-off.
+and 224-test matrix pass. Stage 12.3 turns the proof controls into one runtime
+Worlds & multiplayer browser: Game lists its visible application map folder,
+imports one file or every top-level `.avarra` file from a selected folder,
+refreshes directly dropped maps, and launches the chosen world as Solo, Host,
+or Join without a special build. Session replacement flushes state and releases
+the old listener before rebinding. The shared Thermion viewport now explicitly
+enables PCF shadows, configures only renderable glTF children, and uses an
+angled warm key plus cool fill. Live Windows/Android visual acceptance remains
+open. Stage 12.4 begins the Warcraft-style Forge authoring loop with four typed
+starter presets, renderer-neutral half-unit-grid viewport placement, automatic
+selection, and the existing Inspector/validation/undo/export pipeline. Stage
+12.5 makes declared world-asset choice explicit and adds continuous two-unit
+floor Paint/Erase strokes; renderer-neutral line interpolation fills pointer
+gaps and each drag is one typed undo boundary. The analyzer and consolidated
+230-test matrix pass, and the real Forge Windows x64 release builds.
+Stage 12.6 connects that editor loop to the real Game application. Forge
+validates the current unsaved world, writes an isolated temporary `.avarra`
+package, and starts Game with one exact process argument through an injectable
+launcher. Game loads it as a solo imported world with an in-memory save store,
+and Forge removes the package only after the child exits. The affected app
+analyzers, five focused tests, and both Windows x64 release builds pass; the
+test inventory is now 234 without a repeated full-matrix run.
+Stage 12.7 adds a Gameplay Rules section to the Forge palette. Creators can
+place persistent Objective Switches and count-based Objective Gates through the
+same renderer-neutral click, stable-ID, selection, Inspector, undo, validation,
+export, and Test Play loop used by world objects. These presets author existing
+content-schema components and are evaluated by the unchanged Game/server
+objective runtime. The Forge analyzer, four focused tests, and Windows x64
+release build pass; the inventory is now 235.
+`AVARRA_FORGE_GAME_MAKER_GUIDE.md` documents the product terminology and
+the complete create/Test Play/export/import/host/join workflow.
+Source-asset import/cooking/thumbnails, sculpted or material-blended terrain,
+chunk-aware painting, arbitrary trigger volumes/scripting, reference-driven
+guardian/loot presets, and preview-process management remain open.
+Physical Android direct-LAN, real touch/frame/thermal evidence, and the human
+product playtest remain open before release sign-off.
 See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
@@ -545,6 +579,12 @@ See
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
 `AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`,
+`AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`,
+`AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
+`AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
+`AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
 
 ---

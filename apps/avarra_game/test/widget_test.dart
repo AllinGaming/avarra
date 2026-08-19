@@ -28,7 +28,10 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(find.text('AVARRA'), findsOneWidget);
-    expect(find.text('Stage 12.1 · Durable Ashfall Hosting'), findsOneWidget);
+    expect(
+      find.text('Stage 12.3 · Community Worlds & Sessions'),
+      findsOneWidget,
+    );
     expect(find.text('Relay Zero: Ashfall'), findsOneWidget);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);

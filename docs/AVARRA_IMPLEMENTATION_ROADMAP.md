@@ -743,11 +743,93 @@ Stage 12.2 status (available-target gate completed 2026-08-14):
   movement dirty only when position changes, with a focused regression; and
 - the analyzer and 224-test matrix pass.
 
+Stage 12.3 status (implementation and focused gates completed 2026-08-14):
+
+- Game now owns one runtime **Worlds & multiplayer** browser for map selection,
+  one-file/folder import, library refresh, and Solo/Host/Join launch choices;
+- players can drop `.avarra` maps into the displayed application library or
+  import every top-level map from a selected sharing folder, with failures
+  isolated per file;
+- session replacement retires the old client, flushes state, and releases an
+  existing authoritative listener before another hosted map starts;
+- the shared Thermion viewport explicitly enables PCF shadows, applies
+  cast/receive state only to renderable glTF children, and uses an angled warm
+  key plus cool fill for isometric readability; and
+- whole-workspace analysis plus the consolidated 225-test matrix pass. Live
+  Windows/Android visual and performance acceptance remains open.
+
+Stage 12.4 status (implementation and Windows build gate completed 2026-08-14):
+
+- Forge now exposes an Object palette with floor, visual-prop, solid-obstacle,
+  and persistent-interaction presets above the stable-ID hierarchy;
+- the shared isometric viewport's renderer-neutral ground coordinate drives
+  repeated half-unit-grid placement and automatic selection;
+- every placement creates a generated stable ID through one typed command
+  batch, then reuses the existing Inspector, validation, recovery, undo/redo,
+  save, and canonical export path; and
+- whole-workspace analysis, all 12 Forge tests, the consolidated 228-test
+  matrix, and the Forge Windows x64 release build pass. Live mouse-placement
+  acceptance remains open.
+
+Stage 12.5 status (implementation and Windows build gate completed 2026-08-14):
+
+- the Forge catalog explicitly selects any stable asset already declared by the
+  editable world, and placed/rendered presets retain that AssetId;
+- Paint floor and Erase tools project a raw pointer drag through the isometric
+  camera, interpolate skipped two-unit cells, and suppress viewport/gizmo
+  conflicts only while the brush is active;
+- each drag commits one typed create/delete command batch, skips occupied paint
+  cells, and supports one-step undo/redo plus canonical export; and
+- whole-workspace analysis, all 14 Forge tests, the consolidated 230-test
+  matrix, and the Forge Windows x64 release build pass. Live brush feel and
+  overlay acceptance remain open.
+
+Stage 12.6 status (implementation and Windows build gate completed 2026-08-14):
+
+- Forge adds a Test Play action that validates and exports the current unsaved
+  world into a private temporary `.avarra` package without marking the
+  editable project saved;
+- an injectable launcher resolves and starts the real Avarra Game process with
+  one exact `--avarra-forge-test-play=<path>` argument, retains the package
+  for the child lifetime, and deletes its temporary directory after exit or
+  startup failure;
+- Game parses the shared `avarra_core` argument contract, starts the exact
+  package as a solo imported world, and uses a process-local
+  `MemorySaveStore` so preview mutations cannot affect normal saves; and
+- targeted Game/Forge analysis, five directly affected tests, and Windows x64
+  release builds for both applications pass. The inventory is now 234 tests;
+  the full consolidated matrix was not repeated in this implementation-focused
+  pass. Live packaged-process and visual acceptance remain open.
+
+Stage 12.7 status (implementation and Windows build gate completed 2026-08-14):
+
+- Forge separates World Objects from Gameplay Rules and adds typed Objective
+  Switch and Objective Gate presets to the viewport placement loop;
+- switches author renderable static interaction geometry, a persistent flag
+  effect/default, and an objective in the `primary` group, while gates
+  author renderable solid geometry that opens after one matching completion;
+- the existing schema Inspector edits labels, group keys, and required counts,
+  while shared validation prevents impossible gate requirements and exported
+  rules reuse the unchanged Game/server evaluator;
+- `AVARRA_FORGE_GAME_MAKER_GUIDE.md` now documents the complete
+  Forge-to-Test-Play-to-export-to-host/join creator loop and its current
+  limitations; and
+- targeted Forge analysis, three palette tests, one new widget workflow, and
+  the Windows x64 Forge release build pass. The inventory is now 235 tests;
+  the full repository matrix was not repeated.
+
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
 `AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
-`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`, and ADR-032.
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`,
+`AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`,
+`AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
+`AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
+`AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`AVARRA_FORGE_GAME_MAKER_GUIDE.md`, and
+ADR-032.
 
 Polish:
 

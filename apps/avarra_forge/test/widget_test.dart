@@ -1,8 +1,12 @@
 import 'package:avarra_content/avarra_content.dart';
+import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_creator_api/avarra_creator_api.dart';
 import 'package:avarra_forge/main.dart';
 import 'package:avarra_forge/src/forge_file_services.dart';
+import 'package:avarra_forge/src/forge_palette.dart';
 import 'package:avarra_forge/src/forge_panels.dart';
+import 'package:avarra_forge/src/forge_sample_world.dart';
+import 'package:avarra_forge/src/forge_test_play.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +16,7 @@ void main() {
     tester,
   ) async {
     final storage = _MemoryForgeStorage();
+    final testPlayLauncher = _FakeForgeTestPlayLauncher();
     final dialogs = _FakeForgeFileDialogs()
       ..savePaths.add('build/test-forge-world.avarra');
     await tester.binding.setSurfaceSize(const Size(1280, 760));
@@ -20,6 +25,7 @@ void main() {
       AvarraForgeApp(
         projectStorage: storage,
         fileDialogs: dialogs,
+        testPlayLauncher: testPlayLauncher,
         enableRenderer: false,
       ),
     );
@@ -50,6 +56,15 @@ void main() {
     await tester.pump();
     expect(find.textContaining('Validation passed'), findsOneWidget);
 
+    await tester.tap(find.byKey(const Key('test_play')));
+    await tester.pumpAndSettle();
+    final testPlayWorld = WorldPackageCodec().decode(
+      testPlayLauncher.canonicalWorldSource!,
+    );
+    expect(testPlayLauncher.worldName, 'Tiny Forge World');
+    expect(testPlayWorld.allEntities, hasLength(4));
+    expect(find.textContaining('Test Play launched'), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('export')));
     await tester.pumpAndSettle();
 
@@ -66,6 +81,232 @@ void main() {
     expect(runtime.ecs.entityCount, 4);
     expect(find.textContaining('Exported'), findsOneWidget);
     expect(find.textContaining('•'), findsOneWidget);
+  });
+
+  testWidgets('places a typed palette object through the viewport', (
+    tester,
+  ) async {
+    final storage = _MemoryForgeStorage();
+    final dialogs = _FakeForgeFileDialogs()
+      ..savePaths.add('build/palette-world.avarra');
+    await tester.binding.setSurfaceSize(const Size(1280, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      AvarraForgeApp(
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
+    );
+
+    final solidBlock = find.byKey(const Key('palette_solid_block'));
+    await tester.drag(
+      find.byKey(const Key('object_palette')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(solidBlock);
+    await tester.pump();
+    expect(find.textContaining('Placing Solid block'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('forge_viewport')));
+    await tester.pump();
+    expect(find.textContaining('4 entities'), findsOneWidget);
+    expect(find.textContaining('Place Solid block'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('undo')));
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('redo')));
+    await tester.pump();
+    expect(find.textContaining('4 entities'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('validate')));
+    await tester.pump();
+    expect(find.textContaining('Validation passed'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+
+    final decoded = WorldPackageCodec().decode(
+      storage.files['build/palette-world.avarra']!,
+    );
+    final placed = decoded.allEntities.singleWhere((entity) {
+      final transform = entity.component<TransformDefinition>();
+      final collider = entity.component<PhysicsColliderDefinition>();
+      return transform?.scale == const ContentVector3(1, 1, 1) &&
+          collider?.halfExtents == const ContentVector3(0.5, 0.5, 0.5);
+    });
+    expect(placed.component<RenderableReferenceDefinition>(), isNotNull);
+    expect(
+      placed.component<PhysicsColliderDefinition>()!.bodyKind,
+      ContentPhysicsBodyKind.staticBody,
+    );
+  });
+
+  testWidgets('authors a playable objective switch and gate through Forge', (
+    tester,
+  ) async {
+    final storage = _MemoryForgeStorage();
+    final dialogs = _FakeForgeFileDialogs()
+      ..savePaths.add('build/objective-world.avarra');
+    await tester.binding.setSurfaceSize(const Size(1280, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      AvarraForgeApp(
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('object_palette')),
+      const Offset(0, -280),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('GAMEPLAY RULES'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('palette_objective_switch')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('forge_viewport')));
+    await tester.pump();
+    expect(find.textContaining('5 entities'), findsNothing);
+    expect(find.textContaining('4 entities'), findsOneWidget);
+
+    final objectiveGate = find.byKey(const Key('palette_objective_gate'));
+    await tester.ensureVisible(objectiveGate);
+    await tester.pumpAndSettle();
+    await tester.tap(objectiveGate);
+    await tester.pump();
+    final viewport = find.byKey(const Key('forge_viewport'));
+    await tester.tapAt(tester.getCenter(viewport) + const Offset(90, 0));
+    await tester.pump();
+    expect(find.textContaining('5 entities'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('validate')));
+    await tester.pump();
+    expect(find.textContaining('Validation passed'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+
+    final decoded = WorldPackageCodec().decode(
+      storage.files['build/objective-world.avarra']!,
+    );
+    final objective = decoded.allEntities.singleWhere(
+      (entity) => entity.component<ObjectiveDefinition>() != null,
+    );
+    final gateEntity = decoded.allEntities.singleWhere(
+      (entity) => entity.component<ObjectiveGateDefinition>() != null,
+    );
+    expect(
+      objective.component<ObjectiveDefinition>()!.group,
+      forgeDefaultObjectiveGroup,
+    );
+    final gate = gateEntity.component<ObjectiveGateDefinition>()!;
+    expect(gate.group, forgeDefaultObjectiveGroup);
+    expect(gate.requiredCount, 1);
+  });
+
+  testWidgets('paints and erases one asset-backed floor stroke atomically', (
+    tester,
+  ) async {
+    final source = createForgeStarterWorld();
+    final alternateAssetId = AssetId.parse(
+      '01890f47-e8b8-7a68-8000-000000000598',
+    );
+    final world = WorldDefinition(
+      id: source.id,
+      name: source.name,
+      worldFormatVersion: source.worldFormatVersion,
+      contentSchemaVersion: source.contentSchemaVersion,
+      chunkSize: source.chunkSize,
+      assets: [
+        ...source.assets,
+        WorldAssetDefinition(
+          id: alternateAssetId,
+          path: 'assets/models/cube/Alternate.gltf',
+        ),
+      ],
+      entities: source.entities,
+      chunks: source.chunks,
+    );
+    final storage = _MemoryForgeStorage();
+    final dialogs = _FakeForgeFileDialogs()
+      ..savePaths.add('build/brushed-world.avarra');
+    await tester.binding.setSurfaceSize(const Size(1280, 760));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      AvarraForgeApp(
+        initialWorld: world,
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('palette_asset')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Alternate.gltf').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('brush_paint_floor')));
+    await tester.pump();
+
+    final brushSurface = find.byKey(const Key('forge_brush_surface'));
+    final strokeStart = tester.getCenter(brushSurface);
+    final paintGesture = await tester.startGesture(strokeStart);
+    await paintGesture.moveBy(const Offset(180, 0));
+    await paintGesture.up();
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('forge_status')),
+        matching: find.textContaining('Paint '),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('undo')));
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('redo')));
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('brush_erase_floor')));
+    await tester.pump();
+    final eraseGesture = await tester.startGesture(strokeStart);
+    await eraseGesture.moveBy(const Offset(180, 0));
+    await eraseGesture.up();
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('forge_status')),
+        matching: find.textContaining('Erase '),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('undo')));
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsNothing);
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+
+    final decoded = WorldPackageCodec().decode(
+      storage.files['build/brushed-world.avarra']!,
+    );
+    final floorTiles = decoded.entities.where(isForgeFloorTile).toList();
+    expect(floorTiles.length, greaterThanOrEqualTo(2));
+    expect(
+      floorTiles.every(
+        (entity) =>
+            entity.component<RenderableReferenceDefinition>()!.assetId ==
+            alternateAssetId,
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('saves, reopens, recovers, and protects dirty projects', (
@@ -159,6 +400,25 @@ void main() {
       'Relay terminal',
     );
   });
+}
+
+final class _FakeForgeTestPlayLauncher implements ForgeTestPlayLauncher {
+  String? worldName;
+  String? canonicalWorldSource;
+
+  @override
+  Future<ForgeTestPlayLaunch> launch({
+    required String worldName,
+    required String canonicalWorldSource,
+  }) async {
+    this.worldName = worldName;
+    this.canonicalWorldSource = canonicalWorldSource;
+    return const ForgeTestPlayLaunch(
+      processId: 4242,
+      executablePath: 'avarra_game.exe',
+      worldPath: 'test-play.avarra',
+    );
+  }
 }
 
 final class _FakeForgeFileDialogs implements ForgeFileDialogs {

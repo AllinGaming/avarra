@@ -65,7 +65,18 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   // Thermion compares these configuration objects during widget updates and
   // rejects identity changes at runtime. Keep them stable for this State's
   // entire lifetime instead of recreating them from build().
-  final DirectLight _directLight = DirectLight.sun();
+  final DirectLight _directLight = DirectLight.sun(
+    color: const LinearColor(1, 0.84, 0.68),
+    intensity: 82000,
+    castShadows: true,
+    direction: Vector3(-0.62, -1, -0.48).normalized(),
+  );
+  final DirectLight _fillLight = DirectLight.sun(
+    color: const LinearColor(0.48, 0.64, 1),
+    intensity: 18000,
+    castShadows: false,
+    direction: Vector3(0.55, -0.7, 0.82).normalized(),
+  );
   late final Vector3 _initialCameraPosition;
   SceneBridge<ThermionSceneObject>? _bridge;
   ThermionSceneBackend? _backend;
@@ -126,6 +137,9 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   }
 
   Future<void> _onViewerAvailable(ThermionViewer viewer) async {
+    await viewer.view.setShadowType(ShadowType.PCF);
+    await viewer.view.setShadowsEnabled(true);
+    await viewer.addDirectLight(_fillLight);
     final backend = ThermionSceneBackend(
       viewer: viewer,
       assetUriResolver: widget.assetUriResolver,
@@ -580,13 +594,13 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
               children: [
                 ViewerWidget(
                   initial: const ColoredBox(
-                    color: Color(0xFF101820),
+                    color: Color(0xFF17212A),
                     child: Center(child: CircularProgressIndicator()),
                   ),
                   initialCameraPosition: _initialCameraPosition,
                   directLight: _directLight,
                   manipulatorType: ManipulatorType.NONE,
-                  background: const Color(0xFF101820),
+                  background: const Color(0xFF17212A),
                   destroyEngineOnUnload: true,
                   onViewerAvailable: _onViewerAvailable,
                 ),

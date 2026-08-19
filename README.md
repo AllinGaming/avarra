@@ -48,22 +48,29 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 23. `docs/AVARRA_STAGE_11_3_OBJECTIVE_VALIDATION.md`
 24. `docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md`
 25. `docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`
-26. `docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`
-27. `docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`
-28. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-29. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-30. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-31. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-32. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-33. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-34. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-35. `docs/AVARRA_OPEN_DECISIONS.md`
-36. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-37. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-38. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-39. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-40. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
-41. ADRs under `docs/adr/`
+26. `docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`
+27. `docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`
+28. `docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`
+29. `docs/AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`
+30. `docs/AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`
+31. `docs/AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`
+32. `docs/AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`
+33. `docs/AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`
+34. `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`
+35. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+36. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+37. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+38. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+39. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+40. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+41. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+42. `docs/AVARRA_OPEN_DECISIONS.md`
+43. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+44. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+45. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+46. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+47. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
+48. ADRs under `docs/adr/`
 
 ## Implementation status
 
@@ -81,7 +88,25 @@ Stage 12.1 adds canonical durable host saves plus stable disconnect/reconnect
 retention. Stage 12.2 completes the authoritative mission on an API 37 Pixel
 10 Pro emulator host, holds a ten-minute co-op soak, restores completion after
 cold launch, passes native Windows Game join/held movement, and closes idle
-autosave write amplification. The analyzer and 224-test matrix pass. Physical
+autosave write amplification. Stage 12.3 adds a runtime Worlds & multiplayer
+browser with direct/folder map import and Solo/Host/Join launch choices, then
+restores useful isometric depth with an angled key/fill rig and PCF shadows on
+actual renderable glTF children. Stage 12.4 adds Forge's first Warcraft-style
+Object palette: four typed starter presets use renderer-neutral ground clicks,
+half-unit snapping, stable IDs, automatic selection, and the existing
+Inspector/validation/undo/export path. Stage 12.5 adds explicit stable world
+asset selection plus continuous two-unit floor Paint/Erase strokes committed
+as one undoable batch per drag. Stage 12.6 adds one-click isolated Test Play:
+Forge validates the current unsaved world, launches the real Game executable
+with that exact temporary package, and removes it after Game exits while Game
+uses an in-memory save store. The two affected app analyzers, five focused
+tests, and both Windows x64 release builds pass; the test inventory is now
+234. Stage 12.7 adds a Gameplay Rules palette with persistent Objective Switch
+and count-based Objective Gate presets, plus a dedicated Forge game-maker
+guide. Targeted Forge analysis, four focused tests, and the Forge Windows x64
+release build pass; the test inventory is now 235. Live process, brush,
+placement, gameplay-rule, and lighting acceptance are pending.
+Physical
 Android direct-LAN, touch, performance, battery/thermal, and human playability
 remain the named release boundary.
 
@@ -210,6 +235,18 @@ for interactions, three Hollow Wardens with authored drops, basalt floors, and
 an original six-model/three-material dark-gothic asset kit. Stage 12.1 now
 autosaves host-owned progression and restores player position/inventory across
 disconnect or host restart; its automated and emulator acceptance gates pass.
+Stage 12.3 makes map selection, folder import, hosting, and joining available
+inside the unchanged Game build and improves the shared Game/Forge lighting and
+shadow configuration. Stage 12.4 begins the Forge palette/place/edit loop with
+typed starter objects placed directly through the shared isometric viewport.
+Stage 12.5 adds declared-asset selection and atomic floor paint/erase strokes.
+Stage 12.6 connects Forge to the real Game through an isolated temporary export
+and an injectable process launcher without moving player UI or simulation into
+Forge.
+Stage 12.7 lets creators place and edit persistent objective switches and
+count-based gates using the existing runtime rule schemas. The Forge game-maker
+guide now documents creation, Test Play, export, map sharing, hosting, and
+joining.
 Complete physical Android acceptance is next; the
 playable RPG slice still comes before AI/MCP expansion.
 See
@@ -224,6 +261,13 @@ See
 `docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md`,
 `docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`,
+`docs/AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 

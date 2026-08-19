@@ -66,7 +66,15 @@ final class ForgeViewport extends StatefulWidget {
     required this.selectedEntityId,
     required this.onSelected,
     required this.onTransformCommitted,
+    required this.placementMode,
+    required this.onGroundTapped,
+    required this.brushMode,
+    required this.onBrushStrokeStart,
+    required this.onBrushStrokeUpdate,
+    required this.onBrushStrokeEnd,
     required this.enableRenderer,
+    this.placementLabel,
+    this.brushLabel,
     super.key,
   });
 
@@ -74,6 +82,14 @@ final class ForgeViewport extends StatefulWidget {
   final EntityId? selectedEntityId;
   final ValueChanged<EntityId> onSelected;
   final ValueChanged<PresentationTransform> onTransformCommitted;
+  final bool placementMode;
+  final String? placementLabel;
+  final ValueChanged<ContentVector3> onGroundTapped;
+  final bool brushMode;
+  final String? brushLabel;
+  final ValueChanged<ContentVector3> onBrushStrokeStart;
+  final ValueChanged<ContentVector3> onBrushStrokeUpdate;
+  final VoidCallback onBrushStrokeEnd;
   final bool enableRenderer;
 
   @override
@@ -82,6 +98,7 @@ final class ForgeViewport extends StatefulWidget {
 
 final class _ForgeViewportState extends State<ForgeViewport> {
   late IsometricCameraRig _camera;
+  int? _brushPointer;
 
   @override
   void initState() {
@@ -103,6 +120,71 @@ final class _ForgeViewportState extends State<ForgeViewport> {
 
   void _focusSelection() {
     setState(() => _camera = _camera.copyWith(target: _selectedPosition()));
+  }
+
+  void _emitGroundTap(vectors.Vector3 groundPosition) {
+    widget.onGroundTapped(
+      ContentVector3(groundPosition.x, 0, groundPosition.z),
+    );
+  }
+
+  ContentVector3? _groundPositionForScreen(Offset position, Size size) {
+    final groundPosition = _camera.groundPointForScreen(
+      x: position.dx,
+      y: position.dy,
+      viewportWidth: size.width,
+      viewportHeight: size.height,
+    );
+    return groundPosition == null
+        ? null
+        : ContentVector3(groundPosition.x, 0, groundPosition.z);
+  }
+
+  void _handleBrushPointerDown(PointerDownEvent event, Size size) {
+    if (_brushPointer != null) return;
+    final groundPosition = _groundPositionForScreen(event.localPosition, size);
+    if (groundPosition == null) return;
+    _brushPointer = event.pointer;
+    widget.onBrushStrokeStart(groundPosition);
+  }
+
+  void _handleBrushPointerMove(PointerMoveEvent event, Size size) {
+    if (_brushPointer != event.pointer) return;
+    final groundPosition = _groundPositionForScreen(event.localPosition, size);
+    if (groundPosition != null) widget.onBrushStrokeUpdate(groundPosition);
+  }
+
+  void _handleBrushPointerEnd(PointerEvent event) {
+    if (_brushPointer != event.pointer) return;
+    _brushPointer = null;
+    widget.onBrushStrokeEnd();
+  }
+
+  Widget _buildBrushSurface() {
+    return Positioned.fill(
+      child: LayoutBuilder(
+        builder: (context, constraints) => Listener(
+          key: const Key('forge_brush_surface'),
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (event) =>
+              _handleBrushPointerDown(event, constraints.biggest),
+          onPointerMove: (event) =>
+              _handleBrushPointerMove(event, constraints.biggest),
+          onPointerUp: _handleBrushPointerEnd,
+          onPointerCancel: _handleBrushPointerEnd,
+          child: const ColoredBox(color: Colors.transparent),
+        ),
+      ),
+    );
+  }
+
+  void _handlePick(IsometricPickResult result) {
+    if (widget.placementMode) {
+      _emitGroundTap(result.groundPosition);
+      return;
+    }
+    final id = result.entityId;
+    if (id != null) widget.onSelected(id);
   }
 
   @override
@@ -139,14 +221,40 @@ final class _ForgeViewportState extends State<ForgeViewport> {
     );
 
     if (!widget.enableRenderer) {
-      return ColoredBox(
-        key: const Key('forge_viewport'),
-        color: const Color(0xFF20262B),
-        child: Stack(
-          children: [
-            const Center(child: Text('Thermion viewport disabled for test')),
-            controls,
-          ],
+      return LayoutBuilder(
+        builder: (context, constraints) => GestureDetector(
+          key: const Key('forge_viewport'),
+          behavior: HitTestBehavior.opaque,
+          onTapUp: widget.placementMode
+              ? (details) {
+                  final size = constraints.biggest;
+                  final groundPosition = _camera.groundPointForScreen(
+                    x: details.localPosition.dx,
+                    y: details.localPosition.dy,
+                    viewportWidth: size.width,
+                    viewportHeight: size.height,
+                  );
+                  if (groundPosition != null) _emitGroundTap(groundPosition);
+                }
+              : null,
+          child: ColoredBox(
+            color: const Color(0xFF20262B),
+            child: Stack(
+              children: [
+                Center(
+                  child: Text(
+                    widget.brushMode
+                        ? 'Brush preview · drag to edit floor'
+                        : widget.placementMode
+                        ? 'Placement preview · click to place'
+                        : 'Thermion viewport disabled for test',
+                  ),
+                ),
+                if (widget.brushMode) _buildBrushSurface(),
+                controls,
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -165,21 +273,25 @@ final class _ForgeViewportState extends State<ForgeViewport> {
             selectedEntityId: widget.selectedEntityId,
             enableTranslationGizmo: true,
             onTransformCommitted: widget.onTransformCommitted,
-            onPick: (result) {
-              final id = result.entityId;
-              if (id != null) widget.onSelected(id);
-            },
+            onPick: _handlePick,
             onZoom: (factor) =>
                 setState(() => _camera = _camera.zoomBy(factor)),
           ),
         ),
-        const Positioned(
+        if (widget.brushMode) _buildBrushSurface(),
+        Positioned(
           left: 12,
           top: 12,
           child: Card(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Text('Select an entity, then drag the XYZ gizmo'),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              child: Text(
+                widget.brushMode
+                    ? '${widget.brushLabel ?? 'Floor brush'} · drag one atomic stroke'
+                    : widget.placementMode
+                    ? 'Placing ${widget.placementLabel ?? 'object'} · click ground repeatedly'
+                    : 'Select an entity, then drag the XYZ gizmo',
+              ),
             ),
           ),
         ),

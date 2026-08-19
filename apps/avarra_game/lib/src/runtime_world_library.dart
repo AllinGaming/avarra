@@ -35,6 +35,23 @@ final class RuntimeWorldLibraryEntry {
   final String path;
 }
 
+final class RuntimeWorldImportFailure {
+  const RuntimeWorldImportFailure({required this.path, required this.error});
+
+  final String path;
+  final Object error;
+}
+
+final class RuntimeWorldDirectoryImportResult {
+  const RuntimeWorldDirectoryImportResult({
+    required this.imported,
+    required this.failures,
+  });
+
+  final List<RuntimeWorldLibraryEntry> imported;
+  final List<RuntimeWorldImportFailure> failures;
+}
+
 /// Application-owned catalog for validated runtime-imported prototype worlds.
 final class RuntimeWorldLibrary {
   RuntimeWorldLibrary({
@@ -62,6 +79,43 @@ final class RuntimeWorldLibrary {
       rethrow;
     } on FileSystemException catch (error) {
       _storageFailure('importRead', sourcePath, error);
+    }
+  }
+
+  /// Imports every top-level `.avarra` file from a creator/share directory.
+  ///
+  /// Individual invalid maps are reported without preventing valid siblings
+  /// from reaching the application-owned catalog.
+  Future<RuntimeWorldDirectoryImportResult> importDirectory(
+    String sourcePath,
+  ) async {
+    final sourceDirectory = Directory(sourcePath);
+    try {
+      final files = await sourceDirectory
+          .list(followLinks: false)
+          .where((entry) => entry is File)
+          .cast<File>()
+          .where((file) => file.path.toLowerCase().endsWith('.avarra'))
+          .toList();
+      files.sort((left, right) => left.path.compareTo(right.path));
+
+      final imported = <RuntimeWorldLibraryEntry>[];
+      final failures = <RuntimeWorldImportFailure>[];
+      for (final file in files) {
+        try {
+          imported.add(await importFile(file.path));
+        } on Object catch (error) {
+          failures.add(
+            RuntimeWorldImportFailure(path: file.path, error: error),
+          );
+        }
+      }
+      return RuntimeWorldDirectoryImportResult(
+        imported: List.unmodifiable(imported),
+        failures: List.unmodifiable(failures),
+      );
+    } on FileSystemException catch (error) {
+      _storageFailure('importDirectory', sourcePath, error);
     }
   }
 

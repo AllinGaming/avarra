@@ -539,8 +539,32 @@ Stage 12.2 extends this to a complete authoritative Relay Zero mission and
 ten-minute API 37 emulator soak, canonical save inspection, mission-complete
 cold restore, and a packaged Windows Game join plus held-key movement gate. It
 also fixes zero-vector input marking unchanged player state dirty. The analyzer
-and 224-test matrix pass. Physical Android direct-LAN, real touch/frame/thermal
-evidence, and the human product playtest remain open before release sign-off.
+and 224-test matrix pass. Stage 12.3 turns the proof controls into one runtime
+Worlds & multiplayer browser: Game lists its visible application map folder,
+imports one file or every top-level `.avarra` file from a selected folder,
+refreshes directly dropped maps, and launches the chosen world as Solo, Host,
+or Join without a special build. Session replacement flushes state and releases
+the old listener before rebinding. The shared Thermion viewport now explicitly
+enables PCF shadows, configures only renderable glTF children, and uses an
+angled warm key plus cool fill. Live Windows/Android visual acceptance remains
+open. Stage 12.4 begins the Warcraft-style Forge authoring loop with four typed
+starter presets, renderer-neutral half-unit-grid viewport placement, automatic
+selection, and the existing Inspector/validation/undo/export pipeline. Stage
+12.5 makes declared world-asset choice explicit and adds continuous two-unit
+floor Paint/Erase strokes; renderer-neutral line interpolation fills pointer
+gaps and each drag is one typed undo boundary. The analyzer and consolidated
+230-test matrix pass, and the real Forge Windows x64 release builds.
+Stage 12.6 connects that editor loop to the real Game application. Forge
+validates the current unsaved world, writes an isolated temporary `.avarra`
+package, and starts Game with one exact process argument through an injectable
+launcher. Game loads it as a solo imported world with an in-memory save store,
+and Forge removes the package only after the child exits. The affected app
+analyzers, five focused tests, and both Windows x64 release builds pass; the
+test inventory is now 234 without a repeated full-matrix run.
+Source-asset import/cooking/thumbnails, sculpted or material-blended terrain,
+chunk-aware painting, trigger tools, and preview-process management remain open.
+Physical Android direct-LAN, real touch/frame/thermal evidence, and the human
+product playtest remain open before release sign-off.
 See
 `AVARRA_STAGE_10_1A_PLAYABLE_CONTRACT_VALIDATION.md`,
 `AVARRA_STAGE_10_1B_PROJECT_IMPORT_VALIDATION.md`,
@@ -554,6 +578,9 @@ See
 `AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md`,
 `AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
 `AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`,
+`AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`,
+`AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
 
 ---
@@ -2183,7 +2210,11 @@ immutable upstream pre-release commit. It is not yet a permanent renderer
 decision. Windows visual/lifecycle validation and Pixel 10 Pro Android emulator
 cold-start/lifecycle checks pass. Physical Android rendering/performance,
 animation, physical-device Stage 3 interaction, shadows, and Forge viewport
-embedding still require validation. See ADR-016 and ADR-017.
+embedding still require validation. Stage 12.3 now explicitly enables PCF
+shadows, applies cast/receive flags only to renderable glTF children, and shares
+an angled key/fill profile between Game and Forge; live Windows/Android quality
+and cost remain the open shadow gate. See ADR-016, ADR-017, and
+`AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`.
 
 <!-- END AVARRA_CLIENT_PRESENTATION.md -->
 
@@ -5354,6 +5385,389 @@ must remain a named release gate rather than being inferred from emulator data.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md -->
+
+# AVARRA Stage 12.3 — Community Worlds, Sessions, and Lighting
+
+**Status:** Implemented; consolidated automated gates pass, visual/device acceptance pending
+**Date:** 2026-08-14
+
+## Product requirement
+
+This pass addresses two creator-loop gaps found during human review:
+
+1. the shared 3D viewport looked flat and did not produce useful shadows; and
+2. Game exposed world import plus hosting as separate proof mechanisms instead
+   of one map-centric play/host/join workflow.
+
+Forge remains the maker. Game remains the world browser, player runtime, and
+listen-host/join shell. Server authority remains renderer- and Flutter-free.
+
+## Lighting and shadows
+
+The Thermion viewport now uses a deliberately isometric lighting profile:
+
+- an angled warm key sun replaces the straight-down default light;
+- a low-intensity cool fill preserves readable shadow-side forms;
+- the view explicitly enables mobile-safe PCF shadows; and
+- cast/receive flags are applied only to actual renderable glTF entities.
+
+The last point restores shadows without bringing back the native `invalid
+renderable` warnings previously caused by applying flags to non-renderable glTF
+roots. Because the setup lives in `avarra_thermion_bridge`, Game and Forge use
+the same lighting behavior without moving renderer state into simulation.
+
+## Community world and session loop
+
+Game's in-runtime **Worlds & multiplayer** browser now provides:
+
+- the visible application-owned maps-folder path;
+- refresh after `.avarra` files are dropped into that folder;
+- one-file import;
+- top-level folder import of every `.avarra` file;
+- per-file rejection reporting without blocking valid sibling maps;
+- Solo, Host, and Join launch modes;
+- runtime host address and port entry; and
+- safe world/session replacement that retires the client, closes the old
+  authoritative listener before another host starts, and flushes pending state.
+
+Build-time `AVARRA_MULTIPLAYER_*` values remain supported for automation and
+packaged acceptance, but ordinary players no longer need a special build to
+choose Solo, Host, or Join. Protocol content handshakes still require joiners
+to select the exact same world package.
+
+Folder imports are copied into the validated application catalog. A chosen map
+dropped directly into the catalog is canonicalized before its `WorldId`
+selection is persisted. The 16 MiB prototype limit, playable-world profile,
+and packaged-asset availability checks remain enforced.
+
+## Automated evidence
+
+- whole-workspace `flutter analyze`: no issues;
+- 174 pure-Dart/server tests pass;
+- 36 Game tests pass, including mixed-valid folder import and connected world
+  replacement;
+- 6 Thermion bridge tests pass;
+- 9 Forge tests pass; and
+- the consolidated repository total is 225 passing tests.
+
+Native package gates:
+
+- headless Avarra Server AOT executable compiles;
+- Game Windows x64 release compiles;
+- Forge Windows x64 release compiles; its first incremental attempt exposed a
+  missing generated `thermion_dart.lib`, and a Forge-only `flutter clean`
+  regenerated the native-hook artifact successfully; and
+- Game Android arm64 profile APK compiles (41.7 MiB).
+
+The pinned Thermion Windows macro/DLL-interface warnings, Android C-linkage
+warnings, and legacy Kotlin Gradle Plugin warning remain the same known
+upstream compatibility warnings. The same matrix and device-specific gates
+should be repeated after visual tuning if light values or shadow quality
+settings change.
+
+## Honest limitations
+
+- Shadow quality and cost still need a live Windows comparison plus Android
+  emulator and physical-device profiling. Automated tests prove configuration
+  and boundaries, not that the art direction is subjectively finished.
+- `.avarra` is still prototype canonical JSON and cannot carry arbitrary map
+  assets; imported maps currently reference assets packaged with Game.
+- Join uses an entered address and port. LAN discovery, invitations, relay,
+  NAT traversal, and a public server browser are not implemented.
+- Stage 12.4 adds Forge's first four-item Object palette and typed viewport
+  placement loop, but Forge is not yet Warcraft III–class. An asset-backed
+  production prefab catalog, sculpted/material terrain, region/trigger editing,
+  data tables, and one-click test play remain separate creator slices.
+
+## Recommended next creator slice
+
+Stages 12.4–12.5 implement choose/place/edit/validate plus explicit declared
+asset selection and atomic floor paint/erase around AVARRA's typed commands:
+
+```text
+choose terrain/object palette item
+        ↓
+place or paint in the isometric viewport
+        ↓
+edit schema-backed properties
+        ↓
+validate and undo/redo
+        ↓
+test-play a temporary export in Game              NEXT
+```
+
+Next test-play a temporary export in Game while keeping runtime mutations
+isolated from editable Forge state. Do not merge Game host/join UI into Forge,
+and do not introduce a generic engine abstraction for this work.
+
+<!-- END AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md -->
+
+# AVARRA Stage 12.4 — Forge Object Palette and Placement
+
+**Status:** Implemented; automated and Windows build gates pass, live interaction acceptance pending
+**Date:** 2026-08-14
+
+## Product requirement
+
+This pass begins the Warcraft-style map-making loop without turning AVARRA into
+a general-purpose engine:
+
+    choose an authored object preset
+            ↓
+    click the isometric world
+            ↓
+    edit typed components in the Inspector
+            ↓
+    validate and undo/redo
+            ↓
+    export the playable .avarra world
+
+Forge remains the maker. Game remains the player runtime and owns
+Solo/Host/Join. No Game multiplayer UI was imported into Forge.
+
+## Implemented slice
+
+Forge now has an Object palette above its stable-ID hierarchy. The initial
+starter catalog contains:
+
+- a 2 x 2 floor tile with static collision;
+- a visual prop cube without collision;
+- a solid static obstacle; and
+- a persistent interactive relay console.
+
+Selecting an item arms repeated placement. Clicking the real Thermion viewport
+uses the existing renderer-neutral ground point, snaps X/Z to a half-unit grid,
+creates a new stable entity ID, and selects the result for immediate
+schema-backed Inspector editing. The selection-tool button exits placement
+mode.
+
+Each placement is one typed Creator command batch around CreateEntityCommand.
+Validation runs after commit, command history retains the inverse deletion,
+undo/redo stays one step per object, recovery snapshots remain scheduled, and
+canonical export uses the unchanged playable-world gate. The renderer-disabled
+test viewport projects clicks through the same IsometricCameraRig, so widget
+tests exercise coordinates rather than calling the workspace mutation method
+directly.
+
+## Automated evidence
+
+- whole-workspace flutter analyze: no issues;
+- all 12 Forge tests pass;
+- new pure tests cover grid snapping and the exact typed components produced by
+  each preset;
+- a widget test covers palette selection, viewport placement, automatic
+  selection, undo, redo, validation, canonical export, and runtime-ready static
+  collision; and
+- the Forge Windows x64 release builds with the real Thermion-backed viewport.
+
+The consolidated repository matrix is now 228 passing tests: the existing 174
+pure-Dart/server, 36 Game, and 6 Thermion bridge tests plus 12 Forge tests.
+
+## Honest limitations
+
+- Stage 12.5 makes world-asset choice explicit, but the starter project still
+  declares one cube mesh and Forge does not yet import/cook source assets.
+- Stage 12.5 adds continuous floor paint/erase, but its floor is still an
+  authored static object rather than terrain sculpting or a height/material
+  brush.
+- Placement and floor painting target the always-active entity list.
+  Chunk-aware authoring, region ownership, density budgets, and streaming
+  previews are not included.
+- Object placement is click-based and floor painting is drag-based. Rotation
+  shortcuts, duplication, multi-select, and box selection remain open.
+- Trigger/region editing, gameplay data tables, server-rule templates, and
+  one-click temporary-export test play are not implemented.
+- Real mouse placement, picking feel, grid readability, and shadow quality
+  still need a live Windows smoke; physical Android remains a Game release
+  gate rather than a Forge platform target.
+
+## Recommended next creator slice
+
+Stage 12.5 implements explicit declared-asset selection and a small atomic floor
+paint/erase brush. Next add temporary export plus one-click Game test play. Do
+not couple editable Forge source state to runtime mutations.
+
+<!-- END AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md -->
+
+# AVARRA Stage 12.5 — Forge Asset Catalog and Floor Brush
+
+**Status:** Implemented; automated and Windows build gates pass, live interaction acceptance pending
+**Date:** 2026-08-14
+
+## Product requirement
+
+Stage 12.4 proved typed click placement, but every preset silently selected the
+first world asset and floor creation still required one click per tile. This
+pass makes asset choice explicit and adds the first continuous map-painting
+interaction.
+
+Forge remains an AVARRA world maker rather than a generic engine. Game still
+owns play, hosting, and joining.
+
+## Implemented slice
+
+The Object palette now includes a Catalog asset selector populated from the
+current world's stable WorldAssetDefinition entries. Object placement and floor
+painting write the chosen AssetId into RenderableReferenceDefinition instead of
+implicitly using the first asset.
+
+Two floor tools are available:
+
+- Paint floor creates collision-backed 2 x 2 floor presets.
+- Erase removes matching authored floor presets.
+
+While a brush is active, Forge places a transparent pointer surface over the
+viewport. It projects pointer coordinates through the same IsometricCameraRig
+used by picking, preventing accidental camera/gizmo input without adding
+renderer types to the workspace. Integer line interpolation fills cells skipped
+between pointer events, and a linked cell set prevents duplicate work inside a
+stroke.
+
+The workspace commits a complete drag as one CreatorCommandBatch. Paint skips
+already occupied floor cells and creates generated stable entity IDs. Erase
+collects typed DeleteEntityCommand entries only for entities matching the exact
+starter floor shape. One undo/redo operation therefore removes or restores the
+entire stroke.
+
+## Automated evidence
+
+- whole-workspace flutter analyze: no issues;
+- all 14 Forge tests pass;
+- pure tests cover two-unit floor snapping, structural floor recognition, and
+  deterministic continuous cell interpolation;
+- a widget test selects a second stable asset, paints a multi-cell drag,
+  verifies one-step undo/redo, erases the same drag, undoes the erase, exports,
+  and confirms every painted tile retains the selected AssetId; and
+- the Forge Windows x64 release builds with the real Thermion viewport and
+  brush overlay.
+
+The consolidated repository matrix is now 230 passing tests: 174
+pure-Dart/server, 36 Game, 6 Thermion bridge, and 14 Forge tests.
+
+## Honest limitations
+
+- The catalog lists assets already declared by the editable world. Forge still
+  lacks source-asset import, copying, cooking, thumbnails, search, categories,
+  and missing-file diagnostics.
+- The starter project still declares one cube mesh. The multi-asset behavior is
+  covered with a validated test fixture, not a production art library.
+- The brush paints fixed flat object tiles. It does not sculpt height, blend
+  materials, alter navigation, or create an optimized terrain representation.
+- Erase uses the exact starter floor shape as its prototype identity. A tile
+  whose transform or collider is edited away from that shape is intentionally
+  not erased by this brush.
+- Painting and erasing currently target always-active authored entities.
+  Chunk-aware strokes, streaming-region assignment, and density budgets remain
+  open.
+- Pointer feel and overlay behavior still need a live Windows mouse smoke.
+
+## Recommended next creator slice
+
+Add a temporary-export Test Play action that validates without saving editable
+source, writes a disposable .avarra package, launches Avarra Game with that
+exact package, and keeps runtime mutations isolated from the Forge project.
+Process launch and temporary-file ownership must be injectable for tests and
+must not move Game UI or simulation into Forge.
+
+<!-- END AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md -->
+
+# AVARRA Stage 12.6 - Isolated Forge Test Play
+
+**Status:** Implemented; focused automated and Windows build gates pass, live
+process/visual acceptance pending
+**Date:** 2026-08-14
+
+## Product requirement
+
+A map maker needs a short path from an unsaved edit to the real player
+application. Test Play must exercise Avarra Game itself without importing Game
+UI or runtime simulation into Forge, and runtime mutations must never change the
+editable Forge project.
+
+## Implemented slice
+
+Forge now exposes a **Test Play** action beside Validate and Export. The action:
+
+1. exports the current in-memory world through
+   `CreatorWorldSession.exportCanonical()`, including playable validation;
+2. writes that exact canonical source into a private system-temporary directory;
+3. resolves a Windows Avarra Game executable through an injected path, the
+   `AVARRA_GAME_EXECUTABLE` compile-time setting, a side-by-side executable, or
+   known repository build locations;
+4. starts Game with one
+   `--avarra-forge-test-play=<absolute .avarra path>` argument; and
+5. retains the temporary package until the child process exits, then removes
+   the complete temporary directory.
+
+The launch and process-start boundaries are injectable. Forge tests therefore
+exercise real file ownership and cleanup without starting a GUI process.
+Validation or launch failure deletes the temporary package and reports a
+structured `FORGE_TEST_PLAY_UNAVAILABLE` failure.
+
+Game parses the same argument prefix exported by `avarra_core`, loads the exact
+package as an imported solo world, and uses a fresh `MemorySaveStore` for that
+process. Normal world-library, developer override, host, join, and durable-save
+startup remain unchanged. Forge does not mark the editable project saved and
+does not receive runtime state back from Game.
+
+## Focused evidence
+
+- `flutter analyze` passes in both `apps/avarra_game` and
+  `apps/avarra_forge`.
+- Two Game tests cover exact-file argument loading plus malformed and duplicate
+  argument rejection.
+- Two Forge service tests cover canonical temporary export, exact process
+  arguments, post-exit cleanup, and launch-failure cleanup.
+- The existing Forge edit/validate/export widget workflow now proves Test Play
+  receives the current unsaved four-entity world through the injected launcher.
+- Windows x64 release builds pass for both Avarra Game and Avarra Forge.
+
+The repository test inventory is now 234 tests: the previously consolidated
+230-test matrix plus 2 new Game tests and 2 new Forge tests. This pass ran the
+five directly affected tests rather than repeating the entire repository
+matrix.
+
+## Honest limitations
+
+- A live click-through smoke of Forge launching the packaged Game window is
+  still pending. Native compilation and the complete file/process boundary are
+  covered, but this pass did not open GUI applications automatically.
+- Test Play is currently a Windows desktop Forge integration. It is not an
+  in-process preview, hot reload, Android launcher, or web feature.
+- A separate Game process is created for every Test Play action. Forge does not
+  yet track, focus, or stop an already running preview.
+- A hard Forge or operating-system termination can leave a disposable directory
+  in the system temp area because cleanup normally follows the child exit
+  future.
+- Test Play cannot make undeclared or unavailable assets portable. The current
+  prototype `.avarra` package still references assets supplied by Game.
+- Test Play starts in solo mode with isolated saves. Creator-authored server
+  rules, lobby setup, and multiplayer test orchestration remain later work.
+
+## Recommended next creator slice
+
+Add typed gameplay-rule and trigger-region authoring to the existing palette and
+viewport so a creator can define spawn, objective, interaction, and completion
+logic without editing JSON. Keep every mutation schema-backed, stable-ID based,
+undoable, and consumable by the unchanged Game/server runtime.
+
+<!-- END AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md -->
 
 # AVARRA — First Playable: Relay Zero
@@ -6641,17 +7055,31 @@ not be inferred from this decision. See ADR-025.
 
 # 7. Test Play
 
-Long-term:
+Implemented in Stage 12.6:
 
 ```text
 edit
  ↓
-test play
+validate and write isolated temporary .avarra
+ ↓
+launch the real Avarra Game process
+ ↓
+play with an in-memory save store
+ ↓
+child exit deletes the temporary package
  ↓
 return to edit state
 ```
 
-Avoid making the editor mutate source state with runtime mutations.
+Forge owns validation, temporary-file lifetime, executable discovery, and
+process launch through an injectable service. Game owns package decoding,
+simulation, rendering, saves, hosting, and player UI. The only shared launch
+contract is the process-argument prefix exported by `avarra_core`.
+
+Test Play never marks the source project saved and runtime mutations remain in a
+fresh memory store. It is currently a new Windows Game process per launch;
+live process management, return-state inspection, and multiplayer orchestration
+remain open.
 
 ---
 
@@ -6796,14 +7224,23 @@ The required delivery order is:
 6. **Complete:** bound/batch command history using measured creator fixtures;
 7. **Complete:** integrate the shared Thermion-backed editing viewport and
    translation gizmo;
-8. build the Relay Zero RPG slice;
-9. only then add Stage 10A transactions, permissions, semantic diff, and agent
-   adapters.
+8. **Complete:** build the Relay Zero RPG slice;
+9. **Complete:** add the first typed Object palette and renderer-neutral
+   click-to-place loop;
+10. **Complete:** add explicit declared-asset catalog selection and atomic floor
+    paint/erase strokes;
+11. **Complete:** add temporary-export Game test play; and
+12. only after the human creator loop works, add Stage 10A transactions,
+    permissions, semantic diff, and agent adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
 behavior without closing the final project/archive decisions. Detailed findings
-and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`, ADR-026,
-and `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
+and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
+`AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
+`AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
+ADR-026, and
+`AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 <!-- END AVARRA_FORGE_ARCHITECTURE.md -->
 
@@ -9595,11 +10032,74 @@ Stage 12.2 status (available-target gate completed 2026-08-14):
   movement dirty only when position changes, with a focused regression; and
 - the analyzer and 224-test matrix pass.
 
+Stage 12.3 status (implementation and focused gates completed 2026-08-14):
+
+- Game now owns one runtime **Worlds & multiplayer** browser for map selection,
+  one-file/folder import, library refresh, and Solo/Host/Join launch choices;
+- players can drop `.avarra` maps into the displayed application library or
+  import every top-level map from a selected sharing folder, with failures
+  isolated per file;
+- session replacement retires the old client, flushes state, and releases an
+  existing authoritative listener before another hosted map starts;
+- the shared Thermion viewport explicitly enables PCF shadows, applies
+  cast/receive state only to renderable glTF children, and uses an angled warm
+  key plus cool fill for isometric readability; and
+- whole-workspace analysis plus the consolidated 225-test matrix pass. Live
+  Windows/Android visual and performance acceptance remains open.
+
+Stage 12.4 status (implementation and Windows build gate completed 2026-08-14):
+
+- Forge now exposes an Object palette with floor, visual-prop, solid-obstacle,
+  and persistent-interaction presets above the stable-ID hierarchy;
+- the shared isometric viewport's renderer-neutral ground coordinate drives
+  repeated half-unit-grid placement and automatic selection;
+- every placement creates a generated stable ID through one typed command
+  batch, then reuses the existing Inspector, validation, recovery, undo/redo,
+  save, and canonical export path; and
+- whole-workspace analysis, all 12 Forge tests, the consolidated 228-test
+  matrix, and the Forge Windows x64 release build pass. Live mouse-placement
+  acceptance remains open.
+
+Stage 12.5 status (implementation and Windows build gate completed 2026-08-14):
+
+- the Forge catalog explicitly selects any stable asset already declared by the
+  editable world, and placed/rendered presets retain that AssetId;
+- Paint floor and Erase tools project a raw pointer drag through the isometric
+  camera, interpolate skipped two-unit cells, and suppress viewport/gizmo
+  conflicts only while the brush is active;
+- each drag commits one typed create/delete command batch, skips occupied paint
+  cells, and supports one-step undo/redo plus canonical export; and
+- whole-workspace analysis, all 14 Forge tests, the consolidated 230-test
+  matrix, and the Forge Windows x64 release build pass. Live brush feel and
+  overlay acceptance remain open.
+
+Stage 12.6 status (implementation and Windows build gate completed 2026-08-14):
+
+- Forge adds a Test Play action that validates and exports the current unsaved
+  world into a private temporary `.avarra` package without marking the
+  editable project saved;
+- an injectable launcher resolves and starts the real Avarra Game process with
+  one exact `--avarra-forge-test-play=<path>` argument, retains the package
+  for the child lifetime, and deletes its temporary directory after exit or
+  startup failure;
+- Game parses the shared `avarra_core` argument contract, starts the exact
+  package as a solo imported world, and uses a process-local
+  `MemorySaveStore` so preview mutations cannot affect normal saves; and
+- targeted Game/Forge analysis, five directly affected tests, and Windows x64
+  release builds for both applications pass. The inventory is now 234 tests;
+  the full consolidated matrix was not repeated in this implementation-focused
+  pass. Live packaged-process and visual acceptance remain open.
+
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
 `AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md`,
-`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`, and ADR-032.
+`AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md`,
+`AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`,
+`AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
+`AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`, and
+`AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`, and
+ADR-032.
 
 Polish:
 

@@ -1,7 +1,7 @@
 {
   "architecture_version": "v8-reviewed",
   "date": "2026-08-14",
-  "current_direction": "Stage 12.2 available-target acceptance is complete. Keep physical Android as the release gate, then continue animation/content polish or the typed Creator API; no standalone custom engine requirement.",
+  "current_direction": "Stage 12.7 typed persistent Objective Switch and Objective Gate authoring plus the Forge game-maker guide are implemented. Complete live Windows creator/Test Play/lighting and physical-Android Game acceptance, then add Guardian, Collectible, and Turn-in presets with stable-reference pickers; no standalone custom engine requirement.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
@@ -17,8 +17,15 @@
   "stage_11_4_validation": "docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md",
   "stage_11_5_validation": "docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md",
   "stage_11_6_validation": "docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md",
+  "stage_11_6_validation": "docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md",
   "stage_12_1_validation": "docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md",
   "stage_12_2_validation": "docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md",
+  "stage_12_3_validation": "docs/AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md",
+  "stage_12_4_validation": "docs/AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md",
+  "stage_12_5_validation": "docs/AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md",
+  "stage_12_6_validation": "docs/AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md",
+  "stage_12_7_validation": "docs/AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md",
+  "forge_game_maker_guide": "docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md",
   "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
   "adrs": [
     "ADR-008-build-avarra-not-an-engine.md",
@@ -53,7 +60,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through Stage 12.2 available-target product acceptance; physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
+  "review_status": "Consistency-reviewed through Stage 12.7 Forge objective/gate authoring and the game-maker guide; live Forge creator/Test Play/lighting plus physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

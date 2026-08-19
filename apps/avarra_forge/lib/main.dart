@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'src/forge_file_services.dart';
 import 'src/forge_sample_world.dart';
+import 'src/forge_test_play.dart';
 import 'src/forge_workspace.dart';
 
 void main() => runApp(const AvarraForgeApp());
@@ -12,6 +13,7 @@ class AvarraForgeApp extends StatelessWidget {
     this.initialWorld,
     this.projectStorage,
     this.fileDialogs = const PlatformForgeFileDialogs(),
+    this.testPlayLauncher,
     this.enableRenderer = true,
     super.key,
   });
@@ -19,6 +21,7 @@ class AvarraForgeApp extends StatelessWidget {
   final WorldDefinition? initialWorld;
   final ForgeProjectStorage? projectStorage;
   final ForgeFileDialogs fileDialogs;
+  final ForgeTestPlayLauncher? testPlayLauncher;
   final bool enableRenderer;
 
   @override
@@ -41,6 +44,7 @@ class AvarraForgeApp extends StatelessWidget {
         initialWorld: initialWorld ?? createForgeStarterWorld(),
         projectStorage: projectStorage ?? ForgeProjectFileStorage(),
         fileDialogs: fileDialogs,
+        testPlayLauncher: testPlayLauncher ?? PlatformForgeTestPlayLauncher(),
         enableRenderer: enableRenderer,
       ),
     );

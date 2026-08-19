@@ -6,8 +6,186 @@ import 'package:avarra_creator_api/avarra_creator_api.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 
+import 'forge_palette.dart';
+
 typedef ForgeFieldChanged =
     void Function(String componentType, String fieldName, Object? value);
+
+final class ObjectPalettePanel extends StatelessWidget {
+  const ObjectPalettePanel({
+    required this.items,
+    required this.assets,
+    required this.selectedItem,
+    required this.selectedAssetId,
+    required this.brushMode,
+    required this.onSelected,
+    required this.onAssetSelected,
+    required this.onBrushModeSelected,
+    required this.onSelectionTool,
+    super.key,
+  });
+
+  final List<ForgePaletteItem> items;
+  final List<WorldAssetDefinition> assets;
+  final ForgePaletteItem? selectedItem;
+  final AssetId? selectedAssetId;
+  final ForgeBrushMode brushMode;
+  final ValueChanged<ForgePaletteItem?> onSelected;
+  final ValueChanged<AssetId> onAssetSelected;
+  final ValueChanged<ForgeBrushMode> onBrushModeSelected;
+  final VoidCallback onSelectionTool;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRenderableAsset = assets.isNotEmpty && selectedAssetId != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: PanelTitle('Object palette')),
+            IconButton(
+              key: const Key('palette_select_tool'),
+              tooltip: 'Selection tool',
+              onPressed:
+                  selectedItem == null && brushMode == ForgeBrushMode.none
+                  ? null
+                  : onSelectionTool,
+              icon: const Icon(Icons.near_me_outlined),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Catalog asset',
+              prefixIcon: Icon(Icons.inventory_2_outlined),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<AssetId>(
+                key: const Key('palette_asset'),
+                value: selectedAssetId,
+                isDense: true,
+                isExpanded: true,
+                hint: const Text('No world assets'),
+                items: [
+                  for (final asset in assets)
+                    DropdownMenuItem(
+                      value: asset.id,
+                      child: Text(
+                        _assetLabel(asset),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (assetId) {
+                  if (assetId != null) onAssetSelected(assetId);
+                },
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  key: const Key('brush_paint_floor'),
+                  label: const Text('Paint floor'),
+                  avatar: const Icon(Icons.brush_outlined, size: 18),
+                  selected: brushMode == ForgeBrushMode.paintFloor,
+                  onSelected: hasRenderableAsset
+                      ? (selected) => onBrushModeSelected(
+                          selected
+                              ? ForgeBrushMode.paintFloor
+                              : ForgeBrushMode.none,
+                        )
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ChoiceChip(
+                  key: const Key('brush_erase_floor'),
+                  label: const Text('Erase'),
+                  avatar: const Icon(Icons.auto_fix_off_outlined, size: 18),
+                  selected: brushMode == ForgeBrushMode.eraseFloor,
+                  onSelected: (selected) => onBrushModeSelected(
+                    selected ? ForgeBrushMode.eraseFloor : ForgeBrushMode.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+          child: Text(
+            !hasRenderableAsset
+                ? 'This world has no renderable asset for palette objects.'
+                : brushMode == ForgeBrushMode.paintFloor
+                ? 'Painting floor · drag across the viewport'
+                : brushMode == ForgeBrushMode.eraseFloor
+                ? 'Erasing authored floor tiles · drag across the viewport'
+                : selectedItem == null
+                ? 'Choose an object, then click the viewport.'
+                : 'Placing ${selectedItem!.label} · '
+                      '${selectedItem!.placementGridSize} unit grid',
+            key: const Key('palette_status'),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            key: const Key('object_palette'),
+            children: [
+              for (final category in ForgePaletteItemCategory.values) ...[
+                Padding(
+                  key: Key('palette_category_${category.name}'),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+                  child: Text(
+                    _paletteCategoryLabel(category),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+                for (final item in items.where(
+                  (item) => item.category == category,
+                ))
+                  ListTile(
+                    key: Key('palette_${item.id}'),
+                    dense: true,
+                    enabled: hasRenderableAsset,
+                    selected: item == selectedItem,
+                    leading: Icon(_paletteIcon(item.kind), size: 20),
+                    title: Text(item.label),
+                    subtitle: Text(
+                      item.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: item == selectedItem
+                        ? const Icon(Icons.add_location_alt_outlined, size: 20)
+                        : null,
+                    onTap: hasRenderableAsset ? () => onSelected(item) : null,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _assetLabel(WorldAssetDefinition asset) {
+  final normalized = asset.path.replaceAll(r'\', '/');
+  final name = normalized.split('/').last;
+  return name.isEmpty ? asset.id.value : name;
+}
 
 final class HierarchyPanel extends StatelessWidget {
   const HierarchyPanel({
@@ -486,6 +664,8 @@ final class PanelTitle extends StatelessWidget {
 
 String _entityLabel(WorldEntityDefinition entity) {
   if (entity.component<PlayerControlledDefinition>() != null) return 'Player';
+  final gate = entity.component<ObjectiveGateDefinition>();
+  if (gate != null) return gate.label;
   final interactable = entity.component<InteractableDefinition>();
   if (interactable != null) return interactable.label;
   final transform = entity.component<TransformDefinition>();
@@ -500,11 +680,32 @@ IconData _entityIcon(WorldEntityDefinition entity) {
   if (entity.component<PlayerControlledDefinition>() != null) {
     return Icons.person_outline;
   }
+  if (entity.component<ObjectiveGateDefinition>() != null) {
+    return Icons.door_sliding_outlined;
+  }
+  if (entity.component<ObjectiveDefinition>() != null) {
+    return Icons.task_alt_outlined;
+  }
   if (entity.component<InteractableDefinition>() != null) {
     return Icons.touch_app_outlined;
   }
   return Icons.view_in_ar_outlined;
 }
+
+IconData _paletteIcon(ForgePaletteItemKind kind) => switch (kind) {
+  ForgePaletteItemKind.floorTile => Icons.grid_view_outlined,
+  ForgePaletteItemKind.propCube => Icons.widgets_outlined,
+  ForgePaletteItemKind.solidBlock => Icons.view_in_ar_outlined,
+  ForgePaletteItemKind.relayConsole => Icons.touch_app_outlined,
+  ForgePaletteItemKind.objectiveSwitch => Icons.task_alt_outlined,
+  ForgePaletteItemKind.objectiveGate => Icons.door_sliding_outlined,
+};
+
+String _paletteCategoryLabel(ForgePaletteItemCategory category) =>
+    switch (category) {
+      ForgePaletteItemCategory.world => 'WORLD OBJECTS',
+      ForgePaletteItemCategory.gameplay => 'GAMEPLAY RULES',
+    };
 
 String _formatNumber(double value) => value == value.roundToDouble()
     ? value.toStringAsFixed(0)

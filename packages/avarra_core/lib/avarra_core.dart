@@ -11,5 +11,8 @@ export 'src/time/tick_id.dart';
 /// Canonical product name shared by AVARRA applications.
 const String avarraProductName = 'AVARRA';
 
+/// Process argument used by Forge to launch Game with one disposable package.
+const String avarraForgeTestPlayArgumentPrefix = '--avarra-forge-test-play=';
+
 /// Architecture generation implemented by this repository foundation.
 const String avarraArchitectureGeneration = 'v8-reviewed';

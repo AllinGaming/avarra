@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_content/avarra_content.dart';
@@ -8,8 +9,10 @@ import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 
 import 'forge_file_services.dart';
+import 'forge_palette.dart';
 import 'forge_panels.dart';
 import 'forge_sample_world.dart';
+import 'forge_test_play.dart';
 import 'forge_viewport.dart';
 
 final class ForgeWorkspaceScreen extends StatefulWidget {
@@ -17,6 +20,7 @@ final class ForgeWorkspaceScreen extends StatefulWidget {
     required this.initialWorld,
     required this.projectStorage,
     required this.fileDialogs,
+    required this.testPlayLauncher,
     required this.enableRenderer,
     super.key,
   });
@@ -24,6 +28,7 @@ final class ForgeWorkspaceScreen extends StatefulWidget {
   final WorldDefinition initialWorld;
   final ForgeProjectStorage projectStorage;
   final ForgeFileDialogs fileDialogs;
+  final ForgeTestPlayLauncher testPlayLauncher;
   final bool enableRenderer;
 
   @override
@@ -37,6 +42,11 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
   late CreatorWorldSession _session;
   late CreatorValidationReport _validation;
   EntityId? _selectedEntityId;
+  ForgePaletteItem? _activePaletteItem;
+  AssetId? _selectedPaletteAssetId;
+  ForgeBrushMode _brushMode = ForgeBrushMode.none;
+  final LinkedHashSet<ForgeFloorCell> _brushCells = LinkedHashSet();
+  ForgeFloorCell? _lastBrushCell;
   String? _projectPath;
   String _status = 'Ready · canonical world is valid';
   bool _busy = false;
@@ -58,6 +68,7 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     super.initState();
     _session = CreatorWorldSession(initialWorld: widget.initialWorld);
     _selectedEntityId = _world.allEntities.firstOrNull?.id;
+    _selectedPaletteAssetId = _world.assets.firstOrNull?.id;
     _validation = _session.validate(requirePlayableEntry: true);
   }
 
@@ -85,28 +96,181 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     }
   }
 
-  void _addCube() {
+  void _selectPaletteItem(ForgePaletteItem? item) {
+    setState(() {
+      _activePaletteItem = item;
+      _brushMode = ForgeBrushMode.none;
+      _brushCells.clear();
+      _lastBrushCell = null;
+      _status = item == null
+          ? 'Selection tool active'
+          : 'Place ${item.label} · click the viewport';
+    });
+  }
+
+  void _activateSelectionTool() {
+    setState(() {
+      _activePaletteItem = null;
+      _brushMode = ForgeBrushMode.none;
+      _brushCells.clear();
+      _lastBrushCell = null;
+      _status = 'Selection tool active';
+    });
+  }
+
+  void _selectPaletteAsset(AssetId assetId) {
+    if (!_world.assets.any((asset) => asset.id == assetId)) return;
+    setState(() {
+      _selectedPaletteAssetId = assetId;
+      _status = 'Catalog asset ${assetId.value} selected';
+    });
+  }
+
+  void _selectBrushMode(ForgeBrushMode mode) {
+    setState(() {
+      _activePaletteItem = null;
+      _brushMode = mode;
+      _brushCells.clear();
+      _lastBrushCell = null;
+      _status = switch (mode) {
+        ForgeBrushMode.none => 'Selection tool active',
+        ForgeBrushMode.paintFloor =>
+          'Floor paint brush active · drag the viewport',
+        ForgeBrushMode.eraseFloor =>
+          'Floor erase brush active · drag the viewport',
+      };
+    });
+  }
+
+  void _placePaletteItemAt(
+    ContentVector3 groundPosition, {
+    ForgePaletteItem? item,
+  }) {
+    final paletteItem = item ?? _activePaletteItem;
+    final assetId = _selectedPaletteAssetId;
+    if (paletteItem == null || assetId == null) {
+      setState(() => _status = 'Placement requires a palette item and asset');
+      return;
+    }
     final id = EntityId.generate();
-    final index = _world.allEntities.length;
     _execute(
-      CreateEntityCommand(
-        entity: WorldEntityDefinition(
-          id: id,
-          components: [
-            TransformDefinition(
-              position: ContentVector3(
-                1.25 * ((index - 2) % 4),
-                0.5,
-                1.25 * ((index - 2) ~/ 4),
-              ),
-              rotation: const ContentQuaternion(0, 0, 0, 1),
-              scale: const ContentVector3(1, 1, 1),
+      CreatorCommandBatch(
+        description: 'Place ${paletteItem.label}',
+        commands: [
+          CreateEntityCommand(
+            entity: paletteItem.createEntity(
+              entityId: id,
+              assetId: assetId,
+              groundPosition: groundPosition,
             ),
-            RenderableReferenceDefinition(assetId: forgeSampleAssetId),
-          ],
-        ),
+          ),
+        ],
       ),
       select: id,
+    );
+  }
+
+  void _startBrushStroke(ContentVector3 groundPosition) {
+    if (_brushMode == ForgeBrushMode.none) return;
+    final cell = ForgeFloorCell.fromGround(groundPosition);
+    _brushCells
+      ..clear()
+      ..add(cell);
+    _lastBrushCell = cell;
+  }
+
+  void _updateBrushStroke(ContentVector3 groundPosition) {
+    if (_brushMode == ForgeBrushMode.none) return;
+    final nextCell = ForgeFloorCell.fromGround(groundPosition);
+    final previousCell = _lastBrushCell;
+    if (previousCell == null) {
+      _startBrushStroke(groundPosition);
+      return;
+    }
+    _brushCells.addAll(forgeFloorStrokeCells(previousCell, nextCell));
+    _lastBrushCell = nextCell;
+  }
+
+  Map<ForgeFloorCell, List<EntityId>> _authoredFloorTilesByCell() {
+    final tiles = <ForgeFloorCell, List<EntityId>>{};
+    for (final entity in _world.entities) {
+      if (!isForgeFloorTile(entity)) continue;
+      final transform = entity.component<TransformDefinition>()!;
+      final cell = ForgeFloorCell.fromGround(transform.position);
+      tiles.putIfAbsent(cell, () => []).add(entity.id);
+    }
+    return tiles;
+  }
+
+  void _endBrushStroke() {
+    final mode = _brushMode;
+    final cells = _brushCells.toList(growable: false);
+    _brushCells.clear();
+    _lastBrushCell = null;
+    if (mode == ForgeBrushMode.none || cells.isEmpty) return;
+
+    final existingTiles = _authoredFloorTilesByCell();
+    final commands = <CreatorCommand>[];
+    EntityId? select;
+    if (mode == ForgeBrushMode.paintFloor) {
+      final assetId = _selectedPaletteAssetId;
+      if (assetId == null) {
+        setState(() => _status = 'Floor paint requires a catalog asset');
+        return;
+      }
+      final floorItem = forgeObjectPalette.firstWhere(
+        (item) => item.kind == ForgePaletteItemKind.floorTile,
+      );
+      for (final cell in cells) {
+        if (existingTiles.containsKey(cell)) continue;
+        final id = EntityId.generate();
+        commands.add(
+          CreateEntityCommand(
+            entity: floorItem.createEntity(
+              entityId: id,
+              assetId: assetId,
+              groundPosition: cell.groundPosition,
+            ),
+          ),
+        );
+        select = id;
+      }
+    } else {
+      for (final cell in cells) {
+        for (final entityId in existingTiles[cell] ?? const <EntityId>[]) {
+          commands.add(DeleteEntityCommand(entityId));
+        }
+      }
+    }
+
+    if (commands.isEmpty) {
+      setState(
+        () => _status = mode == ForgeBrushMode.paintFloor
+            ? 'Floor stroke skipped occupied cells'
+            : 'Erase stroke found no authored floor tiles',
+      );
+      return;
+    }
+    final action = mode == ForgeBrushMode.paintFloor ? 'Paint' : 'Erase';
+    _execute(
+      CreatorCommandBatch(
+        description: '$action ${commands.length} floor tile(s)',
+        commands: commands,
+      ),
+      select: select,
+    );
+    if (_selectedEntity == null) {
+      setState(() => _selectedEntityId = _world.allEntities.firstOrNull?.id);
+    }
+  }
+
+  void _addCube() {
+    final index = _world.allEntities.length;
+    _placePaletteItemAt(
+      ContentVector3(1.25 * ((index - 2) % 4), 0, 1.25 * ((index - 2) ~/ 4)),
+      item: forgeObjectPalette.firstWhere(
+        (item) => item.kind == ForgePaletteItemKind.propCube,
+      ),
     );
   }
 
@@ -146,7 +310,11 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
       final contextualFields =
           nextType == AvarraComponentType.renderableReference &&
               _world.assets.isNotEmpty
-          ? <String, Object?>{'assetId': _world.assets.first.id.value}
+          ? <String, Object?>{
+              'assetId':
+                  _selectedPaletteAssetId?.value ??
+                  _world.assets.first.id.value,
+            }
           : const <String, Object?>{};
       commands.add(
         AddEntityComponentCommand(
@@ -270,6 +438,11 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
       );
     }
     _projectPath = path;
+    _activePaletteItem = null;
+    _selectedPaletteAssetId = world.assets.firstOrNull?.id;
+    _brushMode = ForgeBrushMode.none;
+    _brushCells.clear();
+    _lastBrushCell = null;
     _selectedEntityId = world.allEntities.firstOrNull?.id;
     _refreshValidation();
   }
@@ -475,6 +648,29 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     }
   }
 
+  Future<void> _testPlay() async {
+    setState(() {
+      _busy = true;
+      _status = 'Preparing Test Play...';
+    });
+    try {
+      final source = _session.exportCanonical();
+      final launch = await widget.testPlayLauncher.launch(
+        worldName: _world.name,
+        canonicalWorldSource: source,
+      );
+      if (mounted) {
+        setState(
+          () => _status = 'Test Play launched - PID ${launch.processId}',
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) setState(() => _status = 'Test Play failed: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _handlePop(bool didPop) async {
     if (didPop || _allowPop || !mounted) return;
     if (await _confirmDiscardChanges() && mounted) {
@@ -534,6 +730,13 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
             label: const Text('Validate'),
           ),
           const SizedBox(width: 8),
+          OutlinedButton.icon(
+            key: const Key('test_play'),
+            onPressed: _busy || _validation.blocksExport ? null : _testPlay,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Test Play'),
+          ),
+          const SizedBox(width: 8),
           FilledButton.icon(
             key: const Key('export'),
             onPressed: _busy || _validation.blocksExport ? null : _export,
@@ -549,13 +752,35 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
             child: Row(
               children: [
                 SizedBox(
-                  width: 240,
-                  child: HierarchyPanel(
-                    world: _world,
-                    selectedEntityId: _selectedEntityId,
-                    onSelected: (id) => setState(() => _selectedEntityId = id),
-                    onAdd: _addCube,
-                    onDelete: _deleteSelected,
+                  width: 260,
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 380,
+                        child: ObjectPalettePanel(
+                          items: forgeObjectPalette,
+                          assets: _world.assets,
+                          selectedItem: _activePaletteItem,
+                          selectedAssetId: _selectedPaletteAssetId,
+                          brushMode: _brushMode,
+                          onSelected: _selectPaletteItem,
+                          onAssetSelected: _selectPaletteAsset,
+                          onBrushModeSelected: _selectBrushMode,
+                          onSelectionTool: _activateSelectionTool,
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: HierarchyPanel(
+                          world: _world,
+                          selectedEntityId: _selectedEntityId,
+                          onSelected: (id) =>
+                              setState(() => _selectedEntityId = id),
+                          onAdd: _addCube,
+                          onDelete: _deleteSelected,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -565,6 +790,18 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
                     selectedEntityId: _selectedEntityId,
                     onSelected: (id) => setState(() => _selectedEntityId = id),
                     onTransformCommitted: _commitViewportTransform,
+                    placementMode: _activePaletteItem != null,
+                    placementLabel: _activePaletteItem?.label,
+                    onGroundTapped: _placePaletteItemAt,
+                    brushMode: _brushMode != ForgeBrushMode.none,
+                    brushLabel: switch (_brushMode) {
+                      ForgeBrushMode.paintFloor => 'Painting floor',
+                      ForgeBrushMode.eraseFloor => 'Erasing floor',
+                      ForgeBrushMode.none => null,
+                    },
+                    onBrushStrokeStart: _startBrushStroke,
+                    onBrushStrokeUpdate: _updateBrushStroke,
+                    onBrushStrokeEnd: _endBrushStroke,
                     enableRenderer: widget.enableRenderer,
                   ),
                 ),
@@ -604,7 +841,8 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             color: Theme.of(context).colorScheme.surfaceContainer,
             child: Text(
-              'Stage 10.2 · ${_world.allEntities.length} entities · $location · '
+              'Stage 12.5 · Asset Catalog & Floor Brush · '
+              '${_world.allEntities.length} entities · $location · '
               '${_session.historyEstimatedBytes} undo bytes · $_status',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

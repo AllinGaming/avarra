@@ -294,4 +294,8 @@ immutable upstream pre-release commit. It is not yet a permanent renderer
 decision. Windows visual/lifecycle validation and Pixel 10 Pro Android emulator
 cold-start/lifecycle checks pass. Physical Android rendering/performance,
 animation, physical-device Stage 3 interaction, shadows, and Forge viewport
-embedding still require validation. See ADR-016 and ADR-017.
+embedding still require validation. Stage 12.3 now explicitly enables PCF
+shadows, applies cast/receive flags only to renderable glTF children, and shares
+an angled key/fill profile between Game and Forge; live Windows/Android quality
+and cost remain the open shadow gate. See ADR-016, ADR-017, and
+`AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`.

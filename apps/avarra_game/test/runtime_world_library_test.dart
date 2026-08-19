@@ -138,6 +138,40 @@ void main() {
 
     expect(await library.list(), isEmpty);
   });
+
+  test('imports every valid map in a selected folder independently', () async {
+    final delivery = Directory(
+      '${root.path}${Platform.pathSeparator}community-maps',
+    )..createSync();
+    File(
+      '${delivery.path}${Platform.pathSeparator}ashfall.avarra',
+    ).writeAsStringSync(
+      _renameWorld(
+        source,
+        id: '01890f47-e8b8-7a68-8000-000000000792',
+        name: 'Community Ashfall',
+      ),
+    );
+    File(
+      '${delivery.path}${Platform.pathSeparator}broken.avarra',
+    ).writeAsStringSync('{broken');
+    File(
+      '${delivery.path}${Platform.pathSeparator}notes.txt',
+    ).writeAsStringSync('not a map');
+    final library = RuntimeWorldLibrary(
+      directory: Directory('${root.path}${Platform.pathSeparator}catalog'),
+      assetAvailability: (_) async => true,
+    );
+
+    final result = await library.importDirectory(delivery.path);
+
+    expect(result.imported, hasLength(1));
+    expect(result.imported.single.name, 'Community Ashfall');
+    expect(result.failures, hasLength(1));
+    expect(result.failures.single.path, endsWith('broken.avarra'));
+    expect(await library.list(), hasLength(1));
+    expect((await library.loadSelected())?.name, 'Community Ashfall');
+  });
 }
 
 String _renameWorld(String source, {required String id, required String name}) {

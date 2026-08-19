@@ -16,9 +16,11 @@ presentation and collision after pickup, and completes the mission at an
 authored return console. Tap and held movement share the same camera-relative
 control path.
 
-Game remains offline/local by default. `AVARRA_MULTIPLAYER_ROLE` selects
-`offline`, `host`, or `client`; host/port and a canonical `AVARRA_PLAYER_ID`
-complete the configuration. Host mode embeds the server-safe Avarra Server
+Game remains offline/local by default. The in-runtime **Worlds & multiplayer**
+browser launches any selected map as Solo, Host, or Join and accepts the host
+address/port without rebuilding. `AVARRA_MULTIPLAYER_ROLE`, host/port, and a
+canonical `AVARRA_PLAYER_ID` remain developer/acceptance overrides. Host mode
+embeds the server-safe Avarra Server
 runtime, listens on IPv4 interfaces, connects its own client through loopback,
 and accepts additional players with independent avatars. The HUD reports
 connection/ownership state plus frame, tick, memory, network, thermal, and
@@ -39,17 +41,29 @@ two-second acknowledgment-stall pause, replays prediction through the same
 collision system used by authority, and interpolates remote player avatars
 across one host snapshot interval.
 
-The current `.avarra` JSON file is a prototype definition container. Stage
-10.1B adds a runtime world-library dialog that imports a chosen file into
-application support storage, persists selection across restart, isolates saves
-by authored `WorldId`, and reports every referenced asset absent from the Game
-bundle. The import limit is 16 MiB. Cooked archive packaging, embedded assets,
-hashing/trust, and final package resource budgets remain later milestones.
+The current `.avarra` JSON file is a prototype definition container. The world
+browser displays its application-owned maps folder, refreshes maps dropped
+there, and imports either one file or every top-level `.avarra` file from a
+selected sharing folder. Valid sibling maps still import when another file is
+rejected. Selection persists across restart, saves remain isolated by authored
+`WorldId`, and unavailable packaged assets are reported. The import limit is
+16 MiB. Cooked archive packaging, embedded assets, hashing/trust, and final
+package resource budgets remain later milestones.
+
+Creators can follow `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md` to build a
+world in Forge, Test Play it, export it, import it here, and launch it as Solo,
+Host, or Join.
 
 Desktop builds can still use `--dart-define=AVARRA_WORLD_PATH=<path>` as a
 developer/test override. Ordinary runtime import no longer requires a rebuild.
 Imported definitions still use Game-packaged asset paths; the prototype file is
 not yet a self-contained asset archive.
+
+Forge Test Play starts Game with the internal process argument
+`--avarra-forge-test-play=<absolute .avarra path>`. That launch loads the
+exact package first, forces a solo session, and uses a fresh in-memory save
+store. Ordinary players should use the Worlds & multiplayer browser; the
+process argument exists only to keep Forge previews disposable and isolated.
 
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.

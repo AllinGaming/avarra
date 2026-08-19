@@ -135,6 +135,7 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     final asset = await source.createInstance();
     try {
       await _viewer.addToScene(asset);
+      await _enableRenderableShadows(asset);
       await asset.setTransform(
         presentationTransformToThermionMatrix(entity.transform),
       );
@@ -151,6 +152,17 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     } on Object {
       await _viewer.destroyAsset(asset);
       rethrow;
+    }
+  }
+
+  Future<void> _enableRenderableShadows(ThermionAsset<dynamic> asset) async {
+    final app = FilamentApp.instance;
+    if (app == null) return;
+    final renderableManager = app.renderableManager;
+    final renderableEntities = (await asset.getMaterialInstancesAsMap()).keys;
+    for (final entity in renderableEntities) {
+      await renderableManager.setCastShadows(entity, true);
+      await renderableManager.setReceiveShadows(entity, true);
     }
   }
 

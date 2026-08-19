@@ -25,6 +25,7 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'src/action_targeting.dart';
 import 'src/authored_world_movement_bounds.dart';
 import 'src/fixed_step_frame_clock.dart';
+import 'src/game_launch_configuration.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
 import 'src/world_library_ui.dart';
@@ -68,9 +69,27 @@ typedef MultiplayerHostStarter =
       SaveStore saveStore,
       SaveId saveId,
     );
+typedef _RuntimeMultiplayerClientConnector =
+    Future<ReplicationClient?> Function(
+      ContentHandshake content,
+      PlayerId playerId,
+      RuntimeSessionConfiguration session,
+    );
+typedef _RuntimeMultiplayerHostStarter =
+    Future<MultiplayerProofHost?> Function(
+      String worldPackageSource,
+      PlayerId primaryPlayerId,
+      SaveStore saveStore,
+      SaveId saveId,
+      RuntimeSessionConfiguration session,
+    );
 
-void main() {
-  runApp(const AvarraGameApp());
+void main(List<String> arguments) {
+  runApp(
+    AvarraGameApp(
+      launchConfiguration: GameLaunchConfiguration.parse(arguments),
+    ),
+  );
 }
 
 class AvarraGameApp extends StatelessWidget {
@@ -82,6 +101,7 @@ class AvarraGameApp extends StatelessWidget {
     this.saveStoreLoader,
     this.multiplayerClientConnector,
     this.multiplayerHostStarter,
+    this.launchConfiguration = const GameLaunchConfiguration(),
     this.hostDeviceMetricsSampler = const PlatformHostDeviceMetricsSampler(),
     super.key,
   });
@@ -93,6 +113,7 @@ class AvarraGameApp extends StatelessWidget {
   final SaveStoreLoader? saveStoreLoader;
   final MultiplayerClientConnector? multiplayerClientConnector;
   final MultiplayerHostStarter? multiplayerHostStarter;
+  final GameLaunchConfiguration launchConfiguration;
   final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
@@ -112,18 +133,36 @@ class AvarraGameApp extends StatelessWidget {
         selectionLoader:
             worldSelectionLoader ??
             (worldPackageSourceLoader == null
-                ? _loadDefaultWorldSelection
+                ? launchConfiguration.isForgeTestPlay
+                      ? () async => RuntimeWorldSelection(
+                          source: await launchConfiguration
+                              .readForgeTestPlayWorldSource(),
+                          label:
+                              'Forge Test Play · '
+                              '${launchConfiguration.forgeTestPlayWorldPath}',
+                          isImported: true,
+                          session: const RuntimeSessionConfiguration(),
+                        )
+                      : _loadDefaultWorldSelection
                 : () async => RuntimeWorldSelection(
                     source: await worldPackageSourceLoader!(),
                     label: 'Injected world source',
                     isImported: _configuredWorldPath.isNotEmpty,
                   )),
         worldLibraryOpener: worldLibraryOpener ?? _openDefaultWorldLibrary,
-        saveStoreLoader: saveStoreLoader ?? _loadDefaultSaveStore,
-        multiplayerClientConnector:
-            multiplayerClientConnector ?? _connectConfiguredMultiplayer,
-        multiplayerHostStarter:
-            multiplayerHostStarter ?? _startConfiguredMultiplayerHost,
+        saveStoreLoader:
+            saveStoreLoader ??
+            (launchConfiguration.isForgeTestPlay
+                ? () async => MemorySaveStore()
+                : _loadDefaultSaveStore),
+        multiplayerClientConnector: multiplayerClientConnector == null
+            ? _connectRuntimeMultiplayer
+            : (content, playerId, _) =>
+                  multiplayerClientConnector!(content, playerId),
+        multiplayerHostStarter: multiplayerHostStarter == null
+            ? _startRuntimeMultiplayerHost
+            : (source, playerId, store, saveId, _) =>
+                  multiplayerHostStarter!(source, playerId, store, saveId),
         hostDeviceMetricsSampler: hostDeviceMetricsSampler,
       ),
     );
@@ -145,8 +184,8 @@ class _WorldBootstrapScreen extends StatefulWidget {
   final RuntimeWorldSelectionLoader selectionLoader;
   final RuntimeWorldLibraryOpener worldLibraryOpener;
   final SaveStoreLoader saveStoreLoader;
-  final MultiplayerClientConnector multiplayerClientConnector;
-  final MultiplayerHostStarter multiplayerHostStarter;
+  final _RuntimeMultiplayerClientConnector multiplayerClientConnector;
+  final _RuntimeMultiplayerHostStarter multiplayerHostStarter;
   final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
@@ -156,6 +195,7 @@ class _WorldBootstrapScreen extends StatefulWidget {
 class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
   late Future<_LoadedWorld> _loadedWorld = _loadWorld();
   RuntimeWorldSelection? _selectionOverride;
+  GlobalKey<_PresentationBoundaryScreenState> _presentationKey = GlobalKey();
 
   Future<void> _openWorldLibrary() async {
     try {
@@ -163,8 +203,11 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       if (selection == null || !mounted) {
         return;
       }
+      await _presentationKey.currentState?.prepareForWorldReplacement();
+      if (!mounted) return;
       setState(() {
         _selectionOverride = selection;
+        _presentationKey = GlobalKey<_PresentationBoundaryScreenState>();
         _loadedWorld = _loadWorld();
       });
     } on Object catch (error) {
@@ -224,7 +267,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           );
         }
         return _PresentationBoundaryScreen(
-          key: ObjectKey(loadedWorld.runtimeWorld),
+          key: _presentationKey,
           enableRenderer: widget.enableRenderer,
           runtimeWorld: loadedWorld.runtimeWorld,
           streaming: loadedWorld.streaming,
@@ -319,6 +362,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       configuredPlayerId,
       saveStore,
       saveId,
+      selection.session,
     );
     ReplicationClient? multiplayerClient;
     var multiplayerStatus = multiplayerHost == null
@@ -333,6 +377,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           packageHash: networkPackageHashFromText(source),
         ),
         configuredPlayerId,
+        selection.session,
       );
       if (multiplayerClient != null) {
         await multiplayerClient.waitForControlledEntity();
@@ -469,6 +514,7 @@ class _PresentationBoundaryScreenState
   bool _cameraFramingInitialized = false;
   bool _showDiagnostics = false;
   bool _worldEdgeMovementBlocked = false;
+  bool _preparedForWorldReplacement = false;
   Duration _simulationTime = Duration.zero;
   WorldChunkCoordinate? _lastRequestedPlayerChunk;
   String _interactionStatus = 'Select a world object, then interact';
@@ -578,21 +624,47 @@ class _PresentationBoundaryScreenState
     if (replicationSubscription != null) {
       unawaited(replicationSubscription.cancel());
     }
-    final multiplayerClient = widget.multiplayerClient;
-    if (multiplayerClient != null) {
-      unawaited(multiplayerClient.close());
-    }
-    final multiplayerHost = widget.multiplayerHost;
-    if (multiplayerHost != null) {
-      unawaited(multiplayerHost.close());
+    if (!_preparedForWorldReplacement) {
+      final multiplayerClient = widget.multiplayerClient;
+      if (multiplayerClient != null) {
+        unawaited(multiplayerClient.close());
+      }
+      final multiplayerHost = widget.multiplayerHost;
+      if (multiplayerHost != null) {
+        unawaited(multiplayerHost.close());
+      }
     }
     WidgetsBinding.instance.removeObserver(this);
-    if (!_saveInFlight && widget.persistence.dirtyState.hasDirtyState) {
+    if (!_preparedForWorldReplacement &&
+        !_saveInFlight &&
+        widget.persistence.dirtyState.hasDirtyState) {
       unawaited(widget.persistence.saveIfDirty());
     }
     _keyboardFocus.dispose();
     _collisionWorld.dispose();
     super.dispose();
+  }
+
+  Future<void> prepareForWorldReplacement() async {
+    if (_preparedForWorldReplacement) return;
+    _preparedForWorldReplacement = true;
+    _acceptReplicationEvents = false;
+    _inputSubmissionPaused = true;
+    _gameLoopTicker.stop();
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    _hostMetricsTimer?.cancel();
+    _hostMetricsTimer = null;
+    final subscription = _replicationSubscription;
+    _replicationSubscription = null;
+    if (subscription != null) unawaited(subscription.cancel());
+    await _flushSave();
+    final client = widget.multiplayerClient;
+    if (client != null) unawaited(client.close());
+    // Releasing the authoritative listener is the ordering requirement for a
+    // Host -> Host map switch. Client retirement is already event-gated and
+    // may finish concurrently without delaying the replacement bootstrap.
+    await widget.multiplayerHost?.close();
   }
 
   @override
@@ -622,7 +694,7 @@ class _PresentationBoundaryScreenState
             children: [
               Text(avarraProductName, style: textTheme.headlineMedium),
               const SizedBox(height: 4),
-              const Text('Stage 12.1 · Durable Ashfall Hosting'),
+              const Text('Stage 12.3 · Community Worlds & Sessions'),
               Text(widget.runtimeWorld.definition.name),
               Text(
                 'World source: ${widget.sourceLabel}',
@@ -631,8 +703,8 @@ class _PresentationBoundaryScreenState
               TextButton.icon(
                 key: const Key('open_world_library'),
                 onPressed: widget.onOpenWorldLibrary,
-                icon: const Icon(Icons.public, size: 18),
-                label: const Text('World library'),
+                icon: const Icon(Icons.travel_explore, size: 18),
+                label: const Text('Worlds & multiplayer'),
               ),
               Text('${_presentation.length} ECS entities bound to the scene'),
               Text(
@@ -793,6 +865,18 @@ class _PresentationBoundaryScreenState
                             'AVARRA · RELAY ZERO',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
+                        ),
+                        IconButton(
+                          key: const Key('open_world_session_browser'),
+                          tooltip: 'Worlds & multiplayer',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints.tightFor(
+                            width: 36,
+                            height: 36,
+                          ),
+                          padding: EdgeInsets.zero,
+                          onPressed: widget.onOpenWorldLibrary,
+                          icon: const Icon(Icons.travel_explore, size: 20),
                         ),
                         _diagnosticsToggle,
                       ],
@@ -2716,17 +2800,19 @@ final _movementKeys = {
   LogicalKeyboardKey.arrowRight,
 };
 
-Future<RuntimeWorldSelection> _loadDefaultWorldSelection() {
-  return loadDefaultRuntimeWorldSelection(
+Future<RuntimeWorldSelection> _loadDefaultWorldSelection() async {
+  final selection = await loadDefaultRuntimeWorldSelection(
     configuredFilePath: _configuredWorldPath,
     bundledAssetPath: _proofWorldAssetPath,
   );
+  return selection.copyWith(session: _configuredRuntimeSession());
 }
 
 Future<RuntimeWorldSelection?> _openDefaultWorldLibrary(BuildContext context) {
   return openDefaultRuntimeWorldLibrary(
     context,
     bundledAssetPath: _proofWorldAssetPath,
+    initialSession: _configuredRuntimeSession(),
   );
 }
 
@@ -2734,20 +2820,34 @@ Future<SaveStore> _loadDefaultSaveStore() async {
   return FileSaveStore(await getApplicationSupportDirectory());
 }
 
-Future<ReplicationClient?> _connectConfiguredMultiplayer(
-  ContentHandshake content,
-  PlayerId playerId,
-) async {
-  final host = switch (_configuredMultiplayerRole) {
-    'offline' => null,
-    'host' => InternetAddress.loopbackIPv4.address,
-    'client' when _configuredMultiplayerHost.isNotEmpty =>
-      _configuredMultiplayerHost,
-    'client' => throw StateError(
-      'AVARRA_MULTIPLAYER_HOST is required for client role.',
-    ),
+RuntimeSessionConfiguration _configuredRuntimeSession() {
+  final mode = switch (_configuredMultiplayerRole) {
+    'offline' => RuntimeSessionMode.solo,
+    'host' => RuntimeSessionMode.host,
+    'client' => RuntimeSessionMode.join,
     _ => throw StateError(
       'AVARRA_MULTIPLAYER_ROLE must be offline, host, or client.',
+    ),
+  };
+  return RuntimeSessionConfiguration(
+    mode: mode,
+    hostAddress: _configuredMultiplayerHost,
+    port: _configuredMultiplayerPort,
+  );
+}
+
+Future<ReplicationClient?> _connectRuntimeMultiplayer(
+  ContentHandshake content,
+  PlayerId playerId,
+  RuntimeSessionConfiguration session,
+) async {
+  final host = switch (session.mode) {
+    RuntimeSessionMode.solo => null,
+    RuntimeSessionMode.host => InternetAddress.loopbackIPv4.address,
+    RuntimeSessionMode.join when session.hostAddress.trim().isNotEmpty =>
+      session.hostAddress.trim(),
+    RuntimeSessionMode.join => throw StateError(
+      'A host address is required to join a game.',
     ),
   };
   if (host == null) {
@@ -2755,7 +2855,7 @@ Future<ReplicationClient?> _connectConfiguredMultiplayer(
   }
   final connection = await TcpNetworkTransportConnection.connect(
     host: host,
-    port: _configuredMultiplayerPort,
+    port: session.port,
   );
   return ReplicationClient.connectAndJoin(
     connection: connection,
@@ -2764,20 +2864,21 @@ Future<ReplicationClient?> _connectConfiguredMultiplayer(
   );
 }
 
-Future<MultiplayerProofHost?> _startConfiguredMultiplayerHost(
+Future<MultiplayerProofHost?> _startRuntimeMultiplayerHost(
   String worldPackageSource,
   PlayerId primaryPlayerId,
   SaveStore saveStore,
   SaveId saveId,
+  RuntimeSessionConfiguration session,
 ) {
-  if (_configuredMultiplayerRole != 'host') {
+  if (session.mode != RuntimeSessionMode.host) {
     return Future.value();
   }
   return MultiplayerProofHost.start(
     worldPackageSource: worldPackageSource,
     primaryPlayerId: primaryPlayerId,
     bindAddress: InternetAddress.anyIPv4,
-    port: _configuredMultiplayerPort,
+    port: session.port,
     saveStore: saveStore,
     saveId: saveId,
   );
