@@ -1,7 +1,7 @@
 {
   "architecture_version": "v8-reviewed",
-  "date": "2026-08-14",
-  "current_direction": "Stage 12.7 typed persistent Objective Switch and Objective Gate authoring plus the Forge game-maker guide are implemented. Complete live Windows creator/Test Play/lighting and physical-Android Game acceptance, then add Guardian, Collectible, and Turn-in presets with stable-reference pickers; no standalone custom engine requirement.",
+  "date": "2026-08-21",
+  "current_direction": "Stage 12.17 adds a bounded renderer-neutral combat timeline downstream of accepted offline results and authoritative replicated health decreases. Hit flash, world-anchored floating damage, lethal feedback, and a 1.1-second Death linger now make the real Champion fight readable without changing combat authority. Add one complete skill-impact/audio/loot-feedback slice, complete the continuous human Forge-button mission walkthrough, and validate animation plus combat overlays on physical Android before selecting permanent weighted-rig, material-effect, or animation schemas. Resolve an OD-019 cooking/container POC before arbitrary source-asset import; production Android signing/publishing remains explicit and unconfigured.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
@@ -17,7 +17,6 @@
   "stage_11_4_validation": "docs/AVARRA_STAGE_11_4_RELAY_CORE_VALIDATION.md",
   "stage_11_5_validation": "docs/AVARRA_STAGE_11_5_COOP_AUTHORITY_VALIDATION.md",
   "stage_11_6_validation": "docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md",
-  "stage_11_6_validation": "docs/AVARRA_STAGE_11_6_ASHFALL_GAMEPLAY_VALIDATION.md",
   "stage_12_1_validation": "docs/AVARRA_STAGE_12_1_DURABLE_HOST_VALIDATION.md",
   "stage_12_2_validation": "docs/AVARRA_STAGE_12_2_PRODUCT_ACCEPTANCE.md",
   "stage_12_3_validation": "docs/AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md",
@@ -25,7 +24,18 @@
   "stage_12_5_validation": "docs/AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md",
   "stage_12_6_validation": "docs/AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md",
   "stage_12_7_validation": "docs/AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md",
+  "stage_12_8_validation": "docs/AVARRA_STAGE_12_8_FORGE_MISSION_CHAIN_VALIDATION.md",
+  "stage_12_9_validation": "docs/AVARRA_STAGE_12_9_FORGE_MISSION_TEMPLATE_VALIDATION.md",
+  "stage_12_10_validation": "docs/AVARRA_STAGE_12_10_FORGE_MISSION_SETTINGS_VALIDATION.md",
+  "stage_12_11_validation": "docs/AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md",
+  "stage_12_12_validation": "docs/AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md",
+  "stage_12_13_validation": "docs/AVARRA_STAGE_12_13_LIVE_CHAMPION_TEST_PLAY_AND_HUD_POLISH_VALIDATION.md",
+  "stage_12_14_validation": "docs/AVARRA_STAGE_12_14_ACTION_RPG_TARGET_FRAME_VALIDATION.md",
+  "stage_12_15_validation": "docs/AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md",
+  "stage_12_16_validation": "docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md",
+  "stage_12_17_validation": "docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md",
   "forge_game_maker_guide": "docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md",
+  "android_ci_cd": "docs/AVARRA_ANDROID_CI_CD.md",
   "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
   "adrs": [
     "ADR-008-build-avarra-not-an-engine.md",
@@ -60,7 +70,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through Stage 12.7 Forge objective/gate authoring and the game-maker guide; live Forge creator/Test Play/lighting plus physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
+  "review_status": "Consistency-reviewed through Stage 12.17 root-only movement repair, live Windows pointer movement and combat, articulated glTF node animation, bounded authoritative-result feedback/death linger, contextual targeting, and the shared pinned Android CI packaging path; production signing/publication, explicit replicated combat-impact sequencing, permanent weighted-rig/material/animation schemas, one continuous visible Forge-button mission walkthrough, source-asset cooking/container design, and physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

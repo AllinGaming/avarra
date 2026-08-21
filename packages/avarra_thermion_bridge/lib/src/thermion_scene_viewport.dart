@@ -4,12 +4,13 @@ import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
 import 'package:avarra_scene_bridge/avarra_scene_bridge.dart';
-import 'package:flutter/foundation.dart' show setEquals;
+import 'package:flutter/foundation.dart' show mapEquals, setEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:thermion_flutter/thermion_flutter.dart' hide EntityId;
 
 import 'latest_async_value_queue.dart';
+import 'thermion_animation_request.dart';
 import 'thermion_asset_uri_resolver.dart';
 import 'thermion_scene_backend.dart';
 
@@ -29,8 +30,12 @@ final class AvarraThermionViewport extends StatefulWidget {
     this.selectedEntityId,
     this.enableTranslationGizmo = false,
     this.onTransformCommitted,
+    Map<EntityId, ThermionAnimationRequest> animationRequests = const {},
+    Map<EntityId, double> hitFlashIntensities = const {},
     super.key,
-  }) : occluderEntityIds = Set.unmodifiable(occluderEntityIds) {
+  }) : occluderEntityIds = Set.unmodifiable(occluderEntityIds),
+       animationRequests = Map.unmodifiable(animationRequests),
+       hitFlashIntensities = Map.unmodifiable(hitFlashIntensities) {
     if (!occludedOpacity.isFinite ||
         occludedOpacity < 0 ||
         occludedOpacity > 1) {
@@ -39,6 +44,15 @@ final class AvarraThermionViewport extends StatefulWidget {
         'occludedOpacity',
         'Must be from zero to one.',
       );
+    }
+    for (final entry in hitFlashIntensities.entries) {
+      if (!entry.value.isFinite || entry.value < 0 || entry.value > 1) {
+        throw ArgumentError.value(
+          entry.value,
+          'hitFlashIntensities[${entry.key.value}]',
+          'Must be from zero to one.',
+        );
+      }
     }
   }
 
@@ -54,6 +68,8 @@ final class AvarraThermionViewport extends StatefulWidget {
   final EntityId? selectedEntityId;
   final bool enableTranslationGizmo;
   final ValueChanged<PresentationTransform>? onTransformCommitted;
+  final Map<EntityId, ThermionAnimationRequest> animationRequests;
+  final Map<EntityId, double> hitFlashIntensities;
 
   @override
   State<AvarraThermionViewport> createState() {
@@ -86,6 +102,8 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   late final LatestAsyncValueQueue<_OcclusionUpdate> _occlusionQueue;
   Set<EntityId> _managedOccluderEntityIds = {};
   final Map<EntityId, double> _appliedOccluderOpacities = {};
+  Set<EntityId> _managedAnimationEntityIds = {};
+  Set<EntityId> _managedHitFlashEntityIds = {};
   Timer? _cameraDebounce;
   Object? _error;
   EntityId? _selectedEntityId;
@@ -113,7 +131,13 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
   @override
   void didUpdateWidget(AvarraThermionViewport oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.snapshot != widget.snapshot && _bridge != null) {
+    if ((oldWidget.snapshot != widget.snapshot ||
+            !mapEquals(oldWidget.animationRequests, widget.animationRequests) ||
+            !mapEquals(
+              oldWidget.hitFlashIntensities,
+              widget.hitFlashIntensities,
+            )) &&
+        _bridge != null) {
       unawaited(_queueSynchronization(widget.snapshot));
     }
     if (oldWidget.selectedEntityId != widget.selectedEntityId) {
@@ -188,6 +212,8 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
     }
     try {
       await bridge.synchronize(snapshot);
+      await _updateAnimations(widget.animationRequests);
+      await _updateHitFlashes(widget.hitFlashIntensities);
       final selectedId = _selectedEntityId;
       if (selectedId != null) {
         await _backend?.setEntitySelected(selectedId, true);
@@ -210,6 +236,36 @@ final class _AvarraThermionViewportState extends State<AvarraThermionViewport> {
         });
       }
     }
+  }
+
+  Future<void> _updateAnimations(
+    Map<EntityId, ThermionAnimationRequest> requests,
+  ) async {
+    final backend = _backend;
+    if (backend == null) {
+      return;
+    }
+    final entityIds = {..._managedAnimationEntityIds, ...requests.keys}.toList()
+      ..sort((left, right) => left.value.compareTo(right.value));
+    for (final entityId in entityIds) {
+      await backend.setEntityAnimation(entityId, requests[entityId]);
+    }
+    _managedAnimationEntityIds = Set.unmodifiable(requests.keys);
+  }
+
+  Future<void> _updateHitFlashes(Map<EntityId, double> intensities) async {
+    final backend = _backend;
+    if (backend == null) {
+      return;
+    }
+    final entityIds = {
+      ..._managedHitFlashEntityIds,
+      ...intensities.keys,
+    }.toList()..sort((left, right) => left.value.compareTo(right.value));
+    for (final entityId in entityIds) {
+      await backend.setEntityHitFlash(entityId, intensities[entityId] ?? 0);
+    }
+    _managedHitFlashEntityIds = Set.unmodifiable(intensities.keys);
   }
 
   Future<void> _queueCameraConfiguration() {

@@ -44,6 +44,14 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
   EntityId? _selectedEntityId;
   ForgePaletteItem? _activePaletteItem;
   AssetId? _selectedPaletteAssetId;
+  EntityId? _selectedGuardianReferenceId;
+  String? _selectedCollectibleItemId;
+  bool _guardianMissionTemplateActive = false;
+  ForgeGuardianMissionSettings _guardianMissionSettings =
+      const ForgeGuardianMissionSettings();
+  String? _guardianMissionProfileId = forgeDefaultGuardianMissionProfileId;
+  int _guardianMissionProfileRevision = 0;
+  ForgeGuardianMissionAssets? _guardianMissionAssets;
   ForgeBrushMode _brushMode = ForgeBrushMode.none;
   final LinkedHashSet<ForgeFloorCell> _brushCells = LinkedHashSet();
   ForgeFloorCell? _lastBrushCell;
@@ -63,12 +71,58 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
         .firstOrNull;
   }
 
+  EntityId? get _guardianReferenceId {
+    final guardians = forgeGuardianEntities(_world);
+    final selected = _selectedGuardianReferenceId;
+    if (selected != null && guardians.any((entity) => entity.id == selected)) {
+      return selected;
+    }
+    return guardians.firstOrNull?.id;
+  }
+
+  String? get _collectibleItemId {
+    final collectibles = forgeCollectibleEntities(_world);
+    final selected = _selectedCollectibleItemId;
+    if (selected != null &&
+        collectibles.any(
+          (entity) =>
+              entity.component<CollectibleItemDefinition>()!.itemId == selected,
+        )) {
+      return selected;
+    }
+    return collectibles.firstOrNull
+        ?.component<CollectibleItemDefinition>()
+        ?.itemId;
+  }
+
+  ForgePalettePlacementReferences get _paletteReferences =>
+      ForgePalettePlacementReferences(
+        guardianEntityId: _guardianReferenceId,
+        collectibleItemId: _collectibleItemId,
+      );
+
+  ForgeGuardianMissionAssets? get _effectiveGuardianMissionAssets {
+    final selected = _guardianMissionAssets;
+    if (selected != null && selected.validationIssue(_world) == null) {
+      return selected;
+    }
+    final fallbackAssetId = _selectedPaletteAssetId;
+    if (fallbackAssetId == null) return null;
+    return ForgeGuardianMissionAssets.uniform(fallbackAssetId);
+  }
+
   @override
   void initState() {
     super.initState();
     _session = CreatorWorldSession(initialWorld: widget.initialWorld);
     _selectedEntityId = _world.allEntities.firstOrNull?.id;
     _selectedPaletteAssetId = _world.assets.firstOrNull?.id;
+    final selectedAssetId = _selectedPaletteAssetId;
+    if (selectedAssetId != null) {
+      _guardianMissionAssets = ForgeGuardianMissionAssets.uniform(
+        selectedAssetId,
+      );
+    }
     _validation = _session.validate(requirePlayableEntry: true);
   }
 
@@ -82,11 +136,16 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     _validation = _session.validate(requirePlayableEntry: true);
   }
 
-  void _execute(CreatorCommand command, {EntityId? select}) {
+  void _execute(
+    CreatorCommand command, {
+    EntityId? select,
+    VoidCallback? afterApply,
+  }) {
     try {
       _session.execute(command);
       setState(() {
         _selectedEntityId = select ?? _selectedEntityId;
+        afterApply?.call();
         _refreshValidation();
         _status = '${command.description} · revision ${_session.revision}';
       });
@@ -99,6 +158,7 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
   void _selectPaletteItem(ForgePaletteItem? item) {
     setState(() {
       _activePaletteItem = item;
+      _guardianMissionTemplateActive = false;
       _brushMode = ForgeBrushMode.none;
       _brushCells.clear();
       _lastBrushCell = null;
@@ -111,6 +171,7 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
   void _activateSelectionTool() {
     setState(() {
       _activePaletteItem = null;
+      _guardianMissionTemplateActive = false;
       _brushMode = ForgeBrushMode.none;
       _brushCells.clear();
       _lastBrushCell = null;
@@ -126,9 +187,79 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     });
   }
 
+  void _selectGuardianReference(EntityId entityId) {
+    if (!forgeGuardianEntities(_world).any((entity) => entity.id == entityId)) {
+      return;
+    }
+    setState(() {
+      _selectedGuardianReferenceId = entityId;
+      _status = 'Guardian reference ${entityId.value} selected';
+    });
+  }
+
+  void _selectCollectibleReference(String itemId) {
+    if (!forgeCollectibleEntities(_world).any(
+      (entity) =>
+          entity.component<CollectibleItemDefinition>()!.itemId == itemId,
+    )) {
+      return;
+    }
+    setState(() {
+      _selectedCollectibleItemId = itemId;
+      _status = 'Collectible reference $itemId selected';
+    });
+  }
+
+  void _selectGuardianMissionTemplate() {
+    setState(() {
+      _activePaletteItem = null;
+      _guardianMissionTemplateActive = true;
+      _brushMode = ForgeBrushMode.none;
+      _brushCells.clear();
+      _lastBrushCell = null;
+      _status = 'Place combat mission - click the viewport';
+    });
+  }
+
+  void _updateGuardianMissionSettings(ForgeGuardianMissionSettings settings) {
+    setState(() {
+      _guardianMissionSettings = settings;
+      _guardianMissionProfileId = forgeGuardianMissionProfileIdForSettings(
+        settings,
+      );
+      _status =
+          settings.validationIssue ??
+          'Combat mission template settings updated';
+    });
+  }
+
+  void _selectGuardianMissionProfile(String profileId) {
+    final profile = forgeGuardianMissionProfileById(profileId);
+    if (profile == null) return;
+    setState(() {
+      _guardianMissionSettings = profile.applyTo(_guardianMissionSettings);
+      _guardianMissionProfileId = profile.id;
+      _guardianMissionProfileRevision += 1;
+      _status = '${profile.label} combat mission profile selected';
+    });
+  }
+
+  void _updateGuardianMissionAssets(ForgeGuardianMissionAssets assets) {
+    final issue = assets.validationIssue(_world);
+    if (issue != null) {
+      setState(() => _status = issue);
+      return;
+    }
+    setState(() {
+      _guardianMissionAssets = assets;
+      _status = 'Combat mission role assets updated';
+    });
+  }
+
   void _selectBrushMode(ForgeBrushMode mode) {
     setState(() {
       _activePaletteItem = null;
+      _guardianMissionTemplateActive = false;
       _brushMode = mode;
       _brushCells.clear();
       _lastBrushCell = null;
@@ -152,22 +283,88 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
       setState(() => _status = 'Placement requires a palette item and asset');
       return;
     }
+    final references = _paletteReferences;
+    final placementIssue = paletteItem.placementIssue(_world, references);
+    if (placementIssue != null) {
+      setState(() => _status = placementIssue);
+      return;
+    }
     final id = EntityId.generate();
+    final entity = paletteItem.createEntity(
+      entityId: id,
+      assetId: assetId,
+      groundPosition: groundPosition,
+      references: references,
+    );
     _execute(
       CreatorCommandBatch(
         description: 'Place ${paletteItem.label}',
-        commands: [
-          CreateEntityCommand(
-            entity: paletteItem.createEntity(
-              entityId: id,
-              assetId: assetId,
-              groundPosition: groundPosition,
-            ),
-          ),
-        ],
+        commands: [CreateEntityCommand(entity: entity)],
       ),
       select: id,
+      afterApply: () {
+        if (paletteItem.kind == ForgePaletteItemKind.guardian) {
+          _selectedGuardianReferenceId = id;
+        }
+        if (paletteItem.kind == ForgePaletteItemKind.collectibleItem) {
+          _selectedCollectibleItemId = entity
+              .component<CollectibleItemDefinition>()!
+              .itemId;
+        }
+      },
     );
+  }
+
+  void _placeGuardianMissionTemplateAt(ContentVector3 groundPosition) {
+    final missionAssets = _effectiveGuardianMissionAssets;
+    if (missionAssets == null) {
+      setState(
+        () => _status = 'Mission placement requires declared role assets',
+      );
+      return;
+    }
+    final placementIssue = forgeGuardianMissionTemplateIssue(
+      _world,
+      settings: _guardianMissionSettings,
+      assets: missionAssets,
+    );
+    if (placementIssue != null) {
+      setState(() => _status = placementIssue);
+      return;
+    }
+    final mission = createForgeGuardianMissionTemplate(
+      guardianEntityId: EntityId.generate(),
+      collectibleEntityId: EntityId.generate(),
+      completionConsoleEntityId: EntityId.generate(),
+      assets: missionAssets,
+      groundPosition: groundPosition,
+      settings: _guardianMissionSettings,
+    );
+    final collectibleItemId = mission.collectible
+        .component<CollectibleItemDefinition>()!
+        .itemId;
+    _execute(
+      CreatorCommandBatch(
+        description: 'Place combat mission',
+        commands: [
+          for (final entity in mission.entities)
+            CreateEntityCommand(entity: entity),
+        ],
+      ),
+      select: mission.guardian.id,
+      afterApply: () {
+        _selectedGuardianReferenceId = mission.guardian.id;
+        _selectedCollectibleItemId = collectibleItemId;
+      },
+    );
+  }
+
+  void _placeActiveToolAt(ContentVector3 groundPosition) {
+    if (_guardianMissionTemplateActive) {
+      _placeGuardianMissionTemplateAt(groundPosition);
+      return;
+    }
+    _placePaletteItemAt(groundPosition);
   }
 
   void _startBrushStroke(ContentVector3 groundPosition) {
@@ -440,6 +637,13 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
     _projectPath = path;
     _activePaletteItem = null;
     _selectedPaletteAssetId = world.assets.firstOrNull?.id;
+    final selectedAssetId = _selectedPaletteAssetId;
+    _guardianMissionAssets = selectedAssetId == null
+        ? null
+        : ForgeGuardianMissionAssets.uniform(selectedAssetId);
+    _selectedGuardianReferenceId = null;
+    _selectedCollectibleItemId = null;
+    _guardianMissionTemplateActive = false;
     _brushMode = ForgeBrushMode.none;
     _brushCells.clear();
     _lastBrushCell = null;
@@ -759,12 +963,34 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
                         height: 380,
                         child: ObjectPalettePanel(
                           items: forgeObjectPalette,
+                          world: _world,
                           assets: _world.assets,
                           selectedItem: _activePaletteItem,
                           selectedAssetId: _selectedPaletteAssetId,
+                          selectedGuardianEntityId: _guardianReferenceId,
+                          selectedCollectibleItemId: _collectibleItemId,
+                          guardianMissionTemplateActive:
+                              _guardianMissionTemplateActive,
+                          guardianMissionSettings: _guardianMissionSettings,
+                          guardianMissionProfileId: _guardianMissionProfileId,
+                          guardianMissionProfileRevision:
+                              _guardianMissionProfileRevision,
+                          guardianMissionAssets:
+                              _effectiveGuardianMissionAssets,
                           brushMode: _brushMode,
                           onSelected: _selectPaletteItem,
                           onAssetSelected: _selectPaletteAsset,
+                          onGuardianReferenceSelected: _selectGuardianReference,
+                          onCollectibleReferenceSelected:
+                              _selectCollectibleReference,
+                          onGuardianMissionTemplateSelected:
+                              _selectGuardianMissionTemplate,
+                          onGuardianMissionSettingsChanged:
+                              _updateGuardianMissionSettings,
+                          onGuardianMissionProfileSelected:
+                              _selectGuardianMissionProfile,
+                          onGuardianMissionAssetsChanged:
+                              _updateGuardianMissionAssets,
                           onBrushModeSelected: _selectBrushMode,
                           onSelectionTool: _activateSelectionTool,
                         ),
@@ -790,9 +1016,13 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
                     selectedEntityId: _selectedEntityId,
                     onSelected: (id) => setState(() => _selectedEntityId = id),
                     onTransformCommitted: _commitViewportTransform,
-                    placementMode: _activePaletteItem != null,
-                    placementLabel: _activePaletteItem?.label,
-                    onGroundTapped: _placePaletteItemAt,
+                    placementMode:
+                        _activePaletteItem != null ||
+                        _guardianMissionTemplateActive,
+                    placementLabel: _guardianMissionTemplateActive
+                        ? 'Combat mission'
+                        : _activePaletteItem?.label,
+                    onGroundTapped: _placeActiveToolAt,
                     brushMode: _brushMode != ForgeBrushMode.none,
                     brushLabel: switch (_brushMode) {
                       ForgeBrushMode.paintFloor => 'Painting floor',

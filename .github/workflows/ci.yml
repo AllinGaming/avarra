@@ -3,12 +3,14 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   quality-and-builds:
+    name: Quality and Windows builds
     runs-on: windows-latest
     timeout-minutes: 45
 
@@ -108,6 +110,10 @@ jobs:
         shell: powershell
         run: ./tool/test_stage_10_1b_pipeline.ps1
 
+      - name: Test profiled multi-asset Forge mission pipeline
+        shell: powershell
+        run: ./tool/test_stage_12_12_pipeline.ps1
+
       - name: Prepare build output
         shell: powershell
         run: New-Item -ItemType Directory -Force build | Out-Null
@@ -119,10 +125,6 @@ jobs:
         working-directory: apps/avarra_game
         run: flutter build windows
 
-      - name: Build Game for Android
-        working-directory: apps/avarra_game
-        run: flutter build apk --debug
-
       - name: Build Forge for Windows
         working-directory: apps/avarra_forge
         run: flutter build windows
@@ -133,3 +135,30 @@ jobs:
 
       - name: Verify consolidated handoff is current
         run: git diff --exit-code -- AVARRA_MASTER_LLM_HANDOFF_v8.md
+
+  android-build:
+    name: Android debug APK
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      - name: Build and verify Game Android CI APK
+        shell: powershell
+        run: ./tool/build_android_ci.ps1

@@ -1,5 +1,6 @@
 import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_isometric/avarra_isometric.dart';
 import 'package:avarra_thermion_bridge/avarra_thermion_bridge.dart';
 import 'package:avarra_thermion_bridge/src/thermion_entity_index.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,32 @@ void main() {
           ThermionErrorCodes.assetUriNotFound,
         ),
       ),
+    );
+  });
+
+  test('animation requests compare by clip playback policy', () {
+    const idle = ThermionAnimationRequest(clipName: 'Idle');
+    const sameIdle = ThermionAnimationRequest(clipName: 'Idle');
+    const oneShotIdle = ThermionAnimationRequest(clipName: 'Idle', loop: false);
+
+    expect(idle, sameIdle);
+    expect(idle.hashCode, sameIdle.hashCode);
+    expect(idle, isNot(oneShotIdle));
+  });
+
+  test('viewport rejects out-of-range hit flash intensity', () {
+    final entityId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000001',
+    );
+
+    expect(
+      () => AvarraThermionViewport(
+        snapshot: PresentationSnapshot.empty,
+        assetUriResolver: MapThermionAssetUriResolver(const {}),
+        cameraRig: IsometricCameraRig(),
+        hitFlashIntensities: {entityId: 1.01},
+      ),
+      throwsArgumentError,
     );
   });
 

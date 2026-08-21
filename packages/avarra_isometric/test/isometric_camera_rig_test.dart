@@ -73,6 +73,39 @@ void main() {
       expect(point.z, closeTo(-3, 1e-9));
     });
 
+    test('projects world points back into orthographic screen space', () {
+      final rig = IsometricCameraRig(target: Vector3(2, 0, -3));
+      final center = rig.screenPointForWorld(
+        worldPoint: Vector3(2, 0, -3),
+        viewportWidth: 1280,
+        viewportHeight: 720,
+      );
+      final ground = rig.groundPointForScreen(
+        x: 320,
+        y: 500,
+        viewportWidth: 1280,
+        viewportHeight: 720,
+      )!;
+      final projectedGround = rig.screenPointForWorld(
+        worldPoint: ground,
+        viewportWidth: 1280,
+        viewportHeight: 720,
+      );
+
+      expect(center.x, closeTo(640, 1e-9));
+      expect(center.y, closeTo(360, 1e-9));
+      expect(projectedGround.x, closeTo(320, 1e-9));
+      expect(projectedGround.y, closeTo(500, 1e-9));
+      expect(
+        () => rig.screenPointForWorld(
+          worldPoint: Vector3(double.nan, 0, 0),
+          viewportWidth: 1280,
+          viewportHeight: 720,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('screen rays are orthographic and reject invalid viewports', () {
       final rig = IsometricCameraRig();
       final left = rig.screenPointToRay(

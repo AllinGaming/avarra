@@ -141,14 +141,24 @@ final class DeterministicPhysicsCollisionWorld
     final halfExtents = collider.halfExtents + expansion;
     final minimum = collider.center - halfExtents;
     final maximum = collider.center + halfExtents;
+    final isSweep = expansion.length2 > _minimumQueryLength;
+    var startsStrictlyInside = isSweep;
     var enter = 0.0;
     var exit = maxDistance;
     var enterNormal = Vector3.zero();
 
     for (var axis = 0; axis < 3; axis += 1) {
+      if (origin[axis] <= minimum[axis] + _minimumQueryLength ||
+          origin[axis] >= maximum[axis] - _minimumQueryLength) {
+        startsStrictlyInside = false;
+      }
       final axisDirection = direction[axis];
       if (axisDirection.abs() <= _minimumQueryLength) {
-        if (origin[axis] < minimum[axis] || origin[axis] > maximum[axis]) {
+        final outside = isSweep
+            ? origin[axis] <= minimum[axis] + _minimumQueryLength ||
+                  origin[axis] >= maximum[axis] - _minimumQueryLength
+            : origin[axis] < minimum[axis] || origin[axis] > maximum[axis];
+        if (outside) {
           return null;
         }
         continue;
@@ -173,6 +183,12 @@ final class DeterministicPhysicsCollisionWorld
       }
     }
 
+    // A character authored inside a static volume must be able to leave it.
+    // Treating that initial overlap as a zero-distance hit permanently traps
+    // the kinematic controller because there is no depenetration solver.
+    if (startsStrictlyInside) {
+      return null;
+    }
     if (exit < 0 || enter > maxDistance) {
       return null;
     }

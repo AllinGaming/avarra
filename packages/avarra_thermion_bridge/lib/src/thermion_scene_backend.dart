@@ -3,6 +3,7 @@ import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_scene_bridge/avarra_scene_bridge.dart';
 import 'package:thermion_flutter/thermion_flutter.dart' hide EntityId;
 
+import 'thermion_animation_request.dart';
 import 'thermion_asset_uri_resolver.dart';
 import 'thermion_entity_index.dart';
 
@@ -13,16 +14,22 @@ final class ThermionSceneObject {
     required this.assetId,
     required this.asset,
     required this.thermionEntities,
+    required this.animationNames,
     this.opacity = 1,
     this.selected = false,
+    this.hitFlash = 0,
   });
 
   final EntityId entityId;
   AssetId assetId;
   ThermionAsset<dynamic> asset;
   Set<ThermionEntity> thermionEntities;
+  Set<String> animationNames;
+  bool animationComponentAttached = false;
+  ThermionAnimationRequest? activeAnimation;
   double opacity;
   bool selected;
+  double hitFlash;
 }
 
 /// Adapts renderer-neutral AVARRA presentation entities to Thermion assets.
@@ -48,6 +55,47 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
 
   ThermionSceneObject? objectForEntity(EntityId entityId) {
     return _objectsByEntityId[entityId];
+  }
+
+  /// Starts or replaces a renderer-local glTF clip for one stable entity.
+  ///
+  /// Returns false when the entity or requested clip is unavailable, allowing
+  /// creator-selected custom models without animation data to remain playable.
+  Future<bool> setEntityAnimation(
+    EntityId entityId,
+    ThermionAnimationRequest? request,
+  ) async {
+    final object = _objectsByEntityId[entityId];
+    if (object == null) {
+      return false;
+    }
+    final active = object.activeAnimation;
+    if (request == null) {
+      if (active != null) {
+        await object.asset.stopGltfAnimationByName(active.clipName);
+        object.activeAnimation = null;
+      }
+      return true;
+    }
+    if (!object.animationNames.contains(request.clipName)) {
+      return false;
+    }
+    if (active == request) {
+      return true;
+    }
+    if (!object.animationComponentAttached) {
+      await object.asset.addAnimationComponent();
+      object.animationComponentAttached = true;
+    }
+    await object.asset.playGltfAnimationByName(
+      request.clipName,
+      loop: request.loop,
+      replaceActive: true,
+      crossfade: request.crossfadeSeconds,
+      speed: request.speed,
+    );
+    object.activeAnimation = request;
+    return true;
   }
 
   /// Applies cosmetic transparency to an asset authored for alpha blending.
@@ -78,6 +126,22 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     await _applyMaterialState(object, selected: selected);
   }
 
+  /// Applies a short renderer-local hit flash without changing simulation.
+  Future<void> setEntityHitFlash(EntityId entityId, double intensity) async {
+    if (!intensity.isFinite || intensity < 0 || intensity > 1) {
+      throw ArgumentError.value(
+        intensity,
+        'intensity',
+        'Must be from zero to one.',
+      );
+    }
+    final object = _objectsByEntityId[entityId];
+    if (object == null || object.hitFlash == intensity) {
+      return;
+    }
+    await _applyMaterialState(object, hitFlash: intensity);
+  }
+
   @override
   Future<ThermionSceneObject> create(PresentationEntity entity) async {
     final object = await _load(entity);
@@ -105,6 +169,7 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     final replacement = await _load(entity);
     final opacity = handle.opacity;
     final selected = handle.selected;
+    final hitFlash = handle.hitFlash;
     try {
       await _viewer.destroyAsset(handle.asset);
     } on Object {
@@ -116,11 +181,20 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
       ..assetId = entity.renderAssetId
       ..asset = replacement.asset
       ..thermionEntities = replacement.thermionEntities
+      ..animationNames = replacement.animationNames
+      ..animationComponentAttached = false
+      ..activeAnimation = null
       ..opacity = 1
-      ..selected = false;
+      ..selected = false
+      ..hitFlash = 0;
     _register(handle);
-    if (opacity != 1 || selected) {
-      await _applyMaterialState(handle, opacity: opacity, selected: selected);
+    if (opacity != 1 || selected || hitFlash != 0) {
+      await _applyMaterialState(
+        handle,
+        opacity: opacity,
+        selected: selected,
+        hitFlash: hitFlash,
+      );
     }
   }
 
@@ -143,11 +217,15 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
         asset.entity,
         ...await asset.getChildEntities(),
       };
+      final animationNames = Set.unmodifiable(
+        await asset.getGltfAnimationNames(),
+      );
       return ThermionSceneObject(
         entityId: entity.entityId,
         assetId: entity.renderAssetId,
         asset: asset,
         thermionEntities: thermionEntities,
+        animationNames: animationNames,
       );
     } on Object {
       await _viewer.destroyAsset(asset);
@@ -196,12 +274,17 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     ThermionSceneObject object, {
     double? opacity,
     bool? selected,
+    double? hitFlash,
   }) async {
     final nextOpacity = opacity ?? object.opacity;
     final nextSelected = selected ?? object.selected;
-    final red = nextSelected ? 0.44 : 1.0;
-    final green = nextSelected ? 0.72 : 1.0;
-    final blue = nextSelected ? 0.65 : 1.0;
+    final nextHitFlash = hitFlash ?? object.hitFlash;
+    final baseRed = nextSelected ? 0.44 : 1.0;
+    final baseGreen = nextSelected ? 0.72 : 1.0;
+    final baseBlue = nextSelected ? 0.65 : 1.0;
+    final red = baseRed + ((1 - baseRed) * nextHitFlash);
+    final green = baseGreen * (1 - 0.72 * nextHitFlash);
+    final blue = baseBlue * (1 - 0.82 * nextHitFlash);
     final materialInstances = await object.asset.getMaterialInstancesAsMap();
     for (final instances in materialInstances.values) {
       for (final instance in instances) {
@@ -216,7 +299,8 @@ final class ThermionSceneBackend implements SceneBackend<ThermionSceneObject> {
     }
     object
       ..opacity = nextOpacity
-      ..selected = nextSelected;
+      ..selected = nextSelected
+      ..hitFlash = nextHitFlash;
   }
 }
 

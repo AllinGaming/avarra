@@ -55,7 +55,8 @@ world, Game, and authoritative server logic.
 - `flutter analyze` passes in `apps/avarra_forge`.
 - All three focused palette tests pass, including typed component-bundle checks
   for the new objective and gate presets.
-- A new widget workflow scrolls to Gameplay Rules, places both presets through
+- All six Forge widget workflows pass. The new workflow scrolls to Gameplay
+  Rules, places both presets through
   the viewport, validates, exports, decodes the canonical package, and confirms
   matching group/count values.
 - The Windows x64 Forge release builds with the real Thermion viewport.

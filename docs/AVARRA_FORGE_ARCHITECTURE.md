@@ -1,6 +1,7 @@
 # AVARRA — Forge Architecture
 
-**Implementation status:** Stage 10.2 editor-completion gate implemented 2026-08-13
+**Implementation status:** Stage 12.12 built-in Gothic catalog and profiled
+runtime handoff implemented 2026-08-21
 
 ---
 
@@ -104,6 +105,54 @@ vector, quaternion, stable-reference, and boolean-map fields. The same metadata
 also declares labels/help/order, defaults, bounds, reference domains, component
 dependencies, and dependency field requirements. Typed decode is the mutation
 hook, so a field update cannot bypass component semantics.
+
+Stage 12.8 makes stable runtime relationships creator-facing without adding an
+editor-only graph model. The palette carries explicit selected Guardian and
+collectible references between dependent placements, and availability checks
+prevent incomplete preset creation. Stable entity fields render as entity
+dropdowns; `CollectibleItem.guardedByEntityId` is filtered to authored
+Guardians. `ItemTurnIn.requiredItemId` renders from authored collectible
+item IDs. The stored values remain canonical stable IDs, never runtime ECS
+handles, and Inspector changes still use `SetComponentFieldCommand`.
+
+Stage 12.9 composes those existing preset factories through one
+AVARRA-specific `ForgeGuardianMissionTemplate`. It generates all three
+entities and stable links before the command session sees them, then applies
+the creates as one `CreatorCommandBatch`. This is a convenience authoring
+operation, not a new runtime schema, generic prefab abstraction, or editor-only
+mission identity.
+
+Stage 12.10 feeds that same factory a typed immutable
+`ForgeGuardianMissionSettings` value. Health, damage, spacing, item label, and
+completion label are validated before entity construction and become ordinary
+runtime component values inside the existing atomic command batch. The
+settings object is authoring input only: it is not serialized as a new world
+component, prefab identity, or parallel mission model.
+
+Stage 12.11 adds bounded `ForgeGuardianMissionProfile` values for Initiate,
+Sentinel, and Champion tuning plus a typed `ForgeGuardianMissionAssets`
+selection. Profiles only apply health, damage, and spacing and preserve
+creator-authored labels. Each role AssetId must already be declared by the
+world, then becomes its ordinary `RenderableReferenceDefinition`. Profiles
+and selections remain Forge input to the same factory and atomic command batch;
+they introduce no serialized prefab metadata or runtime mission identity.
+
+Stage 12.12 packages Game's existing Gothic kit in Forge and declares the same
+paths and stable AssetIds in the starter world. The two Flutter applications
+retain separate asset bundles; a Forge test compares their built-in files and
+every external glTF dependency byte-for-byte. The profiled export proof uses
+the same typed mission factory and `CreatorWorldSession`, while Game resolves
+the declarations against its own bundle during import and restart load. This
+is an explicitly bounded built-in catalog, not source-asset cooking, archive
+embedding, or a resolution of OD-019.
+
+Stage 12.16 keeps those separate bundles byte-identical while adding generated
+animation buffers and named articulated-node clips to Ashen Vanguard and Hollow
+Warden. The Forge starter floor expands from 8 x 8 to 16 x 16, and the profiled
+Champion helper centers its -6/+6 endpoints around the origin so neither the
+completion console nor Guardian invalidates the player spawn or playable area.
+These are starter/template corrections, not a new world component or generic
+navigation system.
 
 ---
 
@@ -311,8 +360,18 @@ The required delivery order is:
     paint/erase strokes;
 11. **Complete:** add temporary-export Game test play;
 12. **Complete:** add first-class persistent objective switches and count-based
-    gates through existing runtime schemas; and
-13. only after the human creator loop works, add Stage 10A transactions,
+    gates through existing runtime schemas;
+13. **Complete:** add Guardian, guarded collectible, and item turn-in presets
+    with stable-reference selectors;
+14. **Complete:** compose that chain as one repeatable atomic Combat mission
+    placement template;
+15. **Complete:** parameterize the common Combat mission balance, layout, and
+    labels through the same typed atomic factory; and
+16. **Complete:** add bounded named encounter profiles and independent declared
+    assets for the Guardian, loot, and completion-console roles;
+17. **Complete:** package and integrity-check the shared built-in Gothic catalog
+    and prove a real profiled mission through Game import/restart; and
+18. only after the human creator loop works, add Stage 10A transactions,
     permissions, semantic diff, and agent adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
@@ -322,6 +381,11 @@ and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
 `AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
 `AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`AVARRA_STAGE_12_8_FORGE_MISSION_CHAIN_VALIDATION.md`,
+`AVARRA_STAGE_12_9_FORGE_MISSION_TEMPLATE_VALIDATION.md`,
+`AVARRA_STAGE_12_10_FORGE_MISSION_SETTINGS_VALIDATION.md`,
+`AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md`,
+`AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
 ADR-026, and
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

@@ -232,6 +232,37 @@ final class IsometricCameraRig {
     return ray.pointAt(distanceToGround);
   }
 
+  /// Projects a world point into this orthographic viewport.
+  ///
+  /// The result is renderer neutral and may sit outside the viewport when the
+  /// point is off-screen. This is useful for world-anchored Flutter overlays.
+  Vector2 screenPointForWorld({
+    required Vector3 worldPoint,
+    required double viewportWidth,
+    required double viewportHeight,
+  }) {
+    _requireFinitePositive(viewportWidth, 'viewportWidth');
+    _requireFinitePositive(viewportHeight, 'viewportHeight');
+    if (!worldPoint.storage.every((value) => value.isFinite)) {
+      throw ArgumentError.value(worldPoint, 'worldPoint', 'Must be finite.');
+    }
+
+    final position = cameraPosition;
+    final forward = _normalized(_target - position);
+    final right = _normalized(forward.cross(Vector3(0, 1, 0)));
+    final up = _normalized(right.cross(forward));
+    final offset = worldPoint - _target;
+    final aspect = viewportWidth / viewportHeight;
+    final halfHeight = verticalSpan / 2;
+    final halfWidth = halfHeight * aspect;
+    final normalizedX = offset.dot(right) / halfWidth;
+    final normalizedY = offset.dot(up) / halfHeight;
+    return Vector2(
+      (normalizedX + 1) * viewportWidth / 2,
+      (1 - normalizedY) * viewportHeight / 2,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     return other is IsometricCameraRig &&

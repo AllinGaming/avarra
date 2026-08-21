@@ -1,0 +1,37 @@
+{
+  "asset": {"version": "2.0", "generator": "AVARRA Gothic Kit"},
+  "buffers": [{"byteLength": 1800, "uri": "../cube/Cube.bin"}],
+  "bufferViews": [
+    {"buffer": 0, "byteLength": 72, "byteOffset": 0, "target": 34963}, {"buffer": 0, "byteLength": 432, "byteOffset": 72, "target": 34962},
+    {"buffer": 0, "byteLength": 432, "byteOffset": 504, "target": 34962}, {"buffer": 0, "byteLength": 576, "byteOffset": 936, "target": 34962},
+    {"buffer": 0, "byteLength": 288, "byteOffset": 1512, "target": 34962}
+  ],
+  "accessors": [
+    {"bufferView": 0, "componentType": 5123, "count": 36, "max": [35], "min": [0], "type": "SCALAR"},
+    {"bufferView": 1, "componentType": 5126, "count": 36, "max": [1, 1, 1.000001], "min": [-1, -1, -1], "type": "VEC3"},
+    {"bufferView": 2, "componentType": 5126, "count": 36, "max": [1, 1, 1], "min": [-1, -1, -1], "type": "VEC3"},
+    {"bufferView": 3, "componentType": 5126, "count": 36, "max": [1, 0, 0, 1], "min": [0, 0, -1, -1], "type": "VEC4"},
+    {"bufferView": 4, "componentType": 5126, "count": 36, "max": [1, 1], "min": [-1, -1], "type": "VEC2"}
+  ],
+  "images": [{"uri": "materials/basalt_flagstone.png"}, {"uri": "materials/ember_bronze.png"}],
+  "samplers": [{"magFilter": 9729, "minFilter": 9987, "wrapS": 10497, "wrapT": 10497}],
+  "textures": [{"sampler": 0, "source": 0}, {"sampler": 0, "source": 1}],
+  "materials": [
+    {"pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0, "roughnessFactor": 0.9}},
+    {"pbrMetallicRoughness": {"baseColorTexture": {"index": 1}, "metallicFactor": 0.8, "roughnessFactor": 0.35}, "emissiveTexture": {"index": 1}, "emissiveFactor": [0.12, 0.025, 0.003]}
+  ],
+  "meshes": [
+    {"primitives": [{"attributes": {"POSITION": 1, "NORMAL": 2, "TANGENT": 3, "TEXCOORD_0": 4}, "indices": 0, "material": 0}]},
+    {"primitives": [{"attributes": {"POSITION": 1, "NORMAL": 2, "TANGENT": 3, "TEXCOORD_0": 4}, "indices": 0, "material": 1}]}
+  ],
+  "nodes": [
+    {"mesh": 0, "name": "Left pillar", "translation": [0, 0, -0.78], "scale": [0.45, 1.15, 0.22]},
+    {"mesh": 0, "name": "Right pillar", "translation": [0, 0, 0.78], "scale": [0.45, 1.15, 0.22]},
+    {"mesh": 0, "name": "Lintel", "translation": [0, 1, 0], "scale": [0.48, 0.16, 0.8]},
+    {"mesh": 1, "name": "Bar one", "translation": [0, 0, -0.4], "scale": [0.12, 0.92, 0.07]},
+    {"mesh": 1, "name": "Bar two", "translation": [0, 0, 0], "scale": [0.12, 0.92, 0.07]},
+    {"mesh": 1, "name": "Bar three", "translation": [0, 0, 0.4], "scale": [0.12, 0.92, 0.07]}
+  ],
+  "scenes": [{"nodes": [0, 1, 2, 3, 4, 5]}],
+  "scene": 0
+}

@@ -36,9 +36,19 @@ launches the real Game application with a disposable export.
 - select entities in the viewport or hierarchy;
 - translate entities and edit schema-backed component fields;
 - choose a renderable asset already declared by the world;
+- use the built-in Ashen Vanguard, Hollow Warden, Basalt, Relay Shrine, Core
+  Gate, Ember Shard, and construction-cube catalog in new projects;
 - place floor tiles, visual props, solid obstacles, and persistent consoles;
 - paint or erase multi-cell floor strokes as one undoable command;
 - author persistent objective switches and count-based objective gates;
+- author a Guardian, its guarded collectible, and a matching completion
+  turn-in with stable-reference pickers;
+- stamp that complete combat mission from one viewport click and undo it as
+  one creator action;
+- configure Guardian balance, mission spacing, and player-facing loot/turn-in
+  labels before stamping;
+- start from an Initiate, Sentinel, or Champion encounter profile and select
+  separate declared assets for the Guardian, loot, and completion console;
 - undo and redo typed creator commands;
 - aggregate validation issues before export;
 - Test Play the exact current unsaved world in an isolated Game process; and
@@ -106,6 +116,61 @@ New objective presets use the `primary` group and require one completion by
 default. These are starting values, not hard-coded runtime rules. Inspector
 edits are typed, validated, undoable creator commands.
 
+## Make a combat, loot, and turn-in mission
+
+This walkthrough builds a complete runtime-supported mission chain without
+scripts or direct JSON editing.
+
+### Fast path: stamp a complete mission
+
+1. Under **MISSION TEMPLATES**, select **Combat mission**.
+2. In **Template settings**, choose **Initiate**, **Sentinel**, or **Champion**
+   as a starting profile, or edit health/damage/spacing for Custom tuning.
+3. Set the collectible item label and completion label.
+4. Choose declared assets independently for the Guardian, loot, and completion
+   console. The built-in Gothic example uses Hollow Warden, Ember Shard, and
+   Relay Shrine.
+5. Click the viewport where the center of the encounter should be.
+6. Forge creates the Guardian and locked loot the chosen distance forward and
+   the completion console the same distance back.
+7. The new Guardian and Loot references become active automatically.
+8. Move or tune the three entities with the normal viewport and Inspector.
+9. One Undo removes the entire stamp; Redo restores the same stable links.
+10. Leave the tool active and click again to create another independent chain
+   with the current settings.
+
+The template is a fast composition of the same runtime components described
+below. Use the individual presets when you want to position each dependency
+separately.
+
+### Manual path: place each dependency
+
+1. Make a walkable floor area and place any props or obstacles you want.
+2. Scroll to **GAMEPLAY RULES** and select **Guardian**.
+3. Click the viewport to place the enemy. Forge automatically selects it as
+   the active **Guardian ref**.
+4. Select **Guardian loot** and click near the Guardian. The collectible stores
+   that Guardian's stable entity ID and stays locked until the Guardian dies.
+5. Forge automatically selects the new item as **Loot ref**.
+6. Select **Completion console** and place it near the player entry or another
+   return point. The console requires the selected collectible item ID.
+7. If the map has several enemies or items, use **Guardian ref** and **Loot
+   ref** before placing each dependent object.
+8. Select an authored object and use the Inspector to tune health, attack,
+   behavior, labels, interaction range, flags, or references. Reference fields
+   use dropdowns instead of requiring copied IDs.
+9. Select **Validate**, then **Test Play**.
+10. Defeat the Guardian, collect its revealed loot, and interact with the
+    completion console. Game owns combat, inventory, turn-in, and persistence.
+11. Return to Forge, Save the editable project, and Export the playable world.
+
+The default starter player includes Health and Basic Attack components. A
+Guardian preset is unavailable in imported projects whose player lacks either
+component. Guardian loot is unavailable until a Guardian exists, and a
+completion console is unavailable until a collectible exists. These
+availability checks prevent half-configured placement while shared validation
+still verifies the exported world.
+
 ## Share, play, host, and join
 
 In Avarra Game:
@@ -131,24 +196,38 @@ performance acceptance are still open.
   persistent flag.
 - An objective gate needs renderable solid static geometry.
 - A gate cannot require more objectives than its matching group defines.
+- A Guardian mission requires a combat-capable player.
+- A guarded collectible references an authored Guardian by stable entity ID.
+- An item turn-in references an authored collectible by stable item ID.
 - Renderable references must use assets declared by the world.
 - World definitions and runtime save state stay separate.
 
 Forge reports these as structured validation issues and blocks Export and Test
 Play while the world is invalid.
 
+Game's compact HUD identifies the loaded authored world. Forge Test Play worlds
+therefore retain their creator-facing name instead of being labeled as the
+bundled Relay Zero adventure.
+
 ## Current limitations
 
-- The catalog selects assets already declared by the world. Forge does not yet
-  import, cook, thumbnail, or package arbitrary user source assets.
+- New projects include a bounded built-in Gothic catalog, and imported projects
+  expose their own declarations. Forge does not yet import, cook, thumbnail, or
+  package arbitrary user source assets.
 - Prototype `.avarra` files reference assets supplied by Game; they are not
   yet self-contained cooked archives.
 - Floors are object tiles, not sculpted terrain or blended landscape materials.
 - Objective switches and gates use the existing authored adventure model.
   Trigger volumes and arbitrary scripting are not implemented because the
   permanent scripting model is still an open technical decision.
-- Quest graphs, dialogue, loot tables, encounter waves, spawn configuration,
-  lobby rules, and server presets still need creator-facing tools.
+- Quest graphs, dialogue, weighted loot tables, encounter waves, spawn
+  configuration, lobby rules, and server presets still need creator-facing
+  tools. The current combat mission chain is one Guardian, one guaranteed
+  collectible, and one item turn-in.
+- The Combat mission template supports separate role assets, but only from the
+  world's existing declarations. Settings persist for the Forge session, but
+  user-authored reusable prefabs and saved template libraries remain future
+  work.
 - Test Play starts one isolated solo Game process. Forge does not yet manage
   multiple previews or automate multiplayer preview clients.
 - Physical Android touch, direct-LAN, battery, thermal, and sustained

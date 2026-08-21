@@ -64,9 +64,45 @@ Forge Test Play starts Game with the internal process argument
 exact package first, forces a solo session, and uses a fresh in-memory save
 store. Ordinary players should use the Worlds & multiplayer browser; the
 process argument exists only to keep Forge previews disposable and isolated.
+Stage 12.13 visually validates this path with the real Windows release and the
+Forge Champion Gothic fixture. The compact gameplay HUD now identifies the
+loaded authored world rather than assuming Relay Zero, and interaction failures
+use player-facing guidance rather than internal rejection names. See
+`docs/AVARRA_STAGE_12_13_LIVE_CHAMPION_TEST_PLAY_AND_HUD_POLISH_VALIDATION.md`.
+
+Stage 12.14 makes the existing contextual click-to-act loop read like an
+action RPG. A responsive top-center frame keeps the selected hostile's health
+and pursuit/automatic-attack state visible, while interactables receive a
+distinct no-health treatment. Pressing Attack outside range now queues pursuit
+without first showing a contradictory range rejection. See
+`docs/AVARRA_STAGE_12_14_ACTION_RPG_TARGET_FRAME_VALIDATION.md`.
+
+Stage 12.15 addresses the static feel of the current zero-animation Gothic
+models with a bounded presentation-only motion pass. Characters breathe while
+idle and stride/sway from existing movement or AI state, collectibles hover and
+rotate, interactables pulse, ash drifts across the scene, and target-health
+changes ease smoothly. Canonical ECS transforms remain unchanged and at most 12
+visible entities receive procedural motion. See
+`docs/AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`.
+
+Stage 12.16 makes Forge root-only worlds movable and adds real named
+Idle/Run/Attack/Hit/Death glTF node clips behind presentation-only Thermion
+requests. Stage 12.17 consumes accepted offline combat results and confirmed
+replicated health decreases through a 24-event renderer-neutral timeline.
+Hits now flash, float damage at the struck world position, and retain defeated
+Hollow Wardens for a 1.1-second Death clip before collision-safe removal. See
+`docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
+`docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`.
 
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
+GitHub Actions now gives Android native compilation a dedicated Windows job
+with pinned Java/SDK/NDK/CMake versions instead of sharing the combined
+quality/Windows-build timeout. CI and developers use the same
+`tool/build_android_ci.ps1` entry point to validate those pins, build, and
+checksum a debug APK. It does not publish the package. Production signing and
+artifact delivery are separate, explicit release concerns; see
+`docs/AVARRA_ANDROID_CI_CD.md`.
 The Stage 7 emulator gate also passed disk-backed player/chunk restoration after
 a force-stop and fresh process launch.
 The Stage 8 gate passed with a compiled Windows host and Android emulator client

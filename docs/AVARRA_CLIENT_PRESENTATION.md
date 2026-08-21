@@ -299,3 +299,29 @@ shadows, applies cast/receive flags only to renderable glTF children, and shares
 an angled key/fill profile between Game and Forge; live Windows/Android quality
 and cost remain the open shadow gate. See ADR-016, ADR-017, and
 `AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`.
+
+Stage 12.16 adds a bounded animation proof at this same adapter boundary.
+`ThermionAnimationRequest` carries a named clip plus loop, crossfade, and speed
+policy. `ThermionSceneBackend` queries glTF clip names, attaches animation
+components lazily, and keeps missing custom-model clips non-fatal. Game maps
+player/Guardian state to Idle, Run, Attack, Hit, or Death requests after
+presentation extraction; simulation and persisted transforms never contain
+renderer clip names.
+
+The packaged Gothic proof uses an articulated rigid-node hierarchy rather than
+a weighted skin. It validates real glTF playback and state changes, not a
+permanent character asset/schema decision.
+
+Stage 12.17 adds `CombatPresentationTimeline` in renderer-neutral
+`avarra_client`. Game records accepted offline combat results or confirmed
+replicated health decreases into a 24-event cap. One immutable sampled frame
+drives attack/hit/death animation selection, a bounded Thermion material flash,
+and pointer-transparent world-anchored damage text. Dead entities leave
+gameplay collision immediately but remain visible for the 1.1-second Death
+window. The reverse orthographic `screenPointForWorld` projection remains in
+`avarra_isometric` rather than the renderer adapter.
+
+Physical Android cost, production skinning/material effects, and an explicit
+replicated impact-event message remain open. See
+`AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
+`AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`.

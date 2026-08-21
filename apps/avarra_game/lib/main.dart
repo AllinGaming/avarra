@@ -26,6 +26,10 @@ import 'src/action_targeting.dart';
 import 'src/authored_world_movement_bounds.dart';
 import 'src/fixed_step_frame_clock.dart';
 import 'src/game_launch_configuration.dart';
+import 'src/gameplay_atmosphere_overlay.dart';
+import 'src/gameplay_combat_feedback_overlay.dart';
+import 'src/gameplay_motion.dart';
+import 'src/gameplay_target_frame.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
 import 'src/world_library_ui.dart';
@@ -90,6 +94,23 @@ void main(List<String> arguments) {
       launchConfiguration: GameLaunchConfiguration.parse(arguments),
     ),
   );
+}
+
+String gameplayHudTitle(String worldName) {
+  final product = avarraProductName.toUpperCase();
+  final normalizedWorldName = worldName.trim();
+  return normalizedWorldName.isEmpty
+      ? product
+      : '$product · ${normalizedWorldName.toUpperCase()}';
+}
+
+String interactionRejectionStatus(InteractionRejection rejection) {
+  return switch (rejection) {
+    InteractionRejection.actorMissing => 'Player interaction is unavailable',
+    InteractionRejection.targetMissing => 'That object is no longer available',
+    InteractionRejection.outOfRange => 'Move closer to interact',
+    InteractionRejection.blocked => 'Interaction path is blocked',
+  };
 }
 
 class AvarraGameApp extends StatelessWidget {
@@ -465,6 +486,10 @@ class _PresentationBoundaryScreenState
     extends State<_PresentationBoundaryScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late PresentationSnapshot _presentation;
+  Map<EntityId, GameplayMotionKind> _presentationMotionKinds = const {};
+  final ValueNotifier<Duration> _presentationMotionTime = ValueNotifier(
+    Duration.zero,
+  );
   late final ThermionAssetUriResolver _assetUriResolver;
   late DeterministicPhysicsCollisionWorld _collisionWorld;
   late CharacterMovementSystem _movementSystem;
@@ -516,6 +541,8 @@ class _PresentationBoundaryScreenState
   bool _worldEdgeMovementBlocked = false;
   bool _preparedForWorldReplacement = false;
   Duration _simulationTime = Duration.zero;
+  final CombatPresentationTimeline _combatPresentationTimeline =
+      CombatPresentationTimeline();
   WorldChunkCoordinate? _lastRequestedPlayerChunk;
   String _interactionStatus = 'Select a world object, then interact';
 
@@ -538,7 +565,9 @@ class _PresentationBoundaryScreenState
     if (multiplayerClient != null) {
       _applyReplicatedEntities(multiplayerClient);
     }
-    _movementBounds = AuthoredWorldMovementBounds(widget.streaming.index);
+    _movementBounds = AuthoredWorldMovementBounds.fromWorld(
+      widget.runtimeWorld.definition,
+    );
     _playerSpawnTransform = _authoredPlayerSpawn(authoredPlayerEntityId);
     _presentation = _extractPresentation();
     if (multiplayerClient != null) {
@@ -617,6 +646,7 @@ class _PresentationBoundaryScreenState
   void dispose() {
     _acceptReplicationEvents = false;
     _gameLoopTicker.dispose();
+    _presentationMotionTime.dispose();
     _saveTimer?.cancel();
     _hostMetricsTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_recordFrameTimings);
@@ -765,27 +795,71 @@ class _PresentationBoundaryScreenState
         child: Stack(
           fit: StackFit.expand,
           children: [
-            AvarraThermionViewport(
-              snapshot: _presentation,
-              assetUriResolver: _assetUriResolver,
-              cameraRig: _cameraRig,
-              occlusionTargetEntityId: _playerEntityId,
-              occludedOpacity: 0.12,
-              occluderEntityIds: {
-                ...widget.runtimeWorld.isometricOccluderEntityIds,
-                ...widget.streaming.activeOccluderEntityIds,
+            ValueListenableBuilder<Duration>(
+              valueListenable: _presentationMotionTime,
+              builder: (context, elapsed, _) {
+                final combatFrame = _combatPresentationFrame;
+                final animatedSnapshot = applyGameplayMotion(
+                  snapshot: _presentation,
+                  motionKinds: _presentationMotionKinds,
+                  elapsed: elapsed,
+                  priorityEntityIds: {_playerEntityId, ?_selectedEntityId},
+                  activeCharacterEntityIds:
+                      _activePresentationCharacterEntityIds,
+                );
+                final hitFlashIntensities = <EntityId, double>{
+                  for (final entity in animatedSnapshot.entities)
+                    if (combatFrame.hitFlashFor(entity.entityId)
+                        case final value when value > 0)
+                      entity.entityId: value,
+                };
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AvarraThermionViewport(
+                      snapshot: animatedSnapshot,
+                      assetUriResolver: _assetUriResolver,
+                      cameraRig: _cameraRig,
+                      occlusionTargetEntityId: _playerEntityId,
+                      occludedOpacity: 0.12,
+                      occluderEntityIds: {
+                        ...widget.runtimeWorld.isometricOccluderEntityIds,
+                        ...widget.streaming.activeOccluderEntityIds,
+                      },
+                      selectedEntityId: _selectedEntityId,
+                      animationRequests: _presentationAnimationRequests,
+                      hitFlashIntensities: hitFlashIntensities,
+                      onReady: _handleRendererReady,
+                      onPick: _handlePick,
+                      onZoom: (factor) =>
+                          _dispatchIntent(ZoomCameraIntent(factor)),
+                    ),
+                    GameplayCombatFeedbackOverlay(
+                      frame: combatFrame,
+                      snapshot: animatedSnapshot,
+                      cameraRig: _cameraRig,
+                      playerEntityId: _playerEntityId,
+                    ),
+                  ],
+                );
               },
-              selectedEntityId: _selectedEntityId,
-              onReady: _handleRendererReady,
-              onPick: _handlePick,
-              onZoom: (factor) => _dispatchIntent(ZoomCameraIntent(factor)),
             ),
+            GameplayAtmosphereOverlay(compact: compactLayout),
             SafeArea(
               child: Align(
                 alignment: Alignment.topLeft,
                 child: _gameplayHud(
                   diagnostics: status,
                   compactLayout: compactLayout,
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(top: compactLayout ? 150 : 12),
+                  child: _gameplayTargetFrame(compactLayout),
                 ),
               ),
             ),
@@ -860,10 +934,15 @@ class _PresentationBoundaryScreenState
                   children: [
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'AVARRA · RELAY ZERO',
-                            style: TextStyle(fontWeight: FontWeight.w700),
+                            gameplayHudTitle(
+                              widget.runtimeWorld.definition.name,
+                            ),
+                            key: const Key('compact_world_name'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                         IconButton(
@@ -929,6 +1008,54 @@ class _PresentationBoundaryScreenState
                 ),
         ),
       ),
+    );
+  }
+
+  Widget _gameplayTargetFrame(bool compactLayout) {
+    final selectedEntityId = _selectedEntityId;
+    if (selectedEntityId == null ||
+        _excludedGameplayEntityIds.contains(selectedEntityId)) {
+      return const SizedBox.shrink();
+    }
+    if (_isLivingCombatant(selectedEntityId)) {
+      final health = _healthFor(selectedEntityId)!;
+      final targetTransform = _transformFor(selectedEntityId);
+      final attack = _playerBasicAttack;
+      var actionHint = 'Selected · Attack or press Space';
+      if (_attackMoveTargetId == selectedEntityId &&
+          targetTransform != null &&
+          attack != null) {
+        final approach = decideActionApproach(
+          actorPosition: _playerPosition,
+          targetPosition: targetTransform.position,
+          actionRange: attack.range,
+        );
+        actionHint = approach.kind == ActionApproachKind.ready
+            ? 'Attacking automatically · click ground to disengage'
+            : 'Pursuing · attacks automatically in range';
+      }
+      return GameplayTargetFrame(
+        kind: GameplayTargetFrameKind.hostile,
+        label: 'Guardian',
+        actionHint: actionHint,
+        currentHealth: health.currentHealth,
+        maximumHealth: health.maximumHealth,
+        compact: compactLayout,
+      );
+    }
+    final interactable = _interactableFor(selectedEntityId);
+    if (interactable == null) {
+      return const SizedBox.shrink();
+    }
+    var actionHint = 'Selected · choose Interact';
+    if (_interactionMoveTargetId == selectedEntityId) {
+      actionHint = 'Approaching · uses automatically in range';
+    }
+    return GameplayTargetFrame(
+      kind: GameplayTargetFrameKind.interactable,
+      label: interactable.label,
+      actionHint: actionHint,
+      compact: compactLayout,
     );
   }
 
@@ -1368,6 +1495,10 @@ class _PresentationBoundaryScreenState
     for (var index = 0; index < steps; index += 1) {
       _tickMovement();
     }
+    if (_hasExpiredDefeatPresentation) {
+      setState(() => _presentation = _extractPresentation());
+    }
+    _presentationMotionTime.value = elapsed;
   }
 
   Vector3 get _playerPosition {
@@ -1440,6 +1571,32 @@ class _PresentationBoundaryScreenState
     ..._lockedCollectibleEntityIds,
   };
 
+  CombatPresentationFrame get _combatPresentationFrame =>
+      _combatPresentationTimeline.frameAt(_simulationTime);
+
+  Set<EntityId> get _excludedPresentationEntityIds {
+    final combatFrame = _combatPresentationFrame;
+    return {
+      ..._openObjectiveGateEntityIds,
+      ..._collectedItemEntityIds,
+      ..._lockedCollectibleEntityIds,
+      for (final entityId in _deadEntityIds)
+        if (!combatFrame.hasDefeatFor(entityId)) entityId,
+    };
+  }
+
+  bool get _hasExpiredDefeatPresentation {
+    final visibleEntityIds = {
+      for (final entity in _presentation.entities) entity.entityId,
+    };
+    final combatFrame = _combatPresentationFrame;
+    return _deadEntityIds.any(
+      (entityId) =>
+          visibleEntityIds.contains(entityId) &&
+          !combatFrame.hasDefeatFor(entityId),
+    );
+  }
+
   bool get _hasLockedObjectiveGate => widget.runtimeWorld.definition.allEntities
       .map((entity) => entity.component<ObjectiveGateDefinition>())
       .whereType<ObjectiveGateDefinition>()
@@ -1486,6 +1643,100 @@ class _PresentationBoundaryScreenState
       _authoredCombatantEntityIds.contains(entityId) &&
       !(_healthFor(entityId)?.isDead ?? true);
 
+  Set<EntityId> get _activePresentationCharacterEntityIds => {
+    if (!_isPlayerDead &&
+        !_combatPresentationFrame.hasAttackFor(_playerEntityId) &&
+        (_directMovementDirection.length2 > 1e-9 ||
+            _groundTarget != null ||
+            _attackMoveTargetId != null ||
+            _interactionMoveTargetId != null))
+      _playerEntityId,
+    for (final guardian
+        in widget.runtimeWorld.ecs.query<GuardianBehaviorStateComponent>())
+      if (guardian.component.phase == GuardianBehaviorPhase.pursuing ||
+          guardian.component.phase == GuardianBehaviorPhase.returning)
+        if (!_combatPresentationFrame.hasHitReactionFor(guardian.entityId))
+          guardian.entityId,
+  };
+
+  Map<EntityId, ThermionAnimationRequest> get _presentationAnimationRequests {
+    final combatFrame = _combatPresentationFrame;
+    final visibleEntityIds = {
+      for (final entity in _presentation.entities) entity.entityId,
+    };
+    final requests = <EntityId, ThermionAnimationRequest>{};
+    if (visibleEntityIds.contains(_playerEntityId) && !_isPlayerDead) {
+      requests[_playerEntityId] = combatFrame.hasAttackFor(_playerEntityId)
+          ? const ThermionAnimationRequest(
+              clipName: 'Attack',
+              loop: false,
+              crossfadeSeconds: 0.08,
+            )
+          : _activePresentationCharacterEntityIds.contains(_playerEntityId)
+          ? const ThermionAnimationRequest(
+              clipName: 'Run',
+              crossfadeSeconds: 0.1,
+            )
+          : const ThermionAnimationRequest(clipName: 'Idle');
+    }
+    for (final guardian
+        in widget.runtimeWorld.ecs.query<GuardianBehaviorStateComponent>()) {
+      if (!visibleEntityIds.contains(guardian.entityId)) {
+        continue;
+      }
+      requests[guardian.entityId] =
+          (_healthFor(guardian.entityId)?.isDead ?? false)
+          ? const ThermionAnimationRequest(
+              clipName: 'Death',
+              loop: false,
+              crossfadeSeconds: 0.05,
+            )
+          : combatFrame.hasHitReactionFor(guardian.entityId)
+          ? const ThermionAnimationRequest(
+              clipName: 'Hit',
+              loop: false,
+              crossfadeSeconds: 0.05,
+            )
+          : switch (guardian.component.phase) {
+              GuardianBehaviorPhase.pursuing ||
+              GuardianBehaviorPhase.returning => const ThermionAnimationRequest(
+                clipName: 'Run',
+                crossfadeSeconds: 0.1,
+              ),
+              GuardianBehaviorPhase.attacking => const ThermionAnimationRequest(
+                clipName: 'Attack',
+                crossfadeSeconds: 0.08,
+              ),
+              GuardianBehaviorPhase.defeated => throw StateError(
+                'Defeat animation is selected before the phase switch.',
+              ),
+              GuardianBehaviorPhase.idle => const ThermionAnimationRequest(
+                clipName: 'Idle',
+              ),
+            };
+    }
+    return Map.unmodifiable(requests);
+  }
+
+  void _recordPlayerAttackAnimation(EntityId targetId) {
+    _combatPresentationTimeline.recordAttackStarted(
+      attackerEntityId: _playerEntityId,
+      targetEntityId: targetId,
+      occurredAt: _simulationTime,
+    );
+  }
+
+  void _recordAcceptedCombatResult(CombatAttackResult result) {
+    if (!result.accepted || result.damageDealt <= 0) return;
+    _combatPresentationTimeline.recordAcceptedAttack(
+      attackerEntityId: result.attackerId,
+      targetEntityId: result.targetId,
+      damage: result.damageDealt,
+      defeated: result.targetKilled,
+      occurredAt: _simulationTime,
+    );
+  }
+
   TransformComponent? _transformFor(EntityId entityId) {
     final handle = widget.runtimeWorld.ecs.handleFor(entityId);
     return handle == null
@@ -1513,15 +1764,42 @@ class _PresentationBoundaryScreenState
   }
 
   PresentationSnapshot _extractPresentation() {
-    final excludedEntityIds = _excludedGameplayEntityIds;
+    final excludedEntityIds = _excludedPresentationEntityIds;
     final extracted = const PresentationExtractor().extract(
       widget.runtimeWorld.ecs,
     );
-    return PresentationSnapshot(
+    final snapshot = PresentationSnapshot(
       extracted.entities.where(
         (entity) => !excludedEntityIds.contains(entity.entityId),
       ),
     );
+    final motionKinds = <EntityId, GameplayMotionKind>{};
+    for (final entity in snapshot.entities) {
+      final kind = _gameplayMotionKindFor(entity.entityId);
+      if (kind != null) motionKinds[entity.entityId] = kind;
+    }
+    _presentationMotionKinds = Map.unmodifiable(motionKinds);
+    return snapshot;
+  }
+
+  GameplayMotionKind? _gameplayMotionKindFor(EntityId entityId) {
+    final handle = widget.runtimeWorld.ecs.handleFor(entityId);
+    if (handle == null) return null;
+    if (entityId == _playerEntityId ||
+        widget.runtimeWorld.ecs.hasComponent<GuardianBehaviorStateComponent>(
+          handle,
+        )) {
+      return GameplayMotionKind.character;
+    }
+    if (widget.runtimeWorld.ecs.hasComponent<CollectibleItemComponent>(
+      handle,
+    )) {
+      return GameplayMotionKind.collectible;
+    }
+    if (widget.runtimeWorld.ecs.hasComponent<InteractableComponent>(handle)) {
+      return GameplayMotionKind.interactable;
+    }
+    return null;
   }
 
   String _formatHealth(double value) {
@@ -1550,18 +1828,37 @@ class _PresentationBoundaryScreenState
     _attackMoveTargetId = targetId;
     _interactionMoveTargetId = null;
     _groundTarget = null;
+    if (_isPlayerDead) {
+      return;
+    }
+
+    final targetTransform = _transformFor(targetId);
+    final attack = _playerBasicAttack;
+    if (targetTransform != null && attack != null) {
+      final approach = decideActionApproach(
+        actorPosition: _playerPosition,
+        targetPosition: targetTransform.position,
+        actionRange: attack.range,
+      );
+      if (approach.kind == ActionApproachKind.approach) {
+        setState(() {
+          _interactionStatus =
+              'Pursuing Guardian · attacks automatically in range';
+        });
+        return;
+      }
+    }
+
     if (widget.multiplayerClient != null) {
       final submission = widget.multiplayerClient!.submitGameplayCommand(
         kind: GameplayCommandKind.attack,
         targetEntityId: targetId,
       );
       _watchGameplayCommand(submission.sent);
+      _recordPlayerAttackAnimation(targetId);
       setState(() {
         _interactionStatus = 'Attack submitted · target remains engaged';
       });
-      return;
-    }
-    if (_isPlayerDead) {
       return;
     }
 
@@ -1572,6 +1869,7 @@ class _PresentationBoundaryScreenState
     );
     final status = _combatAttackStatus(result);
     if (result.accepted) {
+      _recordAcceptedCombatResult(result);
       _selectedEntityId = targetId;
       if (result.targetKilled) {
         _selectedEntityId = null;
@@ -1630,7 +1928,7 @@ class _PresentationBoundaryScreenState
     );
     _interactionStatus = result.accepted
         ? 'Interacted: ${result.label}'
-        : 'Cannot interact: ${result.rejection!.name}';
+        : interactionRejectionStatus(result.rejection!);
     if (!result.accepted) {
       return;
     }
@@ -1692,6 +1990,7 @@ class _PresentationBoundaryScreenState
     _groundTarget = null;
     _clearActionTargets();
     _nextNetworkAutoAttackAt = Duration.zero;
+    _combatPresentationTimeline.clear();
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
       final submission = multiplayerClient.submitGameplayCommand(
@@ -1902,6 +2201,7 @@ class _PresentationBoundaryScreenState
             );
             _watchGameplayCommand(submission.sent);
             _nextNetworkAutoAttackAt = _simulationTime + attack.cooldown;
+            _recordPlayerAttackAnimation(targetId);
             setState(() {
               _interactionStatus = 'Striking Hollow Warden';
             });
@@ -2006,6 +2306,7 @@ class _PresentationBoundaryScreenState
                 simulationTime: _simulationTime,
               );
               if (playerAttack.accepted) {
+                _recordAcceptedCombatResult(playerAttack);
                 if (playerAttack.targetKilled) {
                   _attackMoveTargetId = null;
                   _selectedEntityId = null;
@@ -2060,11 +2361,22 @@ class _PresentationBoundaryScreenState
             deltaSeconds: _fixedDeltaSeconds,
           );
     final guardianChanged = guardianResults.any((entry) => entry.changed);
+    final acceptedGuardianAttacks = [
+      for (final guardian in guardianResults)
+        if (guardian.attack case final attack? when attack.accepted) attack,
+    ];
+    for (final attack in acceptedGuardianAttacks) {
+      _recordAcceptedCombatResult(attack);
+    }
+    if (acceptedGuardianAttacks.any((attack) => attack.targetKilled)) {
+      _rebuildGameplayQueries();
+    }
     if (result == null &&
         !guardianChanged &&
         playerAttack == null &&
         readyInteractionTargetId == null &&
-        !actionStateChanged) {
+        !actionStateChanged &&
+        acceptedGuardianAttacks.isEmpty) {
       return;
     }
     setState(() {
@@ -2249,7 +2561,7 @@ class _PresentationBoundaryScreenState
     setState(() {
       _applyReplicatedEntities(client);
       if (event is ReplicationGameplayStateApplied) {
-        _applyAuthoritativeGameplayState(client);
+        _applyAuthoritativeGameplayState(client, emitCombatFeedback: true);
         _rebuildGameplayQueries();
       }
       if (event case ReplicationGameplayCommandResult(:final result)) {
@@ -2318,11 +2630,28 @@ class _PresentationBoundaryScreenState
     _presentation = _extractPresentation();
   }
 
-  void _applyAuthoritativeGameplayState(ReplicationClient client) {
+  void _applyAuthoritativeGameplayState(
+    ReplicationClient client, {
+    bool emitCombatFeedback = false,
+  }) {
     for (final state in client.healthStates.values) {
       final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
       if (handle == null) {
         continue;
+      }
+      final previous = widget.runtimeWorld.ecs.tryComponent<HealthComponent>(
+        handle,
+      );
+      if (emitCombatFeedback &&
+          previous != null &&
+          state.current < previous.currentHealth) {
+        _combatPresentationTimeline.recordDamage(
+          sourceEntityId: null,
+          targetEntityId: state.entityId,
+          damage: previous.currentHealth - state.current,
+          defeated: state.current <= 0 && !previous.isDead,
+          occurredAt: _simulationTime,
+        );
       }
       final health = HealthComponent(
         maximumHealth: state.maximum,
@@ -2547,6 +2876,9 @@ class _PresentationBoundaryScreenState
   }
 
   void _scheduleStreamingRefresh() {
+    if (widget.streaming.index.length == 0) {
+      return;
+    }
     _streamingDirty = true;
     if (_streamingInFlight) {
       return;
@@ -2556,6 +2888,9 @@ class _PresentationBoundaryScreenState
   }
 
   void _scheduleStreamingRefreshIfChunkChanged() {
+    if (widget.streaming.index.length == 0) {
+      return;
+    }
     final coordinate = _currentChunkCoordinate;
     if (coordinate == _lastRequestedPlayerChunk) {
       return;
@@ -2652,7 +2987,7 @@ class _PresentationBoundaryScreenState
             }
           });
         }
-        if (unavailable.isNotEmpty) {
+        if (widget.streaming.index.length > 0 && unavailable.isNotEmpty) {
           setState(() {
             _interactionStatus = 'Reached the authored world edge';
           });

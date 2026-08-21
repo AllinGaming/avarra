@@ -75,6 +75,56 @@ void main() {
     );
   });
 
+  test(
+    'horizontal character sweeps do not collide with the supporting floor',
+    () {
+      final ecs = EcsWorld();
+      final floor = ecs.createEntity();
+      ecs
+        ..addComponent(
+          floor,
+          TransformComponent(position: Vector3(0, -0.25, 0)),
+        )
+        ..addComponent(
+          floor,
+          PhysicsColliderComponent.box(
+            halfExtents: Vector3(8, 0.25, 8),
+            bodyKind: PhysicsBodyKind.staticBody,
+          ),
+        );
+
+      final hit = DeterministicPhysicsCollisionWorld.fromEcs(ecs).sweepBox(
+        origin: Vector3(0, 0.5, 0),
+        halfExtents: Vector3(0.35, 0.5, 0.35),
+        displacement: Vector3(1, 0, 0),
+      );
+
+      expect(hit, isNull);
+    },
+  );
+
+  test('character sweeps can escape an authored initial overlap', () {
+    final ecs = EcsWorld();
+    final blocker = ecs.createEntity();
+    ecs
+      ..addComponent(blocker, TransformComponent(position: Vector3.zero()))
+      ..addComponent(
+        blocker,
+        PhysicsColliderComponent.box(
+          halfExtents: Vector3.all(0.5),
+          bodyKind: PhysicsBodyKind.staticBody,
+        ),
+      );
+
+    final hit = DeterministicPhysicsCollisionWorld.fromEcs(ecs).sweepBox(
+      origin: Vector3.zero(),
+      halfExtents: Vector3.all(0.25),
+      displacement: Vector3(1, 0, 0),
+    );
+
+    expect(hit, isNull);
+  });
+
   test('supports lifecycle and per-query collider exclusions', () {
     final ecs = EcsWorld();
     final firstId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000023');

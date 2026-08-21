@@ -5,6 +5,24 @@ import 'package:avarra_world/avarra_world.dart';
 final forgeSampleAssetId = AssetId.parse(
   '01890f47-e8b8-7a68-8000-000000000502',
 );
+final forgeAshenVanguardAssetId = AssetId.parse(
+  '01890f47-e8b8-7a68-9000-000000000002',
+);
+final forgeHollowWardenAssetId = AssetId.parse(
+  '01890f47-e8b8-7a68-9000-000000000003',
+);
+final forgeBasaltAssetId = AssetId.parse(
+  '01890f47-e8b8-7a68-9000-000000000004',
+);
+final forgeRelayShrineAssetId = AssetId.parse(
+  '01890f47-e8b8-7a68-9000-000000000005',
+);
+final forgeCoreGateAssetId = AssetId.parse(
+  '01890f47-e8b8-7a68-9000-000000000006',
+);
+final forgeEmberShardAssetId = AssetId.parse(
+  '01890f47-e8b8-7a68-9000-000000000007',
+);
 
 WorldDefinition createForgeSampleWorld() {
   return _createForgeWorld(
@@ -42,6 +60,30 @@ WorldDefinition _createForgeWorld({
         id: forgeSampleAssetId,
         path: 'assets/models/cube/Cube.gltf',
       ),
+      WorldAssetDefinition(
+        id: forgeAshenVanguardAssetId,
+        path: 'assets/models/gothic/AshenVanguard.gltf',
+      ),
+      WorldAssetDefinition(
+        id: forgeHollowWardenAssetId,
+        path: 'assets/models/gothic/HollowWarden.gltf',
+      ),
+      WorldAssetDefinition(
+        id: forgeBasaltAssetId,
+        path: 'assets/models/gothic/Basalt.gltf',
+      ),
+      WorldAssetDefinition(
+        id: forgeRelayShrineAssetId,
+        path: 'assets/models/gothic/RelayShrine.gltf',
+      ),
+      WorldAssetDefinition(
+        id: forgeCoreGateAssetId,
+        path: 'assets/models/gothic/CoreGate.gltf',
+      ),
+      WorldAssetDefinition(
+        id: forgeEmberShardAssetId,
+        path: 'assets/models/gothic/EmberShard.gltf',
+      ),
     ],
     entities: [
       WorldEntityDefinition(
@@ -52,7 +94,7 @@ WorldDefinition _createForgeWorld({
             rotation: ContentQuaternion(0, 0, 0, 1),
             scale: ContentVector3(0.8, 1, 0.8),
           ),
-          RenderableReferenceDefinition(assetId: forgeSampleAssetId),
+          RenderableReferenceDefinition(assetId: forgeAshenVanguardAssetId),
           const PhysicsColliderDefinition(
             halfExtents: ContentVector3(0.35, 0.5, 0.35),
             bodyKind: ContentPhysicsBodyKind.character,
@@ -65,6 +107,12 @@ WorldDefinition _createForgeWorld({
           ),
           const PlayerControlledDefinition(),
           const IsometricOcclusionTargetDefinition(),
+          const HealthDefinition(maximumHealth: 100),
+          const BasicAttackDefinition(
+            damage: 12,
+            range: 2,
+            cooldownSeconds: 0.65,
+          ),
         ],
       ),
       WorldEntityDefinition(
@@ -73,11 +121,11 @@ WorldDefinition _createForgeWorld({
           const TransformDefinition(
             position: ContentVector3(0, -0.25, 0),
             rotation: ContentQuaternion(0, 0, 0, 1),
-            scale: ContentVector3(8, 0.5, 8),
+            scale: ContentVector3(16, 0.5, 16),
           ),
-          RenderableReferenceDefinition(assetId: forgeSampleAssetId),
+          RenderableReferenceDefinition(assetId: forgeBasaltAssetId),
           const PhysicsColliderDefinition(
-            halfExtents: ContentVector3(4, 0.25, 4),
+            halfExtents: ContentVector3(8, 0.25, 8),
             bodyKind: ContentPhysicsBodyKind.staticBody,
             isSensor: false,
           ),
@@ -91,7 +139,7 @@ WorldDefinition _createForgeWorld({
             rotation: ContentQuaternion(0, 0, 0, 1),
             scale: ContentVector3(0.8, 1, 0.8),
           ),
-          RenderableReferenceDefinition(assetId: forgeSampleAssetId),
+          RenderableReferenceDefinition(assetId: forgeRelayShrineAssetId),
           const PhysicsColliderDefinition(
             halfExtents: ContentVector3(0.4, 0.5, 0.4),
             bodyKind: ContentPhysicsBodyKind.staticBody,

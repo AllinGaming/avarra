@@ -1,19 +1,46 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_game/main.dart';
 import 'package:avarra_game/src/host_device_metrics.dart';
 import 'package:avarra_game/src/runtime_world_library.dart';
 import 'package:avarra_game/src/world_library_ui.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
+import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('compact HUD title uses the authored current world name', () {
+    expect(gameplayHudTitle('Tiny Forge World'), 'AVARRA · TINY FORGE WORLD');
+    expect(gameplayHudTitle('  '), 'AVARRA');
+  });
+
+  test('interaction rejections use player-facing guidance', () {
+    expect(
+      interactionRejectionStatus(InteractionRejection.actorMissing),
+      'Player interaction is unavailable',
+    );
+    expect(
+      interactionRejectionStatus(InteractionRejection.targetMissing),
+      'That object is no longer available',
+    );
+    expect(
+      interactionRejectionStatus(InteractionRejection.outOfRange),
+      'Move closer to interact',
+    );
+    expect(
+      interactionRejectionStatus(InteractionRejection.blocked),
+      'Interaction path is blocked',
+    );
+  });
+
   testWidgets('loads the bundled world into the Game shell', (tester) async {
     final bundledSource = await tester.runAsync(
       () => File('assets/worlds/isometric_proof.avarra').readAsString(),
@@ -68,6 +95,24 @@ void main() {
     expect(find.byKey(const Key('authored_objective_status')), findsOneWidget);
     expect(find.text('Inventory · Empty'), findsOneWidget);
     expect(find.byKey(const Key('inventory_status')), findsOneWidget);
+  });
+
+  testWidgets('root-only Forge world does not report a streamed edge', (
+    tester,
+  ) async {
+    final source = WorldPackageCodec().encodeCanonical(_rootOnlyForgeWorld());
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => source,
+      ),
+    );
+    await _pumpUntilSaveReady(tester);
+    await tester.pump(const Duration(milliseconds: 550));
+    await tester.pump();
+
+    expect(find.text('Reached the authored world edge'), findsNothing);
   });
 
   testWidgets('restores a persistent entity overlay during chunk activation', (
@@ -613,6 +658,67 @@ final class _FakeHostDeviceMetricsSampler implements HostDeviceMetricsSampler {
       platformBytesReceived: 4096,
     );
   }
+}
+
+WorldDefinition _rootOnlyForgeWorld() {
+  final assetId = AssetId.parse('01890f47-e8b8-7a68-8000-000000000801');
+  return WorldDefinition(
+    id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000802'),
+    name: 'Root-only Forge movement',
+    worldFormatVersion: currentWorldFormatVersion,
+    contentSchemaVersion: currentContentSchemaVersion,
+    chunkSize: 16,
+    assets: [
+      WorldAssetDefinition(id: assetId, path: 'assets/models/player.gltf'),
+    ],
+    entities: [
+      WorldEntityDefinition(
+        id: EntityId.parse('01890f47-e8b8-7a68-8000-000000000803'),
+        components: [
+          const TransformDefinition(
+            position: ContentVector3(0, 0.5, 0),
+            rotation: ContentQuaternion(0, 0, 0, 1),
+            scale: ContentVector3(0.8, 1, 0.8),
+          ),
+          RenderableReferenceDefinition(assetId: assetId),
+          const PhysicsColliderDefinition(
+            halfExtents: ContentVector3(0.35, 0.5, 0.35),
+            bodyKind: ContentPhysicsBodyKind.character,
+            isSensor: false,
+          ),
+          const CharacterControllerDefinition(
+            moveSpeed: 3,
+            skinWidth: 0.02,
+            arrivalTolerance: 0.1,
+          ),
+          const PlayerControlledDefinition(),
+          const HealthDefinition(maximumHealth: 100),
+          const BasicAttackDefinition(
+            damage: 12,
+            range: 2,
+            cooldownSeconds: 0.65,
+          ),
+        ],
+      ),
+      WorldEntityDefinition(
+        id: EntityId.parse('01890f47-e8b8-7a68-8000-000000000804'),
+        components: [
+          const TransformDefinition(
+            position: ContentVector3(0, -0.25, 0),
+            rotation: ContentQuaternion(0, 0, 0, 1),
+            scale: ContentVector3(16, 0.5, 16),
+          ),
+          RenderableReferenceDefinition(assetId: assetId),
+          const PhysicsColliderDefinition(
+            halfExtents: ContentVector3(8, 0.25, 8),
+            bodyKind: ContentPhysicsBodyKind.staticBody,
+            isSensor: false,
+          ),
+        ],
+      ),
+    ],
+    chunks: const [],
+  );
 }
 
 Future<void> _pumpUntilSaveReady(WidgetTester tester) async {

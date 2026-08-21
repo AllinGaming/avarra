@@ -814,9 +814,199 @@ Stage 12.7 status (implementation and Windows build gate completed 2026-08-14):
 - `AVARRA_FORGE_GAME_MAKER_GUIDE.md` now documents the complete
   Forge-to-Test-Play-to-export-to-host/join creator loop and its current
   limitations; and
-- targeted Forge analysis, three palette tests, one new widget workflow, and
-  the Windows x64 Forge release build pass. The inventory is now 235 tests;
+- targeted Forge analysis, all three palette tests, all six Forge widget
+  workflows, and the Windows x64 Forge release build pass. The inventory is now
+  235 tests;
   the full repository matrix was not repeated.
+
+Stage 12.8 status (implementation and Windows build gate completed 2026-08-20):
+
+- Forge adds typed Guardian, Guardian loot, and Completion console presets
+  using the existing combat, AI, collectible, turn-in, and persistence schemas;
+- palette Guardian/Loot selectors automatically follow new placements and let
+  creators choose exact stable dependencies in worlds with multiple chains;
+- dependency-aware availability prevents loot without a Guardian, turn-in
+  without a collectible, or Guardian placement for a non-combat player;
+- stable-reference Inspector fields use filtered dropdowns, while every
+  placement and retarget remains a typed, validated, undoable Creator command;
+- the starter player now has health and a basic attack, so the complete
+  authored chain validates and is playable through the unchanged Game/server
+  runtime; and
+- targeted Forge analysis, all four palette tests, all seven Forge widget
+  workflows, and the Windows x64 Forge release build pass. The inventory is
+  now 237 tests; the full repository matrix was not repeated.
+
+Stage 12.9 status (implementation and Windows build gate completed 2026-08-20):
+
+- Forge adds a MISSION TEMPLATES section with a repeatable Combat mission
+  viewport placement tool;
+- each click generates a Guardian, guarded collectible, and completion console
+  in a compact layout, with all stable entity/item references connected before
+  mutation;
+- the three creates execute inside one validated `CreatorCommandBatch`, so
+  one Undo/Redo removes or restores the complete chain;
+- the new Guardian and Loot references become active automatically, while
+  individual Stage 12.8 presets remain available for custom layouts; and
+- targeted Forge analysis, all five palette tests, all eight Forge widget
+  workflows, and the Windows x64 Forge release build pass. The inventory is
+  now 239 tests; the full repository matrix was not repeated.
+
+Stage 12.10 status (implementation and Windows build gate completed 2026-08-20):
+
+- selecting Combat mission reveals a compact pre-placement settings card for
+  Guardian health/damage, center spacing, item label, and completion label;
+- a typed immutable `ForgeGuardianMissionSettings` validates those values
+  before entity creation and applies them through existing runtime components;
+- the settings feed the unchanged three-entity factory and validated
+  `CreatorCommandBatch`, preserving one-step Undo/Redo and exact stable
+  Guardian/item references;
+- settings remain active for repeated stamps while placed values flow through
+  the normal Inspector, export, Game, Server, persistence, and multiplayer
+  paths; and
+- Forge analysis, all five palette tests, all eight widget workflows, and the
+  Windows x64 Forge release build pass. No test was added, so the inventory
+  remains 239; the full repository matrix was not repeated.
+
+Stage 12.11 status (implementation and Windows build gate completed 2026-08-21):
+
+- Combat mission Template settings now provide Initiate, Sentinel, and Champion
+  profiles for bounded health, damage, and spacing defaults while preserving
+  creator-authored player-facing labels;
+- numeric tuning that no longer matches a named profile is shown as Custom
+  tuning instead of retaining a misleading preset identity;
+- independent Guardian, loot, and completion-console selectors accept only
+  AssetIds declared by the current world and write ordinary role-specific
+  renderable references;
+- profiles and role assets remain typed Forge input to the unchanged
+  three-entity factory and one validated CreatorCommandBatch, so no prefab or
+  parallel runtime mission schema was introduced; and
+- Forge analysis, all six palette tests, all nine widget workflows, and the
+  Windows x64 Forge release build pass. The complete 18-suite matrix passes;
+  two tests were added, so the repository inventory is now 241.
+
+Stage 12.12 status (implementation and Windows build gate completed 2026-08-21):
+
+- Forge packages and declares the same six-model/three-material Gothic kit
+  already supplied by Game, with shared Game-compatible paths and stable IDs;
+- the starter player, ground, and relay console now use Ashen Vanguard, Basalt,
+  and Relay Shrine while retaining the cube as a construction asset;
+- the Champion mission proof selects Hollow Warden, Ember Shard, and Relay
+  Shrine through the existing typed factory and one validated command batch;
+- a parity test verifies both app copies byte-for-byte and resolves every glTF
+  buffer and image dependency;
+- CI exports the profiled mission, moves it, imports it through Game with real
+  asset-availability checks, removes the source, and proves restart loading; and
+- workspace analysis, the Windows x64 Forge release, and the complete 18-suite
+  matrix pass. One test was added, so the repository inventory is now 242.
+
+This is a bounded built-in catalog, not an OD-019 resolution. Arbitrary source
+import, cooking, thumbnails, embedded assets, and the permanent world container
+remain open. Live graphical Forge -> Test Play -> Game acceptance is also still
+required.
+
+Stage 12.13 status (live Windows and release-build gate completed 2026-08-21):
+
+- the real Windows Game release loads the typed Forge Champion package through
+  the exact disposable Test Play process argument and reaches renderer Ready;
+- a preserved 1280 x 720 capture verifies the Tiny Forge World identity,
+  64/64 Champion, Ember Shard objective, and packaged Gothic scene;
+- the compact HUD now displays the loaded authored world name instead of the
+  hard-coded Relay Zero label, with ellipsis protection for long names;
+- all four interaction rejection cases now map to player-facing guidance
+  instead of leaking internal enum tokens; and
+- workspace analysis, the profiled import/restart pipeline, both app suites,
+  the Windows x64 Game release, and the complete 18-suite matrix pass. Two
+  tests were added, so the repository inventory is now 244.
+
+The live run used the typed Forge fixture and exact Game Test Play contract. A
+single continuous human Forge-button -> combat -> pickup -> turn-in -> return
+walkthrough remains open, as do the physical Android and OD-019 gates.
+
+Stage 12.14 status (action-RPG target-feedback gate completed 2026-08-21):
+
+- Game displays a responsive top-center contextual frame for the selected
+  hostile's identity, health, and queued attack state;
+- interactables receive a distinct gold no-health frame with approach/use
+  guidance instead of reusing combat presentation;
+- distant Attack commands enter the existing automatic pursuit path without
+  first submitting a guaranteed out-of-range attack;
+- the existing Thermion stable-ID highlight, server-safe targeting, solo
+  combat, and host-authoritative command paths remain the source of truth; and
+- focused tests, Game/workspace analysis, the Windows x64 Game release, live
+  Champion rendering, the profiled import/restart pipeline, and the complete
+  18-suite matrix pass. Two tests were added, so the inventory is now 246.
+
+Floating damage, hit feedback, authored enemy display names/ranks, richer skill
+and loot presentation, the continuous Forge-button mission walkthrough, and
+physical Android acceptance remain open.
+
+Stage 12.15 status (living-world motion gate completed 2026-08-21):
+
+- inspection confirms the packaged Gothic glTF files contain no animation
+  clips, explaining the articulated-motion gap;
+- Game applies renderer-neutral cosmetic transform copies for idle breathing,
+  active player/Guardian stride and sway, collectible hover/rotation, and
+  interactable pulse without mutating ECS state;
+- the player and selected target are prioritized inside a 12-visible-entity
+  motion cap;
+- 20 desktop or 12 compact pointer-transparent ash particles animate inside a
+  repaint boundary, while target-health changes ease over 180 ms;
+- two controlled idle release captures prove frame-to-frame surface change,
+  and live post-ready diagnostics report 1.70/177.00 ms average/maximum Flutter
+  frame span; and
+- focused tests, Game/workspace analysis, the Windows x64 Game release, the
+  profiled import/restart pipeline, and the complete 18-suite matrix pass. Four
+  tests were added, so the inventory is now 250.
+
+Procedural motion is a bounded bridge, not the permanent articulated-animation
+contract. A rigged idle/run/attack/hit/death Thermion POC plus physical Android
+profiling is required before adding a stable animation schema.
+
+Stage 12.16 status (playable animated-character gate completed 2026-08-21):
+
+- root-only Forge worlds derive provisional planar movement regions from
+  shallow static floor colliders instead of rejecting every position for lack
+  of streamed chunks;
+- deterministic sweeps no longer treat parallel supporting-floor contact as a
+  wall, and an initial authored overlap may be exited without adding a general
+  depenetration solver;
+- zero-chunk worlds no longer report false streamed edges, the starter floor is
+  16 x 16, and the profiled Champion endpoints fit at -6/+6 without overlapping
+  the player;
+- the Forge-shaped regression advances the player exactly 0.2 units without a
+  collision;
+- Ashen Vanguard packages Idle/Run/Attack and Hollow Warden packages
+  Idle/Run/Attack/Hit/Death as real glTF articulated-node clips;
+- Game maps existing simulation state to presentation-only requests while the
+  Thermion adapter lazily attaches and crossfades named clips;
+- live Windows pointer-hold acceptance changes 3,032/57,600 sampled pixels from
+  idle to run and another 2,899 across consecutive run frames; and
+- the complete 18-suite matrix passes. Seven tests were added, so the inventory
+  is now 257.
+
+This is not yet a weighted/skinned production rig or permanent `.avarra`
+animation schema. Physical Android animation cost remains open.
+
+Stage 12.17 status (authoritative combat-feedback gate completed 2026-08-21):
+
+- renderer-neutral `avarra_client` owns a bounded 24-event timeline for attack,
+  damage, and defeat presentation downstream of authority;
+- offline accepted combat results and connected authoritative health decreases
+  drive one shared presentation frame without changing combat rules or the
+  protocol;
+- Game applies a 180 ms material flash, 350 ms articulated Hit reaction, 900 ms
+  world-anchored floating damage, and a separate lethal `DEFEATED` callout;
+- dead entities leave collision immediately but remain visible for 1.1 seconds,
+  allowing Hollow Warden's 0.9-second Death clip to finish before loot reveal;
+- a live 108-frame Windows Champion fight proves exchanged damage, hit tint,
+  lethal feedback, death motion, and bounded removal; and
+- workspace analysis, the Windows release, the profiled handoff pipeline, and
+  the complete 18-suite matrix pass. Seven tests were added, so the inventory
+  is now 264.
+
+Protocol v3 still lacks explicit impact-event sequencing; connected feedback
+derives confirmed damage from authoritative health deltas. Physical Android
+cost and a permanent skinned/material/animation schema remain open.
 
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
@@ -828,6 +1018,16 @@ product playtest remain open. See
 `AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
 `AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
 `AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`AVARRA_STAGE_12_8_FORGE_MISSION_CHAIN_VALIDATION.md`,
+`AVARRA_STAGE_12_9_FORGE_MISSION_TEMPLATE_VALIDATION.md`,
+`AVARRA_STAGE_12_10_FORGE_MISSION_SETTINGS_VALIDATION.md`,
+`AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md`,
+`AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md`,
+`AVARRA_STAGE_12_13_LIVE_CHAMPION_TEST_PLAY_AND_HUD_POLISH_VALIDATION.md`,
+`AVARRA_STAGE_12_14_ACTION_RPG_TARGET_FRAME_VALIDATION.md`,
+`AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`,
+`AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md`,
+`AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`, and
 ADR-032.
 

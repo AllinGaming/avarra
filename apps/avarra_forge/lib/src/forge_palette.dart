@@ -11,9 +11,171 @@ enum ForgePaletteItemKind {
   relayConsole,
   objectiveSwitch,
   objectiveGate,
+  guardian,
+  collectibleItem,
+  turnInConsole,
 }
 
 enum ForgeBrushMode { none, paintFloor, eraseFloor }
+
+final class ForgePalettePlacementReferences {
+  const ForgePalettePlacementReferences({
+    this.guardianEntityId,
+    this.collectibleItemId,
+  });
+
+  final EntityId? guardianEntityId;
+  final String? collectibleItemId;
+}
+
+final class ForgeGuardianMissionAssets {
+  const ForgeGuardianMissionAssets({
+    required this.guardianAssetId,
+    required this.collectibleAssetId,
+    required this.completionConsoleAssetId,
+  });
+
+  factory ForgeGuardianMissionAssets.uniform(AssetId assetId) {
+    return ForgeGuardianMissionAssets(
+      guardianAssetId: assetId,
+      collectibleAssetId: assetId,
+      completionConsoleAssetId: assetId,
+    );
+  }
+
+  final AssetId guardianAssetId;
+  final AssetId collectibleAssetId;
+  final AssetId completionConsoleAssetId;
+
+  ForgeGuardianMissionAssets copyWith({
+    AssetId? guardianAssetId,
+    AssetId? collectibleAssetId,
+    AssetId? completionConsoleAssetId,
+  }) {
+    return ForgeGuardianMissionAssets(
+      guardianAssetId: guardianAssetId ?? this.guardianAssetId,
+      collectibleAssetId: collectibleAssetId ?? this.collectibleAssetId,
+      completionConsoleAssetId:
+          completionConsoleAssetId ?? this.completionConsoleAssetId,
+    );
+  }
+
+  String? validationIssue(WorldDefinition world) {
+    final declaredAssetIds = {for (final asset in world.assets) asset.id};
+    if (!declaredAssetIds.contains(guardianAssetId)) {
+      return 'Guardian asset must be declared by this world';
+    }
+    if (!declaredAssetIds.contains(collectibleAssetId)) {
+      return 'Loot asset must be declared by this world';
+    }
+    if (!declaredAssetIds.contains(completionConsoleAssetId)) {
+      return 'Completion console asset must be declared by this world';
+    }
+    return null;
+  }
+}
+
+final class ForgeGuardianMissionSettings {
+  const ForgeGuardianMissionSettings({
+    this.guardianMaximumHealth = 36,
+    this.guardianDamage = 7,
+    this.spacing = 2,
+    this.itemLabel = 'Forge relic',
+    this.completionLabel = 'Mission complete',
+  });
+
+  final double guardianMaximumHealth;
+  final double guardianDamage;
+  final double spacing;
+  final String itemLabel;
+  final String completionLabel;
+
+  String? get validationIssue {
+    if (!guardianMaximumHealth.isFinite || guardianMaximumHealth <= 0) {
+      return 'Guardian health must be greater than zero';
+    }
+    if (!guardianDamage.isFinite || guardianDamage <= 0) {
+      return 'Guardian damage must be greater than zero';
+    }
+    if (!spacing.isFinite || spacing <= 0) {
+      return 'Mission spacing must be greater than zero';
+    }
+    final normalizedItemLabel = itemLabel.trim();
+    if (normalizedItemLabel.isEmpty || normalizedItemLabel.length > 80) {
+      return 'Item label must contain 1 to 80 characters';
+    }
+    final normalizedCompletionLabel = completionLabel.trim();
+    if (normalizedCompletionLabel.isEmpty ||
+        normalizedCompletionLabel.length > 80) {
+      return 'Completion label must contain 1 to 80 characters';
+    }
+    return null;
+  }
+
+  ForgeGuardianMissionSettings copyWith({
+    double? guardianMaximumHealth,
+    double? guardianDamage,
+    double? spacing,
+    String? itemLabel,
+    String? completionLabel,
+  }) {
+    return ForgeGuardianMissionSettings(
+      guardianMaximumHealth:
+          guardianMaximumHealth ?? this.guardianMaximumHealth,
+      guardianDamage: guardianDamage ?? this.guardianDamage,
+      spacing: spacing ?? this.spacing,
+      itemLabel: itemLabel ?? this.itemLabel,
+      completionLabel: completionLabel ?? this.completionLabel,
+    );
+  }
+}
+
+final class ForgeGuardianMissionProfile {
+  const ForgeGuardianMissionProfile({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.guardianMaximumHealth,
+    required this.guardianDamage,
+    required this.spacing,
+  });
+
+  final String id;
+  final String label;
+  final String description;
+  final double guardianMaximumHealth;
+  final double guardianDamage;
+  final double spacing;
+
+  ForgeGuardianMissionSettings applyTo(ForgeGuardianMissionSettings settings) {
+    return settings.copyWith(
+      guardianMaximumHealth: guardianMaximumHealth,
+      guardianDamage: guardianDamage,
+      spacing: spacing,
+    );
+  }
+
+  bool matches(ForgeGuardianMissionSettings settings) {
+    return settings.guardianMaximumHealth == guardianMaximumHealth &&
+        settings.guardianDamage == guardianDamage &&
+        settings.spacing == spacing;
+  }
+}
+
+final class ForgeGuardianMissionTemplate {
+  const ForgeGuardianMissionTemplate({
+    required this.guardian,
+    required this.collectible,
+    required this.completionConsole,
+  });
+
+  final WorldEntityDefinition guardian;
+  final WorldEntityDefinition collectible;
+  final WorldEntityDefinition completionConsole;
+
+  List<WorldEntityDefinition> get entities =>
+      List.unmodifiable([guardian, collectible, completionConsole]);
+}
 
 final class ForgePaletteItem {
   const ForgePaletteItem({
@@ -34,17 +196,47 @@ final class ForgePaletteItem {
     ForgePaletteItemKind.solidBlock ||
     ForgePaletteItemKind.relayConsole => ForgePaletteItemCategory.world,
     ForgePaletteItemKind.objectiveSwitch ||
-    ForgePaletteItemKind.objectiveGate => ForgePaletteItemCategory.gameplay,
+    ForgePaletteItemKind.objectiveGate ||
+    ForgePaletteItemKind.guardian ||
+    ForgePaletteItemKind.collectibleItem ||
+    ForgePaletteItemKind.turnInConsole => ForgePaletteItemCategory.gameplay,
   };
 
   double get placementGridSize => kind == ForgePaletteItemKind.floorTile
       ? forgeFloorTileSize
       : forgePlacementGridSize;
 
+  String? placementIssue(
+    WorldDefinition world,
+    ForgePalettePlacementReferences references,
+  ) {
+    return switch (kind) {
+      ForgePaletteItemKind.guardian when !forgePlayerSupportsCombat(world) =>
+        'Player needs Health and Basic Attack components',
+      ForgePaletteItemKind.collectibleItem
+          when references.guardianEntityId == null ||
+              !forgeGuardianEntities(
+                world,
+              ).any((entity) => entity.id == references.guardianEntityId) =>
+        'Place or select a Guardian first',
+      ForgePaletteItemKind.turnInConsole
+          when references.collectibleItemId == null ||
+              !forgeCollectibleEntities(world).any(
+                (entity) =>
+                    entity.component<CollectibleItemDefinition>()!.itemId ==
+                    references.collectibleItemId,
+              ) =>
+        'Place or select a Collectible first',
+      _ => null,
+    };
+  }
+
   WorldEntityDefinition createEntity({
     required EntityId entityId,
     required AssetId assetId,
     required ContentVector3 groundPosition,
+    ForgePalettePlacementReferences references =
+        const ForgePalettePlacementReferences(),
     double? gridSize,
   }) {
     final effectiveGridSize = gridSize ?? placementGridSize;
@@ -145,6 +337,72 @@ final class ForgePaletteItem {
           requiredCount: 1,
         ),
       ],
+      ForgePaletteItemKind.guardian => <ContentComponentDefinition>[
+        TransformDefinition(
+          position: ContentVector3(x, 0.75, z),
+          rotation: const ContentQuaternion(0, 0, 0, 1),
+          scale: const ContentVector3(0.9, 1.5, 0.9),
+        ),
+        RenderableReferenceDefinition(assetId: assetId),
+        const PhysicsColliderDefinition(
+          halfExtents: ContentVector3(0.4, 0.75, 0.4),
+          bodyKind: ContentPhysicsBodyKind.character,
+          isSensor: false,
+        ),
+        const CharacterControllerDefinition(
+          moveSpeed: 2.2,
+          skinWidth: 0.02,
+          arrivalTolerance: 0.15,
+        ),
+        const HealthDefinition(maximumHealth: 36),
+        const BasicAttackDefinition(damage: 7, range: 1.8, cooldownSeconds: 1),
+        const GuardianBehaviorDefinition(perceptionRange: 7, leashRange: 12),
+      ],
+      ForgePaletteItemKind.collectibleItem => <ContentComponentDefinition>[
+        TransformDefinition(
+          position: ContentVector3(x, 0.35, z),
+          rotation: const ContentQuaternion(0, 0, 0, 1),
+          scale: const ContentVector3(0.55, 0.7, 0.55),
+        ),
+        RenderableReferenceDefinition(assetId: assetId),
+        const PhysicsColliderDefinition(
+          halfExtents: ContentVector3(0.3, 0.35, 0.3),
+          bodyKind: ContentPhysicsBodyKind.staticBody,
+          isSensor: false,
+        ),
+        const InteractableDefinition(label: 'Collect Forge relic', range: 2),
+        CollectibleItemDefinition(
+          itemId: _forgeItemId(entityId),
+          itemLabel: 'Forge relic',
+          collectedFlagKey: 'collected',
+          guardedByEntityId:
+              references.guardianEntityId ??
+              (throw StateError('A Guardian reference is required.')),
+        ),
+        PersistentFlagsDefinition(const {'collected': false}),
+      ],
+      ForgePaletteItemKind.turnInConsole => <ContentComponentDefinition>[
+        TransformDefinition(
+          position: ContentVector3(x, 0.5, z),
+          rotation: const ContentQuaternion(0, 0, 0, 1),
+          scale: const ContentVector3(0.8, 1, 0.8),
+        ),
+        RenderableReferenceDefinition(assetId: assetId),
+        const PhysicsColliderDefinition(
+          halfExtents: ContentVector3(0.4, 0.5, 0.4),
+          bodyKind: ContentPhysicsBodyKind.staticBody,
+          isSensor: false,
+        ),
+        const InteractableDefinition(label: 'Complete mission', range: 2.2),
+        ItemTurnInDefinition(
+          requiredItemId:
+              references.collectibleItemId ??
+              (throw StateError('A Collectible reference is required.')),
+          completionFlagKey: 'mission.complete',
+          completionLabel: 'Mission complete',
+        ),
+        PersistentFlagsDefinition(const {'mission.complete': false}),
+      ],
     };
     return WorldEntityDefinition(id: entityId, components: components);
   }
@@ -153,6 +411,35 @@ final class ForgePaletteItem {
 const double forgePlacementGridSize = 0.5;
 const double forgeFloorTileSize = 2;
 const String forgeDefaultObjectiveGroup = 'primary';
+const String forgeGuardianMissionTemplateId = 'guardian_mission';
+const String forgeDefaultGuardianMissionProfileId = 'sentinel';
+
+const forgeGuardianMissionProfiles = <ForgeGuardianMissionProfile>[
+  ForgeGuardianMissionProfile(
+    id: 'initiate',
+    label: 'Initiate',
+    description: 'Lower-pressure first encounter',
+    guardianMaximumHealth: 24,
+    guardianDamage: 5,
+    spacing: 2,
+  ),
+  ForgeGuardianMissionProfile(
+    id: forgeDefaultGuardianMissionProfileId,
+    label: 'Sentinel',
+    description: 'Balanced standard encounter',
+    guardianMaximumHealth: 36,
+    guardianDamage: 7,
+    spacing: 2,
+  ),
+  ForgeGuardianMissionProfile(
+    id: 'champion',
+    label: 'Champion',
+    description: 'Tougher encounter with a wider layout',
+    guardianMaximumHealth: 64,
+    guardianDamage: 11,
+    spacing: 3,
+  ),
+];
 
 const forgeObjectPalette = <ForgePaletteItem>[
   ForgePaletteItem(
@@ -191,7 +478,193 @@ const forgeObjectPalette = <ForgePaletteItem>[
     description: 'Opens after one primary objective',
     kind: ForgePaletteItemKind.objectiveGate,
   ),
+  ForgePaletteItem(
+    id: 'guardian',
+    label: 'Guardian',
+    description: 'Combat enemy with authored perception and leash',
+    kind: ForgePaletteItemKind.guardian,
+  ),
+  ForgePaletteItem(
+    id: 'collectible_item',
+    label: 'Guardian loot',
+    description: 'Collectible unlocked when its Guardian is defeated',
+    kind: ForgePaletteItemKind.collectibleItem,
+  ),
+  ForgePaletteItem(
+    id: 'turn_in_console',
+    label: 'Completion console',
+    description: 'Consumes selected loot and completes the mission',
+    kind: ForgePaletteItemKind.turnInConsole,
+  ),
 ];
+
+List<WorldEntityDefinition> forgeGuardianEntities(WorldDefinition world) =>
+    List.unmodifiable(
+      world.allEntities.where(
+        (entity) => entity.component<GuardianBehaviorDefinition>() != null,
+      ),
+    );
+
+List<WorldEntityDefinition> forgeCollectibleEntities(WorldDefinition world) =>
+    List.unmodifiable(
+      world.allEntities.where(
+        (entity) => entity.component<CollectibleItemDefinition>() != null,
+      ),
+    );
+
+bool forgePlayerSupportsCombat(WorldDefinition world) {
+  final players = world.allEntities.where(
+    (entity) => entity.component<PlayerControlledDefinition>() != null,
+  );
+  return players.length == 1 &&
+      players.single.component<HealthDefinition>() != null &&
+      players.single.component<BasicAttackDefinition>() != null;
+}
+
+String? forgeGuardianMissionTemplateIssue(
+  WorldDefinition world, {
+  ForgeGuardianMissionSettings settings = const ForgeGuardianMissionSettings(),
+  ForgeGuardianMissionAssets? assets,
+}) {
+  if (!forgePlayerSupportsCombat(world)) {
+    return 'Player needs Health and Basic Attack components';
+  }
+  return settings.validationIssue ?? assets?.validationIssue(world);
+}
+
+ForgeGuardianMissionProfile? forgeGuardianMissionProfileById(String id) {
+  for (final profile in forgeGuardianMissionProfiles) {
+    if (profile.id == id) return profile;
+  }
+  return null;
+}
+
+String? forgeGuardianMissionProfileIdForSettings(
+  ForgeGuardianMissionSettings settings,
+) {
+  for (final profile in forgeGuardianMissionProfiles) {
+    if (profile.matches(settings)) return profile.id;
+  }
+  return null;
+}
+
+ForgeGuardianMissionTemplate createForgeGuardianMissionTemplate({
+  required EntityId guardianEntityId,
+  required EntityId collectibleEntityId,
+  required EntityId completionConsoleEntityId,
+  required ForgeGuardianMissionAssets assets,
+  required ContentVector3 groundPosition,
+  ForgeGuardianMissionSettings settings = const ForgeGuardianMissionSettings(),
+}) {
+  final settingsIssue = settings.validationIssue;
+  if (settingsIssue != null) {
+    throw ArgumentError.value(settings, 'settings', settingsIssue);
+  }
+  if ({
+        guardianEntityId,
+        collectibleEntityId,
+        completionConsoleEntityId,
+      }.length !=
+      3) {
+    throw ArgumentError('Mission template entity IDs must be unique.');
+  }
+  final byKind = {for (final item in forgeObjectPalette) item.kind: item};
+  final guardianPreset = byKind[ForgePaletteItemKind.guardian]!.createEntity(
+    entityId: guardianEntityId,
+    assetId: assets.guardianAssetId,
+    groundPosition: ContentVector3(
+      groundPosition.x,
+      groundPosition.y,
+      groundPosition.z + settings.spacing,
+    ),
+  );
+  final guardian = WorldEntityDefinition(
+    id: guardianPreset.id,
+    components: [
+      for (final component in guardianPreset.components.values)
+        if (component is HealthDefinition)
+          HealthDefinition(maximumHealth: settings.guardianMaximumHealth)
+        else if (component is BasicAttackDefinition)
+          BasicAttackDefinition(
+            damage: settings.guardianDamage,
+            range: component.range,
+            cooldownSeconds: component.cooldownSeconds,
+          )
+        else
+          component,
+    ],
+  );
+  final collectiblePreset = byKind[ForgePaletteItemKind.collectibleItem]!
+      .createEntity(
+        entityId: collectibleEntityId,
+        assetId: assets.collectibleAssetId,
+        groundPosition: ContentVector3(
+          groundPosition.x,
+          groundPosition.y,
+          groundPosition.z + settings.spacing,
+        ),
+        references: ForgePalettePlacementReferences(
+          guardianEntityId: guardianEntityId,
+        ),
+      );
+  final collectible = WorldEntityDefinition(
+    id: collectiblePreset.id,
+    components: [
+      for (final component in collectiblePreset.components.values)
+        if (component is CollectibleItemDefinition)
+          CollectibleItemDefinition(
+            itemId: component.itemId,
+            itemLabel: settings.itemLabel.trim(),
+            collectedFlagKey: component.collectedFlagKey,
+            guardedByEntityId: component.guardedByEntityId,
+          )
+        else
+          component,
+    ],
+  );
+  final collectibleItemId = collectible
+      .component<CollectibleItemDefinition>()!
+      .itemId;
+  final completionConsolePreset = byKind[ForgePaletteItemKind.turnInConsole]!
+      .createEntity(
+        entityId: completionConsoleEntityId,
+        assetId: assets.completionConsoleAssetId,
+        groundPosition: ContentVector3(
+          groundPosition.x,
+          groundPosition.y,
+          groundPosition.z - settings.spacing,
+        ),
+        references: ForgePalettePlacementReferences(
+          guardianEntityId: guardianEntityId,
+          collectibleItemId: collectibleItemId,
+        ),
+      );
+  final completionConsole = WorldEntityDefinition(
+    id: completionConsolePreset.id,
+    components: [
+      for (final component in completionConsolePreset.components.values)
+        if (component is ItemTurnInDefinition)
+          ItemTurnInDefinition(
+            requiredItemId: component.requiredItemId,
+            completionFlagKey: component.completionFlagKey,
+            completionLabel: settings.completionLabel.trim(),
+          )
+        else
+          component,
+    ],
+  );
+  return ForgeGuardianMissionTemplate(
+    guardian: guardian,
+    collectible: collectible,
+    completionConsole: completionConsole,
+  );
+}
+
+String _forgeItemId(EntityId entityId) {
+  final compact = entityId.value.replaceAll('-', '');
+  final suffix = compact.substring(compact.length - 12);
+  return 'forge.relic.$suffix';
+}
 
 double snapForgePlacement(
   double value, {

@@ -23,7 +23,7 @@ Current provisional decision:
 > Use Thermion/Filament behind `avarra_scene_bridge`, pinned to official
 > `v0.5.0-pre.5` commit `caad378…` until its Windows fix is published.
 
-Current evidence (2026-08-10):
+Current evidence (2026-08-21):
 
 `flutter_scene` 0.20.0 resolves and analyzes on Flutter 3.44.4 stable but does
 not compile because it uses newer Flutter GPU APIs. Thermion 0.4.1 passes
@@ -34,6 +34,14 @@ scoped Android compile-SDK override. The Windows visual and lifecycle gate now
 passes. A Pixel 10 Pro Android emulator also passes repeated cold-start and
 background/resume checks with stable memory. Physical Android validation,
 editor embedding and performance remain open.
+Stage 12.16 also proves that the pinned adapter can discover, attach, play, and
+crossfade named glTF node clips in the live Windows Game. The proof is an
+articulated rigid-node hierarchy, not a weighted production rig, and does not
+close the renderer, animation-schema, or physical Android performance decision.
+Stage 12.17 adds a bounded material hit flash plus Flutter world-anchored combat
+text and makes the existing Death clip visible. These remain replaceable
+presentation consumers and do not close the renderer, material-effect,
+animation-schema, or physical Android performance decision.
 See ADR-015 through ADR-017.
 
 Decision criteria:

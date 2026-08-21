@@ -11,33 +11,79 @@ import 'forge_palette.dart';
 typedef ForgeFieldChanged =
     void Function(String componentType, String fieldName, Object? value);
 
+const String _customGuardianMissionProfileId = 'custom';
+
 final class ObjectPalettePanel extends StatelessWidget {
   const ObjectPalettePanel({
     required this.items,
+    required this.world,
     required this.assets,
     required this.selectedItem,
     required this.selectedAssetId,
+    required this.selectedGuardianEntityId,
+    required this.selectedCollectibleItemId,
+    required this.guardianMissionTemplateActive,
+    required this.guardianMissionSettings,
+    required this.guardianMissionProfileId,
+    required this.guardianMissionProfileRevision,
+    required this.guardianMissionAssets,
     required this.brushMode,
     required this.onSelected,
     required this.onAssetSelected,
+    required this.onGuardianReferenceSelected,
+    required this.onCollectibleReferenceSelected,
+    required this.onGuardianMissionTemplateSelected,
+    required this.onGuardianMissionSettingsChanged,
+    required this.onGuardianMissionProfileSelected,
+    required this.onGuardianMissionAssetsChanged,
     required this.onBrushModeSelected,
     required this.onSelectionTool,
     super.key,
   });
 
   final List<ForgePaletteItem> items;
+  final WorldDefinition world;
   final List<WorldAssetDefinition> assets;
   final ForgePaletteItem? selectedItem;
   final AssetId? selectedAssetId;
+  final EntityId? selectedGuardianEntityId;
+  final String? selectedCollectibleItemId;
+  final bool guardianMissionTemplateActive;
+  final ForgeGuardianMissionSettings guardianMissionSettings;
+  final String? guardianMissionProfileId;
+  final int guardianMissionProfileRevision;
+  final ForgeGuardianMissionAssets? guardianMissionAssets;
   final ForgeBrushMode brushMode;
   final ValueChanged<ForgePaletteItem?> onSelected;
   final ValueChanged<AssetId> onAssetSelected;
+  final ValueChanged<EntityId> onGuardianReferenceSelected;
+  final ValueChanged<String> onCollectibleReferenceSelected;
+  final VoidCallback onGuardianMissionTemplateSelected;
+  final ValueChanged<ForgeGuardianMissionSettings>
+  onGuardianMissionSettingsChanged;
+  final ValueChanged<String> onGuardianMissionProfileSelected;
+  final ValueChanged<ForgeGuardianMissionAssets> onGuardianMissionAssetsChanged;
   final ValueChanged<ForgeBrushMode> onBrushModeSelected;
   final VoidCallback onSelectionTool;
 
   @override
   Widget build(BuildContext context) {
     final hasRenderableAsset = assets.isNotEmpty && selectedAssetId != null;
+    final guardians = forgeGuardianEntities(world);
+    final collectibles = forgeCollectibleEntities(world);
+    final missionTemplateIssue = forgeGuardianMissionTemplateIssue(
+      world,
+      settings: guardianMissionSettings,
+      assets: guardianMissionAssets,
+    );
+    final references = ForgePalettePlacementReferences(
+      guardianEntityId: selectedGuardianEntityId,
+      collectibleItemId: selectedCollectibleItemId,
+    );
+    final selectedPlacementIssue = selectedItem?.placementIssue(
+      world,
+      references,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -48,7 +94,9 @@ final class ObjectPalettePanel extends StatelessWidget {
               key: const Key('palette_select_tool'),
               tooltip: 'Selection tool',
               onPressed:
-                  selectedItem == null && brushMode == ForgeBrushMode.none
+                  selectedItem == null &&
+                      !guardianMissionTemplateActive &&
+                      brushMode == ForgeBrushMode.none
                   ? null
                   : onSelectionTool,
               icon: const Icon(Icons.near_me_outlined),
@@ -84,6 +132,82 @@ final class ObjectPalettePanel extends StatelessWidget {
                 },
               ),
             ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Guardian ref',
+                    prefixIcon: Icon(Icons.shield_outlined),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<EntityId>(
+                      key: const Key('palette_guardian_reference'),
+                      value: selectedGuardianEntityId,
+                      isDense: true,
+                      isExpanded: true,
+                      hint: const Text('None'),
+                      items: [
+                        for (final guardian in guardians)
+                          DropdownMenuItem(
+                            value: guardian.id,
+                            child: Text(
+                              _shortEntityReference(guardian),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (entityId) {
+                        if (entityId != null) {
+                          onGuardianReferenceSelected(entityId);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Loot ref',
+                    prefixIcon: Icon(Icons.diamond_outlined),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      key: const Key('palette_collectible_reference'),
+                      value: selectedCollectibleItemId,
+                      isDense: true,
+                      isExpanded: true,
+                      hint: const Text('None'),
+                      items: [
+                        for (final collectible in collectibles)
+                          DropdownMenuItem(
+                            value: collectible
+                                .component<CollectibleItemDefinition>()!
+                                .itemId,
+                            child: Text(
+                              collectible
+                                  .component<CollectibleItemDefinition>()!
+                                  .itemLabel,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (itemId) {
+                        if (itemId != null) {
+                          onCollectibleReferenceSelected(itemId);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         Padding(
@@ -125,14 +249,18 @@ final class ObjectPalettePanel extends StatelessWidget {
           child: Text(
             !hasRenderableAsset
                 ? 'This world has no renderable asset for palette objects.'
-                : brushMode == ForgeBrushMode.paintFloor
-                ? 'Painting floor · drag across the viewport'
-                : brushMode == ForgeBrushMode.eraseFloor
-                ? 'Erasing authored floor tiles · drag across the viewport'
-                : selectedItem == null
-                ? 'Choose an object, then click the viewport.'
-                : 'Placing ${selectedItem!.label} · '
-                      '${selectedItem!.placementGridSize} unit grid',
+                : guardianMissionTemplateActive
+                ? missionTemplateIssue ??
+                      'Placing combat mission - one click creates one linked chain'
+                : selectedPlacementIssue ??
+                      (brushMode == ForgeBrushMode.paintFloor
+                          ? 'Painting floor · drag across the viewport'
+                          : brushMode == ForgeBrushMode.eraseFloor
+                          ? 'Erasing authored floor tiles · drag across the viewport'
+                          : selectedItem == null
+                          ? 'Choose an object, then click the viewport.'
+                          : 'Placing ${selectedItem!.label} · '
+                                '${selectedItem!.placementGridSize} unit grid'),
             key: const Key('palette_status'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -141,6 +269,38 @@ final class ObjectPalettePanel extends StatelessWidget {
           child: ListView(
             key: const Key('object_palette'),
             children: [
+              Padding(
+                key: const Key('palette_category_templates'),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+                child: Text(
+                  'MISSION TEMPLATES',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              if (guardianMissionTemplateActive)
+                _guardianMissionSettingsCard(context),
+              ListTile(
+                key: const Key('palette_guardian_mission'),
+                dense: true,
+                enabled: hasRenderableAsset && missionTemplateIssue == null,
+                selected: guardianMissionTemplateActive,
+                leading: const Icon(Icons.account_tree_outlined, size: 20),
+                title: const Text('Combat mission'),
+                subtitle: Text(
+                  missionTemplateIssue ??
+                      'Guardian + guarded loot + completion console',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: guardianMissionTemplateActive
+                    ? const Icon(Icons.add_location_alt_outlined, size: 20)
+                    : null,
+                onTap: hasRenderableAsset && missionTemplateIssue == null
+                    ? onGuardianMissionTemplateSelected
+                    : null,
+              ),
               for (final category in ForgePaletteItemCategory.values) ...[
                 Padding(
                   key: Key('palette_category_${category.name}'),
@@ -155,28 +315,263 @@ final class ObjectPalettePanel extends StatelessWidget {
                 for (final item in items.where(
                   (item) => item.category == category,
                 ))
-                  ListTile(
-                    key: Key('palette_${item.id}'),
-                    dense: true,
-                    enabled: hasRenderableAsset,
-                    selected: item == selectedItem,
-                    leading: Icon(_paletteIcon(item.kind), size: 20),
-                    title: Text(item.label),
-                    subtitle: Text(
-                      item.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: item == selectedItem
-                        ? const Icon(Icons.add_location_alt_outlined, size: 20)
-                        : null,
-                    onTap: hasRenderableAsset ? () => onSelected(item) : null,
+                  _paletteItemTile(
+                    item: item,
+                    hasRenderableAsset: hasRenderableAsset,
+                    references: references,
                   ),
               ],
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _guardianMissionSettingsCard(BuildContext context) {
+    return Card(
+      key: const Key('guardian_mission_settings'),
+      margin: const EdgeInsets.fromLTRB(8, 2, 8, 8),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Template settings',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 8),
+            InputDecorator(
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Encounter profile',
+                prefixIcon: Icon(Icons.tune_outlined),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  key: const Key('mission_profile'),
+                  value:
+                      guardianMissionProfileId ??
+                      _customGuardianMissionProfileId,
+                  isDense: true,
+                  isExpanded: true,
+                  items: [
+                    for (final profile in forgeGuardianMissionProfiles)
+                      DropdownMenuItem(
+                        value: profile.id,
+                        child: Text(
+                          '${profile.label} - ${profile.description}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    const DropdownMenuItem(
+                      value: _customGuardianMissionProfileId,
+                      enabled: false,
+                      child: Text('Custom tuning'),
+                    ),
+                  ],
+                  onChanged: (profileId) {
+                    if (profileId != null &&
+                        profileId != _customGuardianMissionProfileId) {
+                      onGuardianMissionProfileSelected(profileId);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: KeyedSubtree(
+                    key: ValueKey(
+                      'mission_guardian_health:'
+                      '$guardianMissionProfileRevision',
+                    ),
+                    child: _missionNumberField(
+                      keyName: 'mission_guardian_health',
+                      label: 'Health',
+                      value: guardianMissionSettings.guardianMaximumHealth,
+                      onChanged: (value) => onGuardianMissionSettingsChanged(
+                        guardianMissionSettings.copyWith(
+                          guardianMaximumHealth: value,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: KeyedSubtree(
+                    key: ValueKey(
+                      'mission_guardian_damage:'
+                      '$guardianMissionProfileRevision',
+                    ),
+                    child: _missionNumberField(
+                      keyName: 'mission_guardian_damage',
+                      label: 'Damage',
+                      value: guardianMissionSettings.guardianDamage,
+                      onChanged: (value) => onGuardianMissionSettingsChanged(
+                        guardianMissionSettings.copyWith(guardianDamage: value),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            KeyedSubtree(
+              key: ValueKey('mission_spacing:$guardianMissionProfileRevision'),
+              child: _missionNumberField(
+                keyName: 'mission_spacing',
+                label: 'Center spacing',
+                value: guardianMissionSettings.spacing,
+                onChanged: (value) => onGuardianMissionSettingsChanged(
+                  guardianMissionSettings.copyWith(spacing: value),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              key: const Key('mission_item_label'),
+              initialValue: guardianMissionSettings.itemLabel,
+              maxLength: 80,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Item label',
+              ),
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(itemLabel: value),
+              ),
+            ),
+            TextFormField(
+              key: const Key('mission_completion_label'),
+              initialValue: guardianMissionSettings.completionLabel,
+              maxLength: 80,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Completion label',
+              ),
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(completionLabel: value),
+              ),
+            ),
+            if (guardianMissionAssets case final missionAssets?) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Role assets',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              const SizedBox(height: 6),
+              _missionAssetField(
+                keyName: 'mission_guardian_asset',
+                label: 'Guardian',
+                value: missionAssets.guardianAssetId,
+                onChanged: (assetId) => onGuardianMissionAssetsChanged(
+                  missionAssets.copyWith(guardianAssetId: assetId),
+                ),
+              ),
+              const SizedBox(height: 6),
+              _missionAssetField(
+                keyName: 'mission_loot_asset',
+                label: 'Loot',
+                value: missionAssets.collectibleAssetId,
+                onChanged: (assetId) => onGuardianMissionAssetsChanged(
+                  missionAssets.copyWith(collectibleAssetId: assetId),
+                ),
+              ),
+              const SizedBox(height: 6),
+              _missionAssetField(
+                keyName: 'mission_console_asset',
+                label: 'Completion console',
+                value: missionAssets.completionConsoleAssetId,
+                onChanged: (assetId) => onGuardianMissionAssetsChanged(
+                  missionAssets.copyWith(completionConsoleAssetId: assetId),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _missionAssetField({
+    required String keyName,
+    required String label,
+    required AssetId value,
+    required ValueChanged<AssetId> onChanged,
+  }) {
+    return InputDecorator(
+      decoration: InputDecoration(isDense: true, labelText: label),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<AssetId>(
+          key: Key(keyName),
+          value: value,
+          isDense: true,
+          isExpanded: true,
+          items: [
+            for (final asset in assets)
+              DropdownMenuItem(
+                value: asset.id,
+                child: Text(
+                  _assetLabel(asset),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (assetId) {
+            if (assetId != null) onChanged(assetId);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _missionNumberField({
+    required String keyName,
+    required String label,
+    required double value,
+    required ValueChanged<double> onChanged,
+  }) {
+    return TextFormField(
+      key: Key(keyName),
+      initialValue: _formatNumber(value),
+      decoration: InputDecoration(isDense: true, labelText: label),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (text) {
+        final parsed = double.tryParse(text);
+        if (parsed != null && parsed.isFinite && parsed > 0) {
+          onChanged(parsed);
+        }
+      },
+    );
+  }
+
+  Widget _paletteItemTile({
+    required ForgePaletteItem item,
+    required bool hasRenderableAsset,
+    required ForgePalettePlacementReferences references,
+  }) {
+    final issue = item.placementIssue(world, references);
+    final enabled = hasRenderableAsset && issue == null;
+    return ListTile(
+      key: Key('palette_${item.id}'),
+      dense: true,
+      enabled: enabled,
+      selected: item == selectedItem,
+      leading: Icon(_paletteIcon(item.kind), size: 20),
+      title: Text(item.label),
+      subtitle: Text(
+        issue ?? item.description,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: item == selectedItem
+          ? const Icon(Icons.add_location_alt_outlined, size: 20)
+          : null,
+      onTap: enabled ? () => onSelected(item) : null,
     );
   }
 }
@@ -186,6 +581,9 @@ String _assetLabel(WorldAssetDefinition asset) {
   final name = normalized.split('/').last;
   return name.isEmpty ? asset.id.value : name;
 }
+
+String _shortEntityReference(WorldEntityDefinition entity) =>
+    'Guardian ${entity.id.value.substring(28)}';
 
 final class HierarchyPanel extends StatelessWidget {
   const HierarchyPanel({
@@ -333,6 +731,7 @@ final class SchemaInspectorPanel extends StatelessWidget {
             component: component,
             schema: registry.schemaFor(component.type),
             assets: world.assets,
+            entities: world.allEntities.toList(growable: false),
             onChanged: onFieldChanged,
             onRemove: () => onRemoveComponent(component.type),
           ),
@@ -346,6 +745,7 @@ final class _ComponentEditor extends StatelessWidget {
     required this.component,
     required this.schema,
     required this.assets,
+    required this.entities,
     required this.onChanged,
     required this.onRemove,
   });
@@ -353,6 +753,7 @@ final class _ComponentEditor extends StatelessWidget {
   final ContentComponentDefinition component;
   final ComponentSchema? schema;
   final List<WorldAssetDefinition> assets;
+  final List<WorldEntityDefinition> entities;
   final ForgeFieldChanged onChanged;
   final VoidCallback onRemove;
 
@@ -385,6 +786,7 @@ final class _ComponentEditor extends StatelessWidget {
               field: field,
               value: data[field.name],
               assets: assets,
+              entities: entities,
               onChanged: (value) =>
                   onChanged(component.type, field.name, value),
             ),
@@ -408,6 +810,7 @@ final class _SchemaFieldEditor extends StatelessWidget {
     required this.field,
     required this.value,
     required this.assets,
+    required this.entities,
     required this.onChanged,
   });
 
@@ -415,6 +818,7 @@ final class _SchemaFieldEditor extends StatelessWidget {
   final ComponentFieldSchema field;
   final Object? value;
   final List<WorldAssetDefinition> assets;
+  final List<WorldEntityDefinition> entities;
   final ValueChanged<Object?> onChanged;
 
   String get _keyPrefix => componentType == AvarraComponentType.transform
@@ -479,6 +883,30 @@ final class _SchemaFieldEditor extends StatelessWidget {
   }
 
   Widget _stringField(String text) {
+    if (componentType == AvarraComponentType.itemTurnIn &&
+        field.name == 'requiredItemId') {
+      final collectibles = entities
+          .map((entity) => entity.component<CollectibleItemDefinition>())
+          .whereType<CollectibleItemDefinition>()
+          .toList();
+      if (collectibles.isNotEmpty) {
+        return DropdownButtonFormField<String>(
+          key: Key(_keyPrefix),
+          initialValue: text,
+          decoration: InputDecoration(labelText: field.label),
+          items: [
+            for (final collectible in collectibles)
+              DropdownMenuItem(
+                value: collectible.itemId,
+                child: Text(collectible.itemLabel),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) onChanged(value);
+          },
+        );
+      }
+    }
     final allowed = field.allowedStringValues;
     if (allowed != null) {
       final values = allowed.toList()..sort();
@@ -559,6 +987,35 @@ final class _SchemaFieldEditor extends StatelessWidget {
           if (value != null) onChanged(value);
         },
       );
+    }
+    if (field.stableIdDomain == StableIdDomain.entity) {
+      final candidates =
+          componentType == AvarraComponentType.collectibleItem &&
+              field.name == 'guardedByEntityId'
+          ? entities
+                .where(
+                  (entity) =>
+                      entity.component<GuardianBehaviorDefinition>() != null,
+                )
+                .toList()
+          : entities;
+      if (candidates.isNotEmpty) {
+        return DropdownButtonFormField<String>(
+          key: Key(_keyPrefix),
+          initialValue: id,
+          decoration: InputDecoration(labelText: field.label),
+          items: [
+            for (final entity in candidates)
+              DropdownMenuItem(
+                value: entity.id.value,
+                child: Text(_entityLabel(entity)),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) onChanged(value);
+          },
+        );
+      }
     }
     return TextFormField(
       key: Key(_keyPrefix),
@@ -664,6 +1121,13 @@ final class PanelTitle extends StatelessWidget {
 
 String _entityLabel(WorldEntityDefinition entity) {
   if (entity.component<PlayerControlledDefinition>() != null) return 'Player';
+  if (entity.component<GuardianBehaviorDefinition>() != null) {
+    return 'Guardian';
+  }
+  final collectible = entity.component<CollectibleItemDefinition>();
+  if (collectible != null) return collectible.itemLabel;
+  final turnIn = entity.component<ItemTurnInDefinition>();
+  if (turnIn != null) return turnIn.completionLabel;
   final gate = entity.component<ObjectiveGateDefinition>();
   if (gate != null) return gate.label;
   final interactable = entity.component<InteractableDefinition>();
@@ -679,6 +1143,15 @@ String _entityLabel(WorldEntityDefinition entity) {
 IconData _entityIcon(WorldEntityDefinition entity) {
   if (entity.component<PlayerControlledDefinition>() != null) {
     return Icons.person_outline;
+  }
+  if (entity.component<GuardianBehaviorDefinition>() != null) {
+    return Icons.shield_outlined;
+  }
+  if (entity.component<CollectibleItemDefinition>() != null) {
+    return Icons.diamond_outlined;
+  }
+  if (entity.component<ItemTurnInDefinition>() != null) {
+    return Icons.flag_outlined;
   }
   if (entity.component<ObjectiveGateDefinition>() != null) {
     return Icons.door_sliding_outlined;
@@ -699,6 +1172,9 @@ IconData _paletteIcon(ForgePaletteItemKind kind) => switch (kind) {
   ForgePaletteItemKind.relayConsole => Icons.touch_app_outlined,
   ForgePaletteItemKind.objectiveSwitch => Icons.task_alt_outlined,
   ForgePaletteItemKind.objectiveGate => Icons.door_sliding_outlined,
+  ForgePaletteItemKind.guardian => Icons.shield_outlined,
+  ForgePaletteItemKind.collectibleItem => Icons.diamond_outlined,
+  ForgePaletteItemKind.turnInConsole => Icons.flag_outlined,
 };
 
 String _paletteCategoryLabel(ForgePaletteItemCategory category) =>

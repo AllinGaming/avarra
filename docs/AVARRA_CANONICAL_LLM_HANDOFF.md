@@ -2,7 +2,7 @@
 
 **Status:** Current source of truth
 
-**Date:** 2026-08-14
+**Date:** 2026-08-21
 
 **Audience:** Coding LLMs, engineers, architects
 
@@ -557,13 +557,119 @@ place persistent Objective Switches and count-based Objective Gates through the
 same renderer-neutral click, stable-ID, selection, Inspector, undo, validation,
 export, and Test Play loop used by world objects. These presets author existing
 content-schema components and are evaluated by the unchanged Game/server
-objective runtime. The Forge analyzer, four focused tests, and Windows x64
+objective runtime. The Forge analyzer, nine affected tests, and Windows x64
 release build pass; the inventory is now 235.
+Stage 12.8 extends Gameplay Rules with a complete referenced combat mission.
+Creators place a Guardian, bind guarded loot to its stable entity ID, and bind
+a completion console to the collectible's stable item ID. Palette selectors
+automatically follow newly placed dependencies, dependent presets explain why
+they are unavailable, and schema Inspector reference fields use filtered
+dropdowns. The starter player is combat-capable, so canonical exports pass the
+unchanged playable validator and run through the existing Game/server combat,
+guardian, inventory, turn-in, persistence, and authority systems. Four palette
+tests, seven Forge widget workflows, Forge analysis, and the Windows x64
+release build pass; the inventory is now 237 without a repeated full-matrix
+run.
+Stage 12.9 adds a reusable AVARRA-specific Combat mission template above the
+individual presets. One renderer-neutral ground click constructs a Guardian,
+co-located locked loot, and a return console across a compact four-unit layout.
+All stable IDs and exact Guardian/item references exist before one three-create
+`CreatorCommandBatch` is applied, so validation sees the complete candidate
+and one Undo/Redo removes or restores the chain. The new Guardian and Loot
+selectors become active after placement, and the tool stays selected for
+repeated independent mission stamps. Five palette tests, eight Forge widget
+workflows, Forge analysis, and the Windows x64 release build pass; the
+inventory is now 239 without a repeated full-matrix run.
+Stage 12.10 adds typed pre-placement settings to that same atomic template.
+Creators configure Guardian health/damage, center spacing, item label, and
+completion label in the palette before stamping. The immutable settings value
+is validated before entity creation, becomes ordinary authored runtime
+components, and does not add a prefab identity or parallel mission schema.
+Five palette tests, eight Forge widget workflows, Forge analysis, and the
+Windows x64 release build pass; the inventory remains 239.
+Stage 12.11 adds Initiate, Sentinel, and Champion encounter profiles plus
+independent declared-asset selectors for the Guardian, loot, and completion
+console. Profiles preserve creator labels, modified numeric values become
+Custom tuning, and each role AssetId is validated against the current world
+before the unchanged atomic three-entity factory runs. These values remain
+Forge authoring input and serialize only as existing runtime components. Six
+palette tests, nine Forge widget workflows, Forge analysis, and the Windows x64
+release build pass. The complete 18-suite matrix passes; the inventory is now
+241.
+Stage 12.12 turns those real role selectors into a useful built-in creator
+path. Forge now packages and declares Game's existing six-model/three-material
+Gothic kit, starts with Ashen Vanguard, Basalt, and Relay Shrine visuals, and
+uses Hollow Warden, Ember Shard, and Relay Shrine in the Champion mission
+acceptance workflow. A parity test locks both application copies and their glTF
+dependency closure. CI now proves typed profiled export, moved-file Game import
+with real packaged-asset checks, source removal, and selected-world restart
+load. Workspace analysis, the Forge Windows x64 release, and the complete
+18-suite matrix pass; the inventory is now 242. This is a built-in catalog, not
+an OD-019 cooking/container decision; live graphical Test Play remains open.
+Stage 12.13 opens the actual Windows Game release with that typed Champion
+package through the exact Forge Test Play process contract and records a live
+1280 x 720 Thermion-rendered acceptance image. The package reaches Ready with
+the Tiny Forge World identity, 64/64 Champion, Ember Shard objective, and Gothic
+scene. The live run exposed and fixed two Game presentation defects: the compact
+HUD now uses the loaded authored world name instead of a hard-coded Relay Zero
+label, and every interaction rejection maps to player-facing guidance instead
+of leaking enum tokens. Workspace analysis, the Game release, the profiled
+handoff pipeline, and the complete 18-suite matrix pass; the inventory is now
+244. One continuous visible Forge-button and full mission-completion walkthrough
+remains a manual product acceptance item.
+Stage 12.14 makes the existing contextual click-to-act path legible as an
+action-RPG loop. Game now displays a responsive top-center frame for the
+selected Guardian's health and current selection/pursuit/automatic-attack state,
+plus a distinct no-health frame for interactables. Distant Attack commands
+enter the existing pursuit loop without first submitting an inevitably
+out-of-range attack. Combat authority, simulation, schemas, and the Thermion
+selection highlight are unchanged. Game analysis, the Windows release, live
+Champion validation, the profiled handoff pipeline, and the complete 18-suite
+matrix pass; the inventory is now 246.
+Stage 12.15 adds bounded visual motion while preserving that authority boundary.
+Inspection confirms every packaged Gothic glTF has zero animation clips, so
+Game now derives cosmetic presentation copies for idle breathing, active
+stride/sway, collectible hover/rotation, and interactable pulse. Player and
+selected entities are prioritized within a 12-entity cap; a pointer-transparent
+ash layer and 180 ms target-health easing add continuous motion without changing
+ECS, saves, collision, or networking. Live Windows diagnostics report 1.70 ms
+average Flutter frame span with one 177.00 ms maximum spike. Game/workspace
+analysis, the release build, the profiled pipeline, and the complete 18-suite
+matrix pass; the inventory is now 250. Rigged character animation remains an
+explicit measured POC, not a silently selected permanent schema.
+Stage 12.16 repairs movement in Forge's root-only worlds by deriving bounds from
+shallow static floors, fixing supporting-floor sweep contact and initial
+overlap recovery, suppressing zero-chunk streaming-edge reports, and fitting the
+Champion template inside a 16 x 16 starter floor. Ashen Vanguard gains
+Idle/Run/Attack and Hollow Warden gains Idle/Run/Attack/Hit/Death real glTF
+articulated-node clips. Game maps existing state to presentation-only requests
+and Thermion lazily plays/crossfades available names. A real Windows movement
+pad hold proves control, camera displacement, and consecutive run animation;
+the 18-suite matrix passes 257 tests. This is not yet a weighted production rig
+or permanent animation schema.
+Stage 12.17 adds a pure-Dart, 24-event combat presentation timeline downstream
+of authoritative results. Accepted offline attacks and replicated health
+decreases drive 180 ms hit flashes, 350 ms Hit reactions, 900 ms
+world-anchored floating damage, and a 1.1-second defeat linger. Dead entities
+leave gameplay collision immediately but remain visible long enough for Hollow
+Warden's real Death clip. A live 108-frame Windows Champion fight proves
+simultaneous damage values, red impact tint, lethal `DEFEATED` feedback, death
+motion, and loot reveal. Analysis, the release build, the profiled pipeline,
+and the 18-suite matrix pass 264 tests. Protocol v3 still carries health state,
+not explicit combat-impact events.
+Android CI hardening separates native Game packaging from the combined
+quality/Windows job. A parallel Windows job pins Java 17, Android API 36,
+Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1. CI calls the shared
+`tool/build_android_ci.ps1` entry point, which enforces Flutter/Dart and
+Android component expectations, performs the debug APK build, requires a
+non-empty package, and logs its SHA-256. This is build verification only:
+production signing and external artifact publication remain explicitly
+unconfigured. See `AVARRA_ANDROID_CI_CD.md`.
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md` documents the product terminology and
 the complete create/Test Play/export/import/host/join workflow.
 Source-asset import/cooking/thumbnails, sculpted or material-blended terrain,
-chunk-aware painting, arbitrary trigger volumes/scripting, reference-driven
-guardian/loot presets, and preview-process management remain open.
+chunk-aware painting, arbitrary trigger volumes/scripting, richer mission and
+encounter tooling, and preview-process management remain open.
 Physical Android direct-LAN, real touch/frame/thermal evidence, and the human
 product playtest remain open before release sign-off.
 See
@@ -582,8 +688,17 @@ See
 `AVARRA_STAGE_12_3_COMMUNITY_WORLDS_AND_LIGHTING_VALIDATION.md`,
 `AVARRA_STAGE_12_4_FORGE_OBJECT_PLACEMENT_VALIDATION.md`,
 `AVARRA_STAGE_12_5_FORGE_ASSET_CATALOG_AND_FLOOR_BRUSH_VALIDATION.md`,
-`AVARRA_STAGE_12_6_FORGE_TEST_PLAY_VALIDATION.md`,
 `AVARRA_STAGE_12_7_FORGE_GAMEPLAY_RULES_VALIDATION.md`,
+`AVARRA_STAGE_12_8_FORGE_MISSION_CHAIN_VALIDATION.md`,
+`AVARRA_STAGE_12_9_FORGE_MISSION_TEMPLATE_VALIDATION.md`,
+`AVARRA_STAGE_12_10_FORGE_MISSION_SETTINGS_VALIDATION.md`,
+`AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md`,
+`AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md`,
+`AVARRA_STAGE_12_13_LIVE_CHAMPION_TEST_PLAY_AND_HUD_POLISH_VALIDATION.md`,
+`AVARRA_STAGE_12_14_ACTION_RPG_TARGET_FRAME_VALIDATION.md`,
+`AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`,
+`AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md`,
+`AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
 `AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
 
