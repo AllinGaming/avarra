@@ -658,6 +658,49 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.missionNarrative,
+          version: 1,
+          introducedInContentSchemaVersion: 9,
+          editorLabel: 'Mission Narrative',
+          editorOrder: 69,
+          help: 'Story beats derived from this turn-in mission progress.',
+          requiredComponentTypes: const {AvarraComponentType.itemTurnIn},
+          creatableWithoutContext: false,
+          fields: const [
+            ComponentFieldSchema(
+              name: 'title',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Mission title',
+              defaultValue: 'Emberfall Oath',
+              maximumLength: 80,
+            ),
+            ComponentFieldSchema(
+              name: 'openingText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Opening briefing',
+              defaultValue:
+                  'A guardian holds the last ember. Defeat it and recover the relic.',
+              maximumLength: 280,
+            ),
+            ComponentFieldSchema(
+              name: 'returnText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Return beat',
+              defaultValue:
+                  'The relic answers your touch. Carry it to the mission shrine.',
+              maximumLength: 280,
+            ),
+            ComponentFieldSchema(
+              name: 'completionText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Completion epilogue',
+              defaultValue:
+                  'The shrine awakens and a path through the ash opens.',
+              maximumLength: 280,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.persistentFlags,
           version: 1,
           introducedInContentSchemaVersion: 3,
@@ -779,6 +822,7 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.objectiveGate => _decodeObjectiveGate(data),
       AvarraComponentType.collectibleItem => _decodeCollectibleItem(data),
       AvarraComponentType.itemTurnIn => _decodeItemTurnIn(data),
+      AvarraComponentType.missionNarrative => _decodeMissionNarrative(data),
       AvarraComponentType.persistentFlags => _decodePersistentFlags(data),
       _ => throw StateError('Validated component type has no decoder: $type'),
     };
@@ -972,6 +1016,34 @@ final class ComponentSchemaRegistry {
       requiredItemId: requiredItemId,
       completionFlagKey: completionFlagKey,
       completionLabel: completionLabel,
+    );
+  }
+
+  MissionNarrativeDefinition _decodeMissionNarrative(
+    Map<String, Object?> data,
+  ) {
+    final title = data['title']! as String;
+    final openingText = data['openingText']! as String;
+    final returnText = data['returnText']! as String;
+    final completionText = data['completionText']! as String;
+    if (title.trim().isEmpty ||
+        title.length > 80 ||
+        openingText.trim().isEmpty ||
+        openingText.length > 280 ||
+        returnText.trim().isEmpty ||
+        returnText.length > 280 ||
+        completionText.trim().isEmpty ||
+        completionText.length > 280) {
+      _invalidComponent(
+        AvarraComponentType.missionNarrative,
+        'Mission narrative text is invalid.',
+      );
+    }
+    return MissionNarrativeDefinition(
+      title: title,
+      openingText: openingText,
+      returnText: returnText,
+      completionText: completionText,
     );
   }
 

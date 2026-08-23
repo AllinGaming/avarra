@@ -66,22 +66,30 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 41. `docs/AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`
 42. `docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md`
 43. `docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`
-44. `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`
-45. `docs/AVARRA_ANDROID_CI_CD.md`
-46. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-47. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-48. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-49. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-50. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-51. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-52. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-53. `docs/AVARRA_OPEN_DECISIONS.md`
-54. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-55. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-56. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-57. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-58. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
-59. ADRs under `docs/adr/`
+44. `docs/AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md`
+45. `docs/AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md`
+46. `docs/AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md`
+47. `docs/AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`
+48. `docs/AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`
+49. `docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`
+50. `docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`
+51. `docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`
+51. `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`
+52. `docs/AVARRA_ANDROID_CI_CD.md`
+53. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+54. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+55. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+56. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+57. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+58. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+59. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+60. `docs/AVARRA_OPEN_DECISIONS.md`
+61. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+62. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+63. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+64. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+65. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
+66. ADRs under `docs/adr/`
 
 ## Implementation status
 
@@ -177,6 +185,67 @@ and keep dead Hollow Wardens visible for a 1.1-second Death animation before
 loot reveal. A real Windows Champion fight proves exchanged damage, lethal
 feedback, death motion, and removal; analysis, release, pipeline, and all 18
 suites pass 264 tests.
+Stage 12.18 completes the confirmed impact-to-loot loop with 280 ms
+world-anchored impact bursts, capped pulsing beams over available authored
+collectibles, and a 2.4-second accessible pickup toast driven only by accepted
+offline inventory changes or replicated inventory additions. Live packaged
+acceptance also found and fixed an interaction stall: pressing Interact outside
+range now enters the existing collision-aware approach loop and uses the target
+on arrival. The Windows release, formatting, analysis, profiled pipeline, and
+all 18 suites pass 267 tests.
+Stage 12.19 makes traversal read continuously with a frame-rate-independent
+110 ms camera-follow half-life and a six-unit correction snap. One bounded
+projected indicator distinguishes ground movement, hostile pursuit, and
+interaction approach without changing action authority. A 45-frame packaged
+Champion pursuit keeps the red target ring, camera, hits, and floating damage
+aligned; analysis, formatting, release, pipeline, and all 18 suites pass 272
+tests. No physical Android device was attached for the open device gate.
+Stage 12.20 replaces generic action buttons with a Diablo-style bottom-center
+bar driven by existing gameplay state: a live health globe, Basic Strike slot
+with radial cooldown/readiness, and E-key interaction slot. Space during
+recovery keeps the current strike queued, and connected submission now shares
+the automatic-attack pacing deadline instead of spamming commands. A 24-frame
+packaged Champion fight proves the 67/100 health globe, 0.3-second recovery,
+target marker, damage, and controls together; the Game suite passes 64 tests
+and the complete inventory is 276.
+Stage 12.21 adds portable authored mission storytelling rather than hard-coded
+Game prose. Content schema v9 carries a title plus opening, return, and
+completion beats on the existing item-turn-in entity. Forge authors all four
+fields and upgrades older worlds inside the same undoable mission batch. Game
+derives the current beat from authoritative inventory/completion state and
+presents a Diablo-style journal plus animated briefings. The bundled Ashfall
+world now tells “Ashfall's Last Signal.” Analysis, both Windows releases, and
+all 18 suites pass 280 tests.
+Stage 12.22 turns that journal into active world guidance. The server-safe world
+layer resolves the exact next stabilizer, Guardian, revealed collectible, or
+turn-in shrine from stable authored relationships and authoritative progress.
+Game projects a pulsing marker over visible targets, clamps a directional arrow
+for off-screen or inactive-chunk targets, follows live active-entity movement,
+and adds the next action plus distance to the journal. No content, save, or
+network schema changed; analysis, the Game Windows release, and all 18 suites
+pass 283 tests.
+Stage 12.23 makes incoming damage immediately readable. Confirmed offline hits
+and replicated health decreases drive a bounded 180 ms scene shake and
+screen-edge impact flash; health at or below 30% adds a slow critical pulse,
+and defeat holds a dark crimson veil behind the existing restart prompt.
+Pointer coordinates stay stable because the shake is presentation-only and
+does not transform hit testing. Formatting, analysis, the Game Windows release,
+and all 18 suites pass 286 tests with no simulation or schema change.
+Stage 12.24 adds world-space health bars over active authored enemies. Bars use
+live presentation transforms and authoritative health, ease damage changes over
+180 ms, prioritize the selected target within an eight-bar budget, and disappear
+for dead, inactive, or off-screen entities. Selection receives a stronger gold
+frame plus exact HP without replacing the existing top target panel. Formatting,
+analysis, the Game Windows release, and all 18 suites pass 290 tests; no
+gameplay, save, protocol, or content schema changed.
+Stage 12.25 gives Game a cinematic selected-world front door, authored
+first-save prologue, Escape pause/story recap, safe world/title transitions,
+and durable presentation settings for motion, shake, guidance, enemy bars, and
+damage numbers. Community-world story copy still comes from `.avarra`; Forge
+Test Play keeps its direct iteration path. Corrupt preferences repair to
+defaults without touching world/save authority. Formatting, workspace analysis,
+the Game Windows release, and all 18 suites pass 301 tests. Live packaged visual
+acceptance and physical Android remain open.
 Physical
 Android direct-LAN, touch, performance, battery/thermal, and human playability
 remain the named release boundary.
@@ -380,6 +449,14 @@ See
 `docs/AVARRA_STAGE_12_14_ACTION_RPG_TARGET_FRAME_VALIDATION.md`,
 `docs/AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`,
 `docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
 `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

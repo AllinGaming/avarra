@@ -131,6 +131,15 @@ final class NetworkProtocolCodec {
           for (final state in message.persistentFlagStates)
             {'entityId': state.entityId.value, 'flags': state.flags},
         ],
+        'guardianStates': [
+          for (final state in message.guardianStates)
+            {
+              'entityId': state.entityId.value,
+              'phase': state.phase.name,
+              'targetEntityId': state.targetEntityId?.value,
+              'windUpRemainingMicroseconds': state.windUpRemainingMicroseconds,
+            },
+        ],
         'inventoryItemIds': message.inventoryItemIds.toList(),
       },
     };
@@ -283,6 +292,7 @@ final class NetworkProtocolCodec {
           'revision',
           'healthStates',
           'persistentFlagStates',
+          'guardianStates',
           'inventoryItemIds',
         }, r'$.payload');
         final health = _list(
@@ -292,6 +302,10 @@ final class NetworkProtocolCodec {
         final flags = _list(
           payload['persistentFlagStates'],
           r'$.payload.persistentFlagStates',
+        );
+        final guardians = _list(
+          payload['guardianStates'],
+          r'$.payload.guardianStates',
         );
         final inventory = _list(
           payload['inventoryItemIds'],
@@ -313,6 +327,13 @@ final class NetworkProtocolCodec {
                   flags[index],
                   r'$.payload.persistentFlagStates[$index]',
                 ),
+                index,
+              ),
+          ],
+          guardianStates: [
+            for (var index = 0; index < guardians.length; index += 1)
+              _decodeGuardianState(
+                _object(guardians[index], r'$.payload.guardianStates[$index]'),
                 index,
               ),
           ],
@@ -440,6 +461,45 @@ final class NetworkProtocolCodec {
             r'$.payload.persistentFlagStates[$index].flags.${entry.key}',
           ),
       },
+    );
+  }
+
+  NetworkGuardianState _decodeGuardianState(
+    Map<String, dynamic> value,
+    int index,
+  ) {
+    _exactFields(value, const {
+      'entityId',
+      'phase',
+      'targetEntityId',
+      'windUpRemainingMicroseconds',
+    }, r'$.payload.guardianStates[]');
+    final phaseText = _string(
+      value['phase'],
+      r'$.payload.guardianStates[$index].phase',
+    );
+    final phase = NetworkGuardianPhase.values
+        .where((value) => value.name == phaseText)
+        .firstOrNull;
+    if (phase == null) {
+      _malformed('Network guardian phase is unknown.');
+    }
+    return NetworkGuardianState(
+      entityId: _entityId(
+        value['entityId'],
+        r'$.payload.guardianStates[$index].entityId',
+      ),
+      phase: phase,
+      targetEntityId: value['targetEntityId'] == null
+          ? null
+          : _entityId(
+              value['targetEntityId'],
+              r'$.payload.guardianStates[$index].targetEntityId',
+            ),
+      windUpRemainingMicroseconds: _int(
+        value['windUpRemainingMicroseconds'],
+        r'$.payload.guardianStates[$index].windUpRemainingMicroseconds',
+      ),
     );
   }
 

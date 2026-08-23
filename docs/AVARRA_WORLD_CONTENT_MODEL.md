@@ -180,6 +180,39 @@ CraftingDefinition
 
 Runtime instances reference definitions by stable ID.
 
+The first implemented authored story slice is deliberately narrower than the
+future `QuestDefinition` listed above. Content schema v9 adds
+`MissionNarrativeDefinition` to an existing item-turn-in entity:
+
+```text
+title
+openingText
+returnText
+completionText
+```
+
+The world layer derives its phase from authoritative inventory and completion
+flags. It does not add mutable world-definition state, persisted presentation
+acknowledgement, runtime ECS identity, or a server UI dependency. Existing
+content v1-v8 remains readable.
+
+Stage 12.22 also derives the next guidance target without adding authored or
+persisted fields. The current linear relationship walk is:
+
+```text
+next incomplete authored objective
+  -> living Guardian referenced by the required collectible
+  -> revealed collectible
+  -> item-turn-in entity
+  -> no target after mission completion
+```
+
+Target identity remains an `EntityId`. Root transforms are already global;
+chunk-local transforms resolve through authored integer coordinates and chunk
+size, so guidance does not require activating a chunk. Active clients may use
+the corresponding live ECS transform for presentation, but that runtime handle
+is never persisted as identity.
+
 ---
 
 # 11. Versioning

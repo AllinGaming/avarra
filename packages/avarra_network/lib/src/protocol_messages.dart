@@ -7,7 +7,7 @@ import 'network_values.dart';
 
 const String avarraNetworkWireFormat = 'avarra.net';
 const int currentNetworkWireVersion = 1;
-const int currentNetworkProtocolVersion = 3;
+const int currentNetworkProtocolVersion = 4;
 
 abstract final class NetworkMessageType {
   static const clientHello = 1;
@@ -294,6 +294,39 @@ final class NetworkPersistentFlagState {
   final Map<String, bool> flags;
 }
 
+enum NetworkGuardianPhase {
+  idle,
+  pursuing,
+  windingUp,
+  attacking,
+  returning,
+  defeated,
+}
+
+/// Bounded server-visible AI action state for presentation and prediction-free
+/// encounter readability.
+final class NetworkGuardianState {
+  NetworkGuardianState({
+    required this.entityId,
+    required this.phase,
+    required this.targetEntityId,
+    required this.windUpRemainingMicroseconds,
+  }) {
+    final windingUp = phase == NetworkGuardianPhase.windingUp;
+    if (windUpRemainingMicroseconds < 0 ||
+        windUpRemainingMicroseconds > 10000000 ||
+        windingUp != (windUpRemainingMicroseconds > 0) ||
+        (windingUp && targetEntityId == null)) {
+      _invalid('Network guardian state values are invalid.');
+    }
+  }
+
+  final EntityId entityId;
+  final NetworkGuardianPhase phase;
+  final EntityId? targetEntityId;
+  final int windUpRemainingMicroseconds;
+}
+
 /// Authoritative adventure and combat state for one connected player.
 final class GameplayStateSnapshotMessage extends NetworkMessage {
   GameplayStateSnapshotMessage({
@@ -301,6 +334,7 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
     required Iterable<NetworkHealthState> healthStates,
     required Iterable<NetworkPersistentFlagState> persistentFlagStates,
     required Iterable<String> inventoryItemIds,
+    Iterable<NetworkGuardianState> guardianStates = const [],
   }) : healthStates = List.unmodifiable(
          healthStates.toList()..sort(
            (left, right) => left.entityId.value.compareTo(right.entityId.value),
@@ -311,12 +345,18 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
            (left, right) => left.entityId.value.compareTo(right.entityId.value),
          ),
        ),
+       guardianStates = List.unmodifiable(
+         guardianStates.toList()..sort(
+           (left, right) => left.entityId.value.compareTo(right.entityId.value),
+         ),
+       ),
        inventoryItemIds = Set.unmodifiable(
          SplayTreeSet<String>.of(inventoryItemIds),
        ) {
     if (revision < 0 ||
         this.healthStates.length > 256 ||
         this.persistentFlagStates.length > 256 ||
+        this.guardianStates.length > 256 ||
         this.inventoryItemIds.length > 64 ||
         this.inventoryItemIds.any(
           (itemId) => !_networkStateKeyPattern.hasMatch(itemId),
@@ -330,11 +370,16 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
             this.persistentFlagStates.length) {
       _invalid('Gameplay state snapshot values are invalid.');
     }
+    if (this.guardianStates.map((state) => state.entityId).toSet().length !=
+        this.guardianStates.length) {
+      _invalid('Gameplay state snapshot values are invalid.');
+    }
   }
 
   final int revision;
   final List<NetworkHealthState> healthStates;
   final List<NetworkPersistentFlagState> persistentFlagStates;
+  final List<NetworkGuardianState> guardianStates;
   final Set<String> inventoryItemIds;
 
   @override

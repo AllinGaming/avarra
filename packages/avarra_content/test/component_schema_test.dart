@@ -28,6 +28,7 @@ void main() {
           AvarraComponentType.physicsCollider,
           AvarraComponentType.playerControlled,
           AvarraComponentType.renderableReference,
+          AvarraComponentType.missionNarrative,
           AvarraComponentType.transform,
         ]),
       );
@@ -271,6 +272,40 @@ void main() {
         'completionLabel': 'Signal transmitted',
       }, contentSchemaVersion: 7),
       _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test('decodes authored mission narrative only in content v9', () {
+    final narrative = registry.decode(AvarraComponentType.missionNarrative, {
+      'schemaVersion': 1,
+      'title': 'Emberfall Oath',
+      'openingText': 'Defeat the warden and reclaim the shard.',
+      'returnText': 'Carry the shard to the relay shrine.',
+      'completionText': 'The relay burns again.',
+    });
+
+    expect(narrative, isA<MissionNarrativeDefinition>());
+    expect((narrative as MissionNarrativeDefinition).title, 'Emberfall Oath');
+    expect(narrative.returnText, 'Carry the shard to the relay shrine.');
+    expect(
+      () => registry.decode(AvarraComponentType.missionNarrative, {
+        'schemaVersion': 1,
+        'title': 'Emberfall Oath',
+        'openingText': 'Defeat the warden.',
+        'returnText': 'Return to the shrine.',
+        'completionText': 'The relay burns again.',
+      }, contentSchemaVersion: 8),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.missionNarrative, {
+        'schemaVersion': 1,
+        'title': 'Emberfall Oath',
+        'openingText': '   ',
+        'returnText': 'Return to the shrine.',
+        'completionText': 'The relay burns again.',
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
     );
   });
 

@@ -457,6 +457,63 @@ final class ObjectPalettePanel extends StatelessWidget {
                 guardianMissionSettings.copyWith(completionLabel: value),
               ),
             ),
+            TextFormField(
+              key: const Key('mission_title'),
+              initialValue: guardianMissionSettings.missionTitle,
+              maxLength: 80,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Mission title',
+              ),
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(missionTitle: value),
+              ),
+            ),
+            TextFormField(
+              key: const Key('mission_opening_text'),
+              initialValue: guardianMissionSettings.openingText,
+              minLines: 2,
+              maxLines: 3,
+              maxLength: 280,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Opening briefing',
+                alignLabelWithHint: true,
+              ),
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(openingText: value),
+              ),
+            ),
+            TextFormField(
+              key: const Key('mission_return_text'),
+              initialValue: guardianMissionSettings.returnText,
+              minLines: 2,
+              maxLines: 3,
+              maxLength: 280,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Return briefing',
+                alignLabelWithHint: true,
+              ),
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(returnText: value),
+              ),
+            ),
+            TextFormField(
+              key: const Key('mission_completion_text'),
+              initialValue: guardianMissionSettings.completionText,
+              minLines: 2,
+              maxLines: 3,
+              maxLength: 280,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Completion epilogue',
+                alignLabelWithHint: true,
+              ),
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(completionText: value),
+              ),
+            ),
             if (guardianMissionAssets case final missionAssets?) ...[
               const SizedBox(height: 4),
               Text(

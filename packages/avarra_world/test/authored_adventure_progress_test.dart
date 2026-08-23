@@ -17,7 +17,7 @@ void main() {
       id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000710'),
       name: 'Adventure progress test',
       worldFormatVersion: 2,
-      contentSchemaVersion: 8,
+      contentSchemaVersion: 9,
       chunkSize: 8,
       assets: const [],
       entities: [
@@ -51,6 +51,12 @@ void main() {
               completionFlagKey: 'signal.transmitted',
               completionLabel: 'Signal transmitted',
             ),
+            const MissionNarrativeDefinition(
+              title: 'Signal in the Ash',
+              openingText: 'Defeat the guardian and recover the Relay Core.',
+              returnText: 'Carry the Relay Core to the control console.',
+              completionText: 'The signal crosses the ash at last.',
+            ),
             PersistentFlagsDefinition(const {'signal.transmitted': false}),
           ],
         ),
@@ -77,6 +83,10 @@ void main() {
     );
     expect(progress.inventoryStatus, 'Inventory · Empty');
     expect(progress.isMissionComplete, isFalse);
+    var narrative = authoredMissionNarrative(world, progress)!;
+    expect(narrative.turnInEntityId, consoleId);
+    expect(narrative.phase, AuthoredMissionNarrativePhase.opening);
+    expect(narrative.text, 'Defeat the guardian and recover the Relay Core.');
 
     persistence.setFlag(coreId, 'collected', true);
     persistence.addItem(playerId, 'relay.core');
@@ -88,10 +98,21 @@ void main() {
     );
     expect(progress.inventoryStatus, 'Inventory · Relay Core');
 
+    narrative = authoredMissionNarrative(world, progress)!;
+    expect(narrative.phase, AuthoredMissionNarrativePhase.returnToTurnIn);
+    expect(narrative.text, 'Carry the Relay Core to the control console.');
+
     persistence.setFlag(consoleId, 'signal.transmitted', true);
     persistence.removeItem(playerId, 'relay.core');
     progress = authoredAdventureProgress(world, persistence, playerId);
     expect(progress.isMissionComplete, isTrue);
+    narrative = authoredMissionNarrative(world, progress)!;
+    expect(narrative.phase, AuthoredMissionNarrativePhase.complete);
+    expect(narrative.text, 'The signal crosses the ash at last.');
+    expect(
+      narrative.stableKey,
+      '01890f47-e8b8-7a68-8000-000000000705:complete',
+    );
     expect(progress.status(world), 'Mission complete · Signal transmitted');
     expect(progress.inventoryStatus, 'Inventory · Empty');
   });

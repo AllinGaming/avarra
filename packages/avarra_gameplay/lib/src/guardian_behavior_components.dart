@@ -25,7 +25,16 @@ final class GuardianBehaviorComponent {
   final double leashRange;
 }
 
-enum GuardianBehaviorPhase { idle, pursuing, attacking, returning, defeated }
+const guardianAttackWindUpDuration = Duration(milliseconds: 650);
+
+enum GuardianBehaviorPhase {
+  idle,
+  pursuing,
+  windingUp,
+  attacking,
+  returning,
+  defeated,
+}
 
 /// Mutable deterministic AI state. Home is captured from the authored spawn.
 final class GuardianBehaviorStateComponent {
@@ -33,22 +42,45 @@ final class GuardianBehaviorStateComponent {
     required Vector3 homePosition,
     this.phase = GuardianBehaviorPhase.idle,
     this.targetEntityId,
-  }) : _homePosition = Vector3.copy(homePosition);
+    this.windUpCompletesAt,
+  }) : _homePosition = Vector3.copy(homePosition) {
+    final windingUp = phase == GuardianBehaviorPhase.windingUp;
+    if (windUpCompletesAt?.isNegative ??
+        false ||
+            windingUp != (windUpCompletesAt != null) ||
+            (windingUp && targetEntityId == null)) {
+      throw AvarraException(
+        code: GameplayErrorCodes.invalidGuardianBehavior,
+        message: 'Guardian wind-up state is invalid.',
+      );
+    }
+  }
 
   final Vector3 _homePosition;
   final GuardianBehaviorPhase phase;
   final EntityId? targetEntityId;
+  final Duration? windUpCompletesAt;
 
   Vector3 get homePosition => Vector3.copy(_homePosition);
 
   GuardianBehaviorStateComponent transition({
     required GuardianBehaviorPhase phase,
     EntityId? targetEntityId,
+    Duration? windUpCompletesAt,
   }) {
     return GuardianBehaviorStateComponent(
       homePosition: _homePosition,
       phase: phase,
       targetEntityId: targetEntityId,
+      windUpCompletesAt: windUpCompletesAt,
     );
+  }
+
+  Duration remainingWindUpAt(Duration simulationTime) {
+    final completion = windUpCompletesAt;
+    if (completion == null || simulationTime >= completion) {
+      return Duration.zero;
+    }
+    return completion - simulationTime;
   }
 }

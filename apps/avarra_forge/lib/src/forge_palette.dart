@@ -80,8 +80,18 @@ final class ForgeGuardianMissionSettings {
     this.guardianMaximumHealth = 36,
     this.guardianDamage = 7,
     this.spacing = 2,
-    this.itemLabel = 'Forge relic',
-    this.completionLabel = 'Mission complete',
+    this.itemLabel = 'Ember Shard',
+    this.completionLabel = 'Ember relay restored',
+    this.missionTitle = 'Emberfall Oath',
+    this.openingText =
+        'The Hollow Warden has sealed the last ember beneath the ruined keep. '
+        'Break its guard and reclaim the shard.',
+    this.returnText =
+        'The Ember Shard answers your touch. Carry it to the relay shrine '
+        'before the ash consumes its light.',
+    this.completionText =
+        'The shard ignites the relay. A path through the ash opens, and '
+        'something ancient answers beyond it.',
   });
 
   final double guardianMaximumHealth;
@@ -89,6 +99,10 @@ final class ForgeGuardianMissionSettings {
   final double spacing;
   final String itemLabel;
   final String completionLabel;
+  final String missionTitle;
+  final String openingText;
+  final String returnText;
+  final String completionText;
 
   String? get validationIssue {
     if (!guardianMaximumHealth.isFinite || guardianMaximumHealth <= 0) {
@@ -109,6 +123,20 @@ final class ForgeGuardianMissionSettings {
         normalizedCompletionLabel.length > 80) {
       return 'Completion label must contain 1 to 80 characters';
     }
+    final normalizedMissionTitle = missionTitle.trim();
+    if (normalizedMissionTitle.isEmpty || normalizedMissionTitle.length > 80) {
+      return 'Mission title must contain 1 to 80 characters';
+    }
+    for (final entry in {
+      'Opening text': openingText,
+      'Return text': returnText,
+      'Completion text': completionText,
+    }.entries) {
+      final normalized = entry.value.trim();
+      if (normalized.isEmpty || normalized.length > 280) {
+        return '${entry.key} must contain 1 to 280 characters';
+      }
+    }
     return null;
   }
 
@@ -118,6 +146,10 @@ final class ForgeGuardianMissionSettings {
     double? spacing,
     String? itemLabel,
     String? completionLabel,
+    String? missionTitle,
+    String? openingText,
+    String? returnText,
+    String? completionText,
   }) {
     return ForgeGuardianMissionSettings(
       guardianMaximumHealth:
@@ -126,6 +158,10 @@ final class ForgeGuardianMissionSettings {
       spacing: spacing ?? this.spacing,
       itemLabel: itemLabel ?? this.itemLabel,
       completionLabel: completionLabel ?? this.completionLabel,
+      missionTitle: missionTitle ?? this.missionTitle,
+      openingText: openingText ?? this.openingText,
+      returnText: returnText ?? this.returnText,
+      completionText: completionText ?? this.completionText,
     );
   }
 }
@@ -651,6 +687,12 @@ ForgeGuardianMissionTemplate createForgeGuardianMissionTemplate({
           )
         else
           component,
+      MissionNarrativeDefinition(
+        title: settings.missionTitle.trim(),
+        openingText: settings.openingText.trim(),
+        returnText: settings.returnText.trim(),
+        completionText: settings.completionText.trim(),
+      ),
     ],
   );
   return ForgeGuardianMissionTemplate(

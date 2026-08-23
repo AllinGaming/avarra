@@ -281,6 +281,19 @@ void main() {
 
     _moveHostEntity(host, _playerEntityId, Vector3(11, 0.4, 5.2));
     await _waitUntil(
+      () =>
+          client.guardianStates[_guardianId]?.phase ==
+          NetworkGuardianPhase.windingUp,
+    );
+    expect(
+      client.guardianStates[_guardianId]?.targetEntityId,
+      _playerEntityId,
+    );
+    expect(
+      client.guardianStates[_guardianId]?.windUpRemainingMicroseconds,
+      greaterThan(0),
+    );
+    await _waitUntil(
       () => (client.healthStates[_playerEntityId]?.current ?? 100) < 100,
     );
     final restart = await _sendCommand(client, GameplayCommandKind.restart);

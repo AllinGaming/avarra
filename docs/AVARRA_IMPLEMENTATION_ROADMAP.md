@@ -1008,6 +1008,185 @@ Protocol v3 still lacks explicit impact-event sequencing; connected feedback
 derives confirmed damage from authoritative health deltas. Physical Android
 cost and a permanent skinned/material/animation schema remain open.
 
+Stage 12.18 status (combat-impact and loot-flow gate completed 2026-08-21):
+
+- confirmed `damageApplied` events add a 280 ms world-anchored expanding ring
+  and ray burst without predicting damage;
+- currently available authored collectibles receive pulsing gradient beams,
+  ground rings, and four rising particles inside a normal eight-beam cap;
+- accepted offline inventory additions and replicated inventory deltas drive a
+  pointer-transparent, live-region 2.4-second pickup toast, while initial
+  replicated inventory is seeded without replaying restored loot;
+- deterministic inventory diffing de-duplicates and sorts additions;
+- a live packaged Champion run exposed a post-combat interaction-range stall,
+  and Interact now enters the existing collision-aware approach loop before
+  invoking the target on arrival;
+- two 1280 x 720 captures prove the revealed Ember Shard beam and the completed
+  objective/inventory/toast transition; and
+- formatting, workspace analysis, the Windows release, the profiled handoff
+  pipeline, and the complete 18-suite matrix pass. Three tests were added, so
+  the inventory is now 267.
+
+Protocol v3 still derives impact and pickup presentation from health and
+inventory state rather than explicit sequenced gameplay events. Audio, authored
+rarity presentation, renderer-depth particles, physical Android cost, and the
+visible Forge-button/turn-in walkthrough remain open.
+
+Stage 12.19 status (smooth-traversal and destination-feedback gate completed
+2026-08-21):
+
+- a pure, frame-rate-independent camera follower uses a 110 ms half-life for
+  ordinary movement and snaps corrections of at least six world units;
+- local fixed-step movement, connected prediction, and authoritative
+  replication update one desired camera target while the displayed camera rig
+  remains the shared source for rendering, projection, and picking;
+- one bounded, pointer-transparent projected indicator distinguishes move,
+  attack, and interaction targets with cyan dots, a red cross, or a gold
+  diamond, and stops animating when no destination exists;
+- a 45-frame packaged Windows Champion pursuit proves camera displacement and
+  attack-marker alignment through automatic approach, combat impacts, damage,
+  defeat, and loot reveal; and
+- formatting, workspace analysis, the Windows release, the profiled handoff
+  pipeline, and the complete 18-suite matrix pass. Five tests were added, so
+  the inventory is now 272.
+
+The follower and indicator are replaceable presentation policies, not new
+simulation, persistence, or network contracts. No Android device was attached;
+physical touch quality, sustained frame timing, thermal, and battery evidence
+remain open.
+
+Stage 12.20 status (primary-action-bar gate completed 2026-08-21):
+
+- a bounded bottom-center action bar presents a live health globe, large Basic
+  Strike slot, smaller interaction slot, and visible Space/E key caps;
+- the strike slot derives its radial recovery and tenths label from authored
+  cooldown plus offline runtime attack state or the connected command-pacing
+  deadline, without changing combat authority;
+- pressing strike during recovery retains the target for the existing fixed-
+  step automatic-attack loop, while connected immediate attacks share the same
+  pacing deadline instead of submitting repeated commands;
+- E and the Use slot dispatch the same existing interaction/approach path;
+- a 24-frame packaged Windows Champion fight proves live health, cooldown,
+  target, damage, movement, and camera controls together; and
+- formatting, workspace analysis, the Windows release, the profiled handoff
+  pipeline, and the complete 18-suite matrix pass. Four tests were added, so
+  the inventory is now 276.
+
+This is one Basic Strike presentation, not a permanent multi-skill schema,
+resource system, or loadout. Physical Android was explicitly deferred; touch,
+sustained frame timing, thermal, and battery evidence remain open.
+
+Stage 12.21 status (authored-mission-narrative gate completed 2026-08-21):
+
+- content schema v9 adds a bounded definition-only mission title plus opening,
+  return, and completion prose on the existing item-turn-in entity;
+- `avarra_world` selects opening, return, or complete from authoritative
+  inventory and turn-in progress, with stable turn-in EntityId ordering for
+  multiple missions;
+- Forge exposes the four story fields in Combat mission settings and upgrades
+  v1-v8 projects through an explicit command in the same atomic stamp batch;
+- Undo exports the original v8 world, while Redo exports v9 with the narrative;
+- Game presents the active beat in a responsive Diablo-style quest journal and
+  transient accessible briefing without persisting presentation state;
+- the bundled Relay Zero package tells the “Ashfall's Last Signal” arc; and
+- formatting, workspace analysis, both Windows release builds, and all 18
+  suites pass. Four tests were added, so the inventory is now 280.
+
+This is a linear story layer over the existing AVARRA mission slice, not a
+branching quest graph, dialogue system, localization contract, cinematic
+system, or scripting runtime. Physical Android remains open.
+
+Stage 12.22 status (authoritative-quest-guidance gate completed 2026-08-21):
+
+- `avarra_world` exposes the stable entity ID of the next incomplete authored
+  objective and derives a deterministic objective -> Guardian -> collectible
+  -> turn-in guidance chain from existing authoritative progress;
+- root and inactive chunk-local target positions resolve from the portable
+  definition, while Game prefers the live ECS transform when an entity is
+  active and moving;
+- Game projects one pointer-transparent, color-coded pulsing marker and clamps
+  a rotated arrow to the viewport for off-screen targets;
+- the quest journal shows the exact next action plus planar distance, and
+  completed missions remove guidance;
+- no content-schema, world-format, save, protocol, replication, simulation, or
+  Forge contract changed; and
+- formatting, workspace analysis, the Game Windows release, and all 18 suites
+  pass. Three tests were added, so the inventory is now 283.
+
+This is direct target guidance, not pathfinding, a navigation mesh, route
+planning, fog-of-war discovery, or a permanent world-unit/metric-scale policy.
+Live packaged visual acceptance and physical Android remain open.
+
+Stage 12.23 status (reactive-player-danger gate completed 2026-08-21):
+
+- confirmed player-targeted events from the existing combat presentation
+  timeline drive a deterministic scene shake bounded to seven logical pixels
+  and the existing 180 ms hit-flash lifetime;
+- the renderer and world-anchored overlays move together, while disabled
+  transform hit testing keeps pointer input mapped to the unchanged viewport;
+- a pointer-transparent edge vignette flashes on confirmed damage, pulses
+  roughly every 1.2 seconds at or below 30% authoritative health, and remains
+  as a defeat veil behind the existing restart prompt;
+- offline accepted attacks and replicated health decreases use the same path;
+- no simulation, health, cooldown, renderer adapter, save, protocol,
+  replication, content, Forge, or authority contract changed; and
+- formatting, workspace analysis, the Game Windows release, and all 18 suites
+  pass. Three tests were added, so the inventory is now 286.
+
+This is visual survival feedback, not controller haptics, audio, accessibility
+settings for reduced motion, a permanent camera-shake policy, or physical
+Android performance evidence. Live packaged visual acceptance remains open.
+
+Stage 12.24 status (world-space-enemy-health gate completed 2026-08-21):
+
+- Game projects authoritative health over active authored combatants using
+  their current animated presentation transforms;
+- a deterministic eight-bar budget sorts the selected target first and all
+  other enemies by stable entity ID;
+- living on-screen enemies receive compact names and eased health fractions;
+  the selected enemy receives a wider gold frame plus exact HP;
+- dead, inactive, and off-screen entities do not create bars, and the entire
+  overlay remains pointer-transparent inside the existing combat-scene shake;
+- offline ECS health and replicated authoritative health use the same path;
+- no gameplay, AI, combat, renderer adapter, save, protocol, replication,
+  content, Forge, or authority contract changed; and
+- formatting, workspace analysis, the Game Windows release, and all 18 suites
+  pass. Four tests were added, so the inventory is now 290.
+
+This is health readability, not an attack telegraph. The current Guardian model
+attacks immediately in range and does not replicate a wind-up phase; professional
+telegraphing must wait for an explicit server-visible gameplay contract rather
+than guessing from client animation. Live packaged visual acceptance and
+physical Android remain open.
+
+Stage 12.25 status (epic-game-experience gate completed 2026-08-23):
+
+- Game opens on a responsive cinematic front door with selected-world identity,
+  world-library/multiplayer access, settings, controls, and portable authored
+  mission preview;
+- first-time saves receive a full-screen authored prologue before local
+  simulation movement starts;
+- Escape or the HUD pause action stops offline local fixed-step work, clears
+  held movement, flushes dirty state, and exposes story/objective/inventory,
+  settings, world selection, resume, and title actions;
+- connected authority continues while the pause menu is open and Game states
+  that limitation instead of presenting a false global pause;
+- versioned Game-only settings persist reduced motion, camera-shake strength,
+  quest guidance, enemy bars, and damage-number choices using recoverable
+  atomic replacement;
+- corrupt or unavailable preferences degrade safely without affecting world,
+  save, multiplayer, Forge, or server authority;
+- Forge Test Play continues to bypass the player front door; and
+- formatting, workspace analysis, the Game Windows release, and all 18 suites
+  pass. Eleven tests were added, so the inventory is now 301.
+
+This is a complete player shell and stronger delivery of the existing authored
+story, not a permanent audio backend, input-remapping policy, localization
+format, branching quest/dialogue graph, cinematic system, or authoritative
+attack telegraph. Live packaged visual acceptance and physical Android remain
+open. The next product order is hands-on acceptance, audio POC/decision,
+server-visible enemy wind-up, then richer typed story authoring.
+
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
@@ -1028,8 +1207,16 @@ product playtest remain open. See
 `AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`,
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md`,
 `AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`,
+`AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md`,
+`AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md`,
+`AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md`,
+`AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`,
+`AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`,
+`AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
+`AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
+`AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`, and
-ADR-032.
+ADR-033.
 
 Polish:
 

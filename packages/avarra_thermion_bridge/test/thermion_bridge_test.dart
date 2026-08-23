@@ -42,9 +42,7 @@ void main() {
   });
 
   test('viewport rejects out-of-range hit flash intensity', () {
-    final entityId = EntityId.parse(
-      '01890f47-e8b8-7a68-8000-000000000001',
-    );
+    final entityId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
 
     expect(
       () => AvarraThermionViewport(

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_game/main.dart';
+import 'package:avarra_game/src/game_experience_settings.dart';
 import 'package:avarra_game/src/host_device_metrics.dart';
 import 'package:avarra_game/src/runtime_world_library.dart';
 import 'package:avarra_game/src/world_library_ui.dart';
@@ -13,7 +14,7 @@ import 'package:avarra_persistence/avarra_persistence.dart';
 import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
 import 'package:avarra_world/avarra_world.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -95,6 +96,71 @@ void main() {
     expect(find.byKey(const Key('authored_objective_status')), findsOneWidget);
     expect(find.text('Inventory · Empty'), findsOneWidget);
     expect(find.byKey(const Key('inventory_status')), findsOneWidget);
+  });
+
+  testWidgets('front door previews authored story before entering the world', (
+    tester,
+  ) async {
+    final bundledSource = await tester.runAsync(
+      () => File('assets/worlds/isometric_proof.avarra').readAsString(),
+    );
+    final settingsStore = MemoryGameExperienceSettingsStore(
+      const GameExperienceSettings(reducedMotion: true).encode(),
+    );
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        showFrontDoor: true,
+        experienceSettingsStoreLoader: () async => settingsStore,
+        saveStoreLoader: () async => MemorySaveStore(),
+        worldPackageSourceLoader: () async => bundledSource!,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('game_front_door')), findsOneWidget);
+    expect(find.text('RELAY ZERO: ASHFALL'), findsOneWidget);
+    expect(find.byKey(const Key('front_door_mission_title')), findsOneWidget);
+    expect(find.byKey(const Key('front_door_mission_text')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('front_door_settings')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('game_experience_settings_dialog')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('close_game_settings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('enter_world')));
+    await _pumpUntilSaveReady(tester);
+
+    expect(find.byKey(const Key('game_front_door')), findsNothing);
+    expect(find.byKey(const Key('world_source_status')), findsOneWidget);
+  });
+
+  testWidgets('front door keeps world-selection failures recoverable', (
+    tester,
+  ) async {
+    final settingsStore = MemoryGameExperienceSettingsStore(
+      const GameExperienceSettings(reducedMotion: true).encode(),
+    );
+    await tester.pumpWidget(
+      AvarraGameApp(
+        enableRenderer: false,
+        showFrontDoor: true,
+        experienceSettingsStoreLoader: () async => settingsStore,
+        worldSelectionLoader: () async => throw StateError('missing world'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Selected world unavailable'), findsOneWidget);
+    expect(find.byKey(const Key('front_door_worlds')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('enter_world')))
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('root-only Forge world does not report a streamed edge', (

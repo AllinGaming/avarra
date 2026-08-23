@@ -185,6 +185,10 @@ void main() {
         spacing: 3,
         itemLabel: 'Arcane core',
         completionLabel: 'Gateway secured',
+        missionTitle: 'The Arcane Gate',
+        openingText: 'Break the sentinel and recover its arcane core.',
+        returnText: 'Bring the core to the gateway plinth.',
+        completionText: 'The gateway opens into the buried citadel.',
       ),
     );
 
@@ -219,6 +223,18 @@ void main() {
           .component<ItemTurnInDefinition>()!
           .completionLabel,
       'Gateway secured',
+    );
+    final narrative = mission.completionConsole
+        .component<MissionNarrativeDefinition>()!;
+    expect(narrative.title, 'The Arcane Gate');
+    expect(
+      narrative.openingText,
+      'Break the sentinel and recover its arcane core.',
+    );
+    expect(narrative.returnText, 'Bring the core to the gateway plinth.');
+    expect(
+      narrative.completionText,
+      'The gateway opens into the buried citadel.',
     );
 
     for (final entity in mission.entities) {
@@ -260,6 +276,10 @@ void main() {
       const ForgeGuardianMissionSettings(
         itemLabel: 'Ashen crest',
         completionLabel: 'Citadel secured',
+        missionTitle: 'Ashen Crown',
+        openingText: 'Defeat the keeper of the crest.',
+        returnText: 'Return the crest to the citadel.',
+        completionText: 'The citadel remembers its oath.',
       ),
     );
 
@@ -268,6 +288,8 @@ void main() {
     expect(settings.spacing, 3);
     expect(settings.itemLabel, 'Ashen crest');
     expect(settings.completionLabel, 'Citadel secured');
+    expect(settings.missionTitle, 'Ashen Crown');
+    expect(settings.openingText, 'Defeat the keeper of the crest.');
     expect(forgeGuardianMissionProfileIdForSettings(settings), 'champion');
     expect(
       forgeGuardianMissionTemplateIssue(
@@ -299,6 +321,10 @@ void main() {
           .component<RenderableReferenceDefinition>()!
           .assetId,
       consoleAssetId,
+    );
+    expect(
+      mission.completionConsole.component<MissionNarrativeDefinition>()!.title,
+      'Ashen Crown',
     );
 
     for (final entity in mission.entities) {

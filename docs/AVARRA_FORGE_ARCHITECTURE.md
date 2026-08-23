@@ -1,7 +1,7 @@
 # AVARRA — Forge Architecture
 
-**Implementation status:** Stage 12.12 built-in Gothic catalog and profiled
-runtime handoff implemented 2026-08-21
+**Implementation status:** Stage 12.21 authored mission narrative and
+backward-compatible schema migration implemented 2026-08-21
 
 ---
 
@@ -153,6 +153,15 @@ Champion helper centers its -6/+6 endpoints around the origin so neither the
 completion console nor Guardian invalidates the player spawn or playable area.
 These are starter/template corrections, not a new world component or generic
 navigation system.
+
+Stage 12.21 extends `ForgeGuardianMissionSettings` with a title and three
+bounded story beats. The same three-entity factory attaches
+`MissionNarrativeDefinition` to the completion console. Profiles still change
+only encounter tuning, preserving authored labels and prose. When the current
+project predates content schema v9, Forge prepends an undoable
+`SetWorldContentSchemaVersionCommand` to the existing mission batch; inverse
+order removes v9 entities before restoring the older version. This is a typed
+portable component, not editor-only metadata or a second quest graph.
 
 ---
 
@@ -371,7 +380,9 @@ The required delivery order is:
     assets for the Guardian, loot, and completion-console roles;
 17. **Complete:** package and integrity-check the shared built-in Gothic catalog
     and prove a real profiled mission through Game import/restart; and
-18. only after the human creator loop works, add Stage 10A transactions,
+18. **Complete:** author bounded opening, return, and completion story beats
+    through the same mission factory and portable content contract; and
+19. only after the human creator loop works, add Stage 10A transactions,
     permissions, semantic diff, and agent adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
@@ -386,6 +397,7 @@ and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_12_10_FORGE_MISSION_SETTINGS_VALIDATION.md`,
 `AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md`,
 `AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md`,
+`AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-ADR-026, and
+ADR-026, ADR-033, and
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

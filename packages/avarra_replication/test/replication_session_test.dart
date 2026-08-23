@@ -244,6 +244,14 @@ void main() {
             flags: const {'activated': true},
           ),
         ],
+        guardianStates: [
+          NetworkGuardianState(
+            entityId: _globalId,
+            phase: NetworkGuardianPhase.windingUp,
+            targetEntityId: _localId,
+            windUpRemainingMicroseconds: 420000,
+          ),
+        ],
         inventoryItemIds: const {'relay.core'},
       ),
     );
@@ -254,6 +262,14 @@ void main() {
       true,
     );
     expect(connected.client.inventoryItemIds, {'relay.core'});
+    expect(
+      connected.client.guardianStates[_globalId]?.phase,
+      NetworkGuardianPhase.windingUp,
+    );
+    expect(
+      connected.client.guardianStates[_globalId]?.targetEntityId,
+      _localId,
+    );
 
     await connected.client.close();
     await server.close();

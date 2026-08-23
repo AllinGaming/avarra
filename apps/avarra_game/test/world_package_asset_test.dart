@@ -47,7 +47,7 @@ void main() {
 
       expect(definition.name, 'Relay Zero: Ashfall');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 8);
+      expect(definition.contentSchemaVersion, 9);
       expect(definition.chunkSize, 8);
       expect(definition.chunks, hasLength(3));
       expect(definition.allEntities, hasLength(22));
@@ -94,6 +94,14 @@ void main() {
           .single;
       expect(turnIn.requiredItemId, 'relay.core');
       expect(turnIn.completionFlagKey, 'signal.transmitted');
+      final narrative = definition.allEntities
+          .map((entity) => entity.component<MissionNarrativeDefinition>())
+          .whereType<MissionNarrativeDefinition>()
+          .single;
+      expect(narrative.title, "Ashfall's Last Signal");
+      expect(narrative.openingText, contains('three stabilizers'));
+      expect(narrative.returnText, contains('ash storm'));
+      expect(narrative.completionText, contains('answers in return'));
       final collectibles = definition.allEntities
           .map((entity) => entity.component<CollectibleItemDefinition>())
           .whereType<CollectibleItemDefinition>()

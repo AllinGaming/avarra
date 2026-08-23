@@ -321,7 +321,85 @@ gameplay collision immediately but remain visible for the 1.1-second Death
 window. The reverse orthographic `screenPointForWorld` projection remains in
 `avarra_isometric` rather than the renderer adapter.
 
+Stage 12.18 adds three replaceable consumers without expanding authority. The
+same confirmed damage frame emits a 280 ms projected impact burst. Authored
+collectible availability projects at most eight pulsing loot beams through the
+same camera rig. Accepted offline inventory changes or authoritative
+replicated inventory additions create a pointer-transparent, accessible
+2.4-second pickup notice. Initial replicated inventory seeds presentation
+state without replaying restored loot.
+
+Stage 12.19 routes existing player-position updates into a presentation-only
+camera target follower. Exponential 110 ms half-life easing is independent of
+display-frame subdivision, while six-unit corrections and restart snap
+immediately. The resulting `IsometricCameraRig` remains the single displayed
+camera supplied to Thermion and projected overlays. A separate bounded overlay
+projects one move, attack, or interaction destination with kind-specific
+feedback from the unchanged action-target state.
+
+Stage 12.20 exposes existing player health, authored Basic Strike cooldown, and
+action availability through a bounded bottom-center action bar. Offline
+readiness comes from `BasicAttackStateComponent`; connected readiness is
+explicitly local command pacing while the host retains authority. Space and E
+reuse the existing attack/approach and interaction/approach paths. The radial
+cooldown repaint is driven by the existing presentation notifier rather than
+adding a simulation clock or per-frame gameplay mutation.
+
+Stage 12.21 presents `AuthoredMissionNarrative` derived by the server-safe world
+layer from existing authoritative adventure progress. Game owns a responsive
+quest journal and 4.8-second live-region transition notice for opening, relic
+recovery, and completion. Initial connected state waits for an authoritative
+gameplay snapshot; later replicated inventory/flag changes and accepted offline
+effects use the same beat-change path. The widgets are pointer-transparent and
+no presentation acknowledgement enters saves, ECS, or replication.
+
+Stage 12.22 presents `AuthoredQuestGuidanceTarget`, another immutable
+server-safe derivation of the same definition and progress. Stable entity
+relationships choose the next incomplete objective, guarding enemy, revealed
+collectible, or turn-in destination. Authored chunk-local positions keep
+unloaded targets navigable; Game substitutes the live ECS transform for active
+moving entities. A pointer-transparent projected marker uses a down-chevron
+on-screen and a clamped directional arrow off-screen, while the journal repeats
+the next action and planar distance. The `m`/`km` label is presentation
+shorthand for current world units, not a permanent metric-scale contract.
+
+Stage 12.23 reads player-targeted damage from the existing
+`CombatPresentationFrame`. A deterministic, decaying offset translates the
+renderer plus world-anchored overlays by at most seven logical pixels during
+the 180 ms hit-flash window. `transformHitTests: false` keeps pointer mapping
+stable. A separate pointer-transparent vignette combines confirmed-hit
+intensity, a roughly 1.2-second pulse at or below 30% health, and a persistent
+defeat veil. It neither infers attacks from animation nor mutates health.
+
+Stage 12.24 combines active authored combatant IDs, authoritative
+`HealthComponent` values, and animated `PresentationSnapshot` transforms into
+at most eight world-space enemy bars. Selected-first then stable-ID ordering
+makes budget behavior deterministic. Dead, inactive, and off-screen targets are
+omitted; selected targets receive a wider gold frame and exact value, while all
+health fractions ease over 180 ms. The pointer-transparent overlay lives inside
+the shaken world layer so enemies, bars, markers, and combat text remain
+aligned.
+
+Stage 12.25 adds a Game-owned shell around that presentation boundary. A
+code-native animated front door previews the selected package's world and
+mission narrative before runtime load. A first-save prologue gates the local
+ticker, while the Escape pause overlay exposes the current derived narrative,
+objective, and inventory without creating progress state. Offline pause stops
+local fixed-step work; connected authority continues and is labeled honestly.
+Recoverable app preferences can disable procedural motion/atmosphere/shake,
+quest guidance, enemy bars, or combat text. These settings select downstream
+presentation only: they do not mutate `PresentationSnapshot`, ECS, saves,
+world packages, commands, or replication.
+
 Physical Android cost, production skinning/material effects, and an explicit
 replicated impact-event message remain open. See
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
-`AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`.
+`AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md` and
+`AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md` and
+`AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md` and
+`AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md`.
+See `AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md` and ADR-033.
+See `AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`.
+See `AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`.
+See `AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`.
+See `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`.

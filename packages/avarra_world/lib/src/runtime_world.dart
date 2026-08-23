@@ -186,9 +186,11 @@ final class RuntimeEntityLoader {
               completionLabel: component.completionLabel,
             ),
           );
-        case ObjectiveDefinition() || ObjectiveGateDefinition():
+        case ObjectiveDefinition() ||
+            ObjectiveGateDefinition() ||
+            MissionNarrativeDefinition():
           // Objective grouping and gates remain authored definition state.
-          // Their runtime result is derived from persisted objective progress.
+          // Narrative also derives from persisted/replicated adventure progress.
           break;
         case PersistentFlagsDefinition():
           ecs.addComponent(handle, PersistentFlagsComponent(component.flags));

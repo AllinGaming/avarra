@@ -94,6 +94,67 @@ Hollow Wardens for a 1.1-second Death clip before collision-safe removal. See
 `docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
 `docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`.
 
+Stage 12.18 adds a 280 ms impact burst to confirmed damage, capped pulsing
+world beams for revealed collectibles, and an accessible 2.4-second pickup
+toast driven only by accepted or replicated inventory additions. Pressing
+Interact outside authored range now enters the existing collision-aware
+approach loop and uses the target on arrival. See
+`docs/AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md`.
+
+Stage 12.19 smooths the visible camera toward authoritative/predicted player
+positions with a frame-rate-independent 110 ms half-life and six-unit snap.
+One pointer-transparent projected ring distinguishes ground movement, hostile
+pursuit, and interaction approach, then disappears with the existing action
+target. See
+`docs/AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md`.
+
+Stage 12.20 replaces generic action buttons with a bottom-center health and
+primary-action bar. Basic Strike displays the existing simulation-time
+cooldown as a radial recovery sweep, Space keeps the hostile engagement queued,
+and E dispatches the same interaction/approach path as the Use slot. Connected
+submission uses a local pacing deadline while the host remains authoritative.
+See `docs/AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md`.
+
+Stage 12.21 adds content-schema-v9 mission narrative. Game derives the active
+opening, return, or completion beat from the same authoritative inventory and
+turn-in flags used by gameplay, then presents it in a top-right quest journal
+and a pointer-transparent animated briefing. The bundled world now authors
+“Ashfall's Last Signal”; older worlds without narrative keep their existing
+derived objective text. See
+`docs/AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`.
+
+Stage 12.22 derives one exact quest target from authored stable-ID
+relationships and authoritative progress. The pointer-transparent overlay
+marks an on-screen objective, Guardian, collectible, or turn-in shrine and
+becomes a clamped directional arrow when the target is outside the viewport.
+Inactive chunks use authored global positions; active moving entities use live
+ECS transforms. The quest journal repeats the next action and presentation-only
+distance. See
+`docs/AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`.
+
+Stage 12.23 turns already-confirmed player damage into bounded screen response.
+Offline accepted Guardian attacks and replicated health decreases use the same
+combat timeline to produce an at-most-seven-logical-pixel, 180 ms scene shake
+and a fading edge flash. Health at or below 30% adds a pointer-transparent
+critical pulse; defeat replaces it with a persistent veil behind the existing
+restart prompt. Scene translation does not transform pointer hit testing. See
+`docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`.
+
+Stage 12.24 projects authoritative health over active authored enemies. Up to
+eight pointer-transparent bars follow animated presentation transforms, ease
+health changes over 180 ms, and disappear when an entity dies, unloads, or
+leaves the viewport. The selected hostile wins the bounded display budget and
+receives a wider gold frame plus exact HP. See
+`docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`.
+
+Stage 12.25 adds the real player-facing shell around that gameplay: a cinematic
+selected-world title screen, portable mission preview, first-save prologue,
+Escape pause/story recap, world/title transitions, and persistent Game-only
+presentation settings. Reduced motion, shake strength, quest guidance, enemy
+bars, and damage numbers are wired at the presentation boundary. Forge Test
+Play still enters directly. See
+`docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`.
+
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
 GitHub Actions now gives Android native compilation a dedicated Windows job

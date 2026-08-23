@@ -667,7 +667,11 @@ final class MultiplayerProofHost {
       simulationTime: _simulationTime,
       deltaSeconds: 1 / tickRateHz,
     );
-    if (results.any((result) => result.attack?.accepted ?? false)) {
+    if (results.any(
+      (result) =>
+          result.previousPhase != result.phase ||
+          (result.attack?.accepted ?? false),
+    )) {
       _gameplayStateRevision += 1;
     }
   }
@@ -719,6 +723,18 @@ final class MultiplayerProofHost {
       persistentFlagStates: [
         for (final entry in flags.entries)
           NetworkPersistentFlagState(entityId: entry.key, flags: entry.value),
+      ],
+      guardianStates: [
+        for (final entry
+            in runtimeWorld.ecs.query<GuardianBehaviorStateComponent>())
+          NetworkGuardianState(
+            entityId: entry.entityId,
+            phase: _networkGuardianPhase(entry.component.phase),
+            targetEntityId: entry.component.targetEntityId,
+            windUpRemainingMicroseconds: entry.component
+                .remainingWindUpAt(_simulationTime)
+                .inMicroseconds,
+          ),
       ],
       inventoryItemIds: adventureState.inventoryFor(playerId),
     );
@@ -773,6 +789,16 @@ final class MultiplayerProofHost {
     );
   }
 }
+
+NetworkGuardianPhase _networkGuardianPhase(GuardianBehaviorPhase phase) =>
+    switch (phase) {
+      GuardianBehaviorPhase.idle => NetworkGuardianPhase.idle,
+      GuardianBehaviorPhase.pursuing => NetworkGuardianPhase.pursuing,
+      GuardianBehaviorPhase.windingUp => NetworkGuardianPhase.windingUp,
+      GuardianBehaviorPhase.attacking => NetworkGuardianPhase.attacking,
+      GuardianBehaviorPhase.returning => NetworkGuardianPhase.returning,
+      GuardianBehaviorPhase.defeated => NetworkGuardianPhase.defeated,
+    };
 
 String _attackRejectionDetail(CombatAttackRejection rejection) =>
     switch (rejection) {

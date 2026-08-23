@@ -49,6 +49,14 @@ $sourcePaths = @(
     'docs/AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md'
     'docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md'
     'docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md'
+    'docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md'
     'docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md'
     'docs/AVARRA_ANDROID_CI_CD.md'
     'docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md'
@@ -89,6 +97,7 @@ $sourcePaths = @(
     'docs/adr/ADR-030-player-inventory-and-authored-item-turn-ins.md'
     'docs/adr/ADR-031-host-authoritative-adventure-commands.md'
     'docs/adr/ADR-032-durable-host-saves-and-player-retention.md'
+    'docs/adr/ADR-033-authored-mission-narrative.md'
 )
 
 $sections = foreach ($relativePath in $sourcePaths) {

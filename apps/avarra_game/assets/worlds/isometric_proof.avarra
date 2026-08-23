@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 8,
+  "contentSchemaVersion": 9,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero: Ashfall",
@@ -317,6 +317,13 @@
               "requiredItemId": "relay.core",
               "completionFlagKey": "signal.transmitted",
               "completionLabel": "Signal transmitted"
+            },
+            "avarra.story.mission_narrative": {
+              "schemaVersion": 1,
+              "title": "Ashfall's Last Signal",
+              "openingText": "Relight the three stabilizers, breach the sealed core chamber, and wrest the Relay Core from the Ash Warden.",
+              "returnText": "The Relay Core beats like a buried heart. Carry it to the transmitter before the ash storm swallows the signal.",
+              "completionText": "The transmitter answers. Avarra's last signal cuts through the ash, and something distant answers in return."
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,

@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 void main() {
-  test('guardian perceives, pursues, attacks, and respects cooldown', () {
+  test('guardian pursues, winds up, attacks, and respects cooldown', () {
     final fixture = _GuardianFixture(targetPosition: Vector3(3, 0, 0));
 
     var result = fixture.tick(Duration.zero);
@@ -20,17 +20,46 @@ void main() {
     fixture.tick(const Duration(milliseconds: 750));
     result = fixture.tick(const Duration(seconds: 1));
 
+    expect(result.phase, GuardianBehaviorPhase.windingUp);
+    expect(result.attack, isNull);
+    expect(fixture.playerHealth.currentHealth, 100);
+    expect(
+      fixture.guardianState.windUpCompletesAt,
+      const Duration(milliseconds: 1650),
+    );
+
+    result = fixture.tick(const Duration(milliseconds: 1750));
     expect(result.phase, GuardianBehaviorPhase.attacking);
     expect(result.attack?.accepted, isTrue);
     expect(fixture.playerHealth.currentHealth, 90);
 
-    final coolingDown = fixture.tick(const Duration(milliseconds: 1100));
-    expect(coolingDown.attack?.rejection, CombatAttackRejection.cooldown);
+    final coolingDown = fixture.tick(const Duration(seconds: 2));
+    expect(coolingDown.phase, GuardianBehaviorPhase.attacking);
+    expect(coolingDown.attack, isNull);
     expect(fixture.playerHealth.currentHealth, 90);
 
-    final nextAttack = fixture.tick(const Duration(milliseconds: 1500));
+    final nextWindUp = fixture.tick(const Duration(milliseconds: 2250));
+    expect(nextWindUp.phase, GuardianBehaviorPhase.windingUp);
+    expect(fixture.playerHealth.currentHealth, 90);
+
+    final nextAttack = fixture.tick(const Duration(seconds: 3));
     expect(nextAttack.attack?.accepted, isTrue);
     expect(fixture.playerHealth.currentHealth, 80);
+  });
+
+  test('player can leave attack range during the authoritative wind-up', () {
+    final fixture = _GuardianFixture(targetPosition: Vector3(0.5, 0, 0));
+
+    final warning = fixture.tick(Duration.zero);
+    expect(warning.phase, GuardianBehaviorPhase.windingUp);
+    expect(fixture.playerHealth.currentHealth, 100);
+
+    fixture.movePlayer(Vector3(3, 0, 0));
+    final dodged = fixture.tick(const Duration(milliseconds: 750));
+
+    expect(dodged.phase, GuardianBehaviorPhase.pursuing);
+    expect(dodged.attack?.rejection, CombatAttackRejection.outOfRange);
+    expect(fixture.playerHealth.currentHealth, 100);
   });
 
   test('guardian cannot perceive a target through a static blocker', () {
@@ -188,6 +217,14 @@ final class _GuardianFixture {
 
   void moveGuardian(Vector3 position) {
     final handle = ecs.handleFor(guardianId)!;
+    ecs.replaceComponent<TransformComponent>(
+      handle,
+      ecs.component<TransformComponent>(handle).copyWith(position: position),
+    );
+  }
+
+  void movePlayer(Vector3 position) {
+    final handle = ecs.handleFor(playerId)!;
     ecs.replaceComponent<TransformComponent>(
       handle,
       ecs.component<TransformComponent>(handle).copyWith(position: position),

@@ -63,6 +63,14 @@ void main() {
             flags: const {'activated': true},
           ),
         ],
+        guardianStates: [
+          NetworkGuardianState(
+            entityId: _entityId,
+            phase: NetworkGuardianPhase.windingUp,
+            targetEntityId: _entityId,
+            windUpRemainingMicroseconds: 480000,
+          ),
+        ],
         inventoryItemIds: const {'relay.core'},
       ),
     ];
@@ -105,6 +113,27 @@ void main() {
         ),
       ),
       throwsA(_hasCode(NetworkErrorCodes.unsupportedWireVersion)),
+    );
+  });
+
+  test('rejects inconsistent Guardian wind-up state', () {
+    expect(
+      () => NetworkGuardianState(
+        entityId: _entityId,
+        phase: NetworkGuardianPhase.windingUp,
+        targetEntityId: null,
+        windUpRemainingMicroseconds: 500000,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    );
+    expect(
+      () => NetworkGuardianState(
+        entityId: _entityId,
+        phase: NetworkGuardianPhase.idle,
+        targetEntityId: null,
+        windUpRemainingMicroseconds: 1,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
     );
   });
 

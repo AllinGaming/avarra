@@ -138,6 +138,7 @@ final class ReplicationClient {
   final Map<NetworkEntityId, ReplicatedEntityState> _entities = {};
   final Map<EntityId, NetworkHealthState> _healthStates = {};
   final Map<EntityId, NetworkPersistentFlagState> _persistentFlagStates = {};
+  final Map<EntityId, NetworkGuardianState> _guardianStates = {};
   Set<String> _inventoryItemIds = const {};
   late final StreamSubscription<NetworkMessage> _subscription;
   NetworkConnectionId? _connectionId;
@@ -164,6 +165,8 @@ final class ReplicationClient {
       Map.unmodifiable(_healthStates);
   Map<EntityId, NetworkPersistentFlagState> get persistentFlagStates =>
       Map.unmodifiable(_persistentFlagStates);
+  Map<EntityId, NetworkGuardianState> get guardianStates =>
+      Map.unmodifiable(_guardianStates);
   Set<String> get inventoryItemIds => _inventoryItemIds;
   NetworkTransportStatistics get transportStatistics => _channel.statistics;
 
@@ -365,6 +368,13 @@ final class ReplicationClient {
               (state) => MapEntry(state.entityId, state),
             ),
           );
+        _guardianStates
+          ..clear()
+          ..addEntries(
+            message.guardianStates.map(
+              (state) => MapEntry(state.entityId, state),
+            ),
+          );
         _inventoryItemIds = message.inventoryItemIds;
         _latestGameplayStateRevision = message.revision;
         _events.add(ReplicationGameplayStateApplied(message.revision));
@@ -408,6 +418,7 @@ final class ReplicationClient {
     _entities.clear();
     _healthStates.clear();
     _persistentFlagStates.clear();
+    _guardianStates.clear();
     _inventoryItemIds = const {};
     _latestGameplayStateRevision = null;
     if (!_events.isClosed) {

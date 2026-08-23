@@ -445,6 +445,39 @@ final class ItemTurnInDefinition extends ContentComponentDefinition {
   };
 }
 
+/// Authored story delivery for one item-turn-in mission.
+///
+/// Narrative phase is derived from authoritative inventory and completion
+/// state; this definition contains no mutable progress.
+final class MissionNarrativeDefinition extends ContentComponentDefinition {
+  const MissionNarrativeDefinition({
+    required this.title,
+    required this.openingText,
+    required this.returnText,
+    required this.completionText,
+  });
+
+  final String title;
+  final String openingText;
+  final String returnText;
+  final String completionText;
+
+  @override
+  String get type => AvarraComponentType.missionNarrative;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'title': title,
+    'openingText': openingText,
+    'returnText': returnText,
+    'completionText': completionText,
+  };
+}
+
 final class PersistentFlagsDefinition extends ContentComponentDefinition {
   PersistentFlagsDefinition(Map<String, bool> flags)
     : flags = Map.unmodifiable(SplayTreeMap.of(flags));

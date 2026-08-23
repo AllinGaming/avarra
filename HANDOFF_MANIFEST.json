@@ -1,7 +1,7 @@
 {
   "architecture_version": "v8-reviewed",
-  "date": "2026-08-21",
-  "current_direction": "Stage 12.17 adds a bounded renderer-neutral combat timeline downstream of accepted offline results and authoritative replicated health decreases. Hit flash, world-anchored floating damage, lethal feedback, and a 1.1-second Death linger now make the real Champion fight readable without changing combat authority. Add one complete skill-impact/audio/loot-feedback slice, complete the continuous human Forge-button mission walkthrough, and validate animation plus combat overlays on physical Android before selecting permanent weighted-rig, material-effect, or animation schemas. Resolve an OD-019 cooking/container POC before arbitrary source-asset import; production Android signing/publishing remains explicit and unconfigured.",
+  "date": "2026-08-23",
+  "current_direction": "Stage 12.25 adds the complete Game-owned title, authored prologue, pause/story recap, world/title transition, and persistent presentation-settings flow without changing simulation or authority. Next prioritize a hands-on packaged UX pass, an audio backend POC/decision, an explicit server-authoritative enemy wind-up/telegraph contract, richer typed story authoring, and physical Android touch/performance/direct-LAN validation. Source-asset cooking/container design and production Android signing/publication remain explicit open work.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
@@ -34,6 +34,14 @@
   "stage_12_15_validation": "docs/AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md",
   "stage_12_16_validation": "docs/AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md",
   "stage_12_17_validation": "docs/AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md",
+  "stage_12_18_validation": "docs/AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md",
+  "stage_12_19_validation": "docs/AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md",
+  "stage_12_20_validation": "docs/AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md",
+  "stage_12_21_validation": "docs/AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md",
+  "stage_12_22_validation": "docs/AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md",
+  "stage_12_23_validation": "docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md",
+  "stage_12_24_validation": "docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md",
+  "stage_12_25_validation": "docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md",
   "forge_game_maker_guide": "docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md",
   "android_ci_cd": "docs/AVARRA_ANDROID_CI_CD.md",
   "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
@@ -62,7 +70,8 @@
     "ADR-029-authored-objective-groups-and-derived-gates.md",
     "ADR-030-player-inventory-and-authored-item-turn-ins.md",
     "ADR-031-host-authoritative-adventure-commands.md",
-    "ADR-032-durable-host-saves-and-player-retention.md"
+    "ADR-032-durable-host-saves-and-player-retention.md",
+    "ADR-033-authored-mission-narrative.md"
   ],
   "ai_creator_docs": [
     "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",
@@ -70,7 +79,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through Stage 12.17 root-only movement repair, live Windows pointer movement and combat, articulated glTF node animation, bounded authoritative-result feedback/death linger, contextual targeting, and the shared pinned Android CI packaging path; production signing/publication, explicit replicated combat-impact sequencing, permanent weighted-rig/material/animation schemas, one continuous visible Forge-button mission walkthrough, source-asset cooking/container design, and physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
+  "review_status": "Consistency-reviewed through Stage 12.25 cinematic title, portable mission preview/prologue, pause/story recap, persistent presentation settings, authoritative gameplay feedback, smooth traversal, and world-space enemy health. The 18-suite matrix passes 301 tests and the Game Windows release builds. Live packaged visual acceptance, audio/haptics/input-remapping decisions, richer story authoring, authoritative enemy wind-ups, source-asset cooking/container design, production signing/publication, and physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

@@ -122,7 +122,10 @@ final class GuardianBehaviorSystem {
       );
     }
 
-    final target = ecs.handleFor(targetId);
+    final effectiveTargetId = state.phase == GuardianBehaviorPhase.windingUp
+        ? state.targetEntityId ?? targetId
+        : targetId;
+    final target = ecs.handleFor(effectiveTargetId);
     final targetHealth = target == null
         ? null
         : ecs.tryComponent<HealthComponent>(target);
@@ -156,7 +159,7 @@ final class GuardianBehaviorSystem {
 
     if (!_canPerceive(
       guardianId: guardianId,
-      targetId: targetId,
+      targetId: effectiveTargetId,
       origin: transform.position,
       target: targetPosition,
       range: behavior.perceptionRange,
@@ -179,15 +182,25 @@ final class GuardianBehaviorSystem {
 
     final attackDefinition = ecs.component<BasicAttackComponent>(handle);
     final targetDistance = _planarDistance(transform.position, targetPosition);
-    if (targetDistance <= attackDefinition.range) {
+    if (state.phase == GuardianBehaviorPhase.windingUp) {
+      if (simulationTime < state.windUpCompletesAt!) {
+        return GuardianBehaviorTickResult(
+          guardianId: guardianId,
+          previousPhase: state.phase,
+          phase: state.phase,
+          positionChanged: false,
+        );
+      }
       final attack = _combat.attack(
         attackerId: guardianId,
-        targetId: targetId,
+        targetId: effectiveTargetId,
         simulationTime: simulationTime,
       );
       final next = state.transition(
-        phase: GuardianBehaviorPhase.attacking,
-        targetEntityId: targetId,
+        phase: attack.accepted || targetDistance <= attackDefinition.range
+            ? GuardianBehaviorPhase.attacking
+            : GuardianBehaviorPhase.pursuing,
+        targetEntityId: effectiveTargetId,
       );
       _replaceStateIfChanged(handle, state, next);
       return GuardianBehaviorTickResult(
@@ -196,6 +209,26 @@ final class GuardianBehaviorSystem {
         phase: next.phase,
         positionChanged: false,
         attack: attack,
+      );
+    }
+    if (targetDistance <= attackDefinition.range) {
+      final attackState = ecs.component<BasicAttackStateComponent>(handle);
+      final ready = simulationTime >= attackState.nextReadyAt;
+      final next = state.transition(
+        phase: ready
+            ? GuardianBehaviorPhase.windingUp
+            : GuardianBehaviorPhase.attacking,
+        targetEntityId: effectiveTargetId,
+        windUpCompletesAt: ready
+            ? simulationTime + guardianAttackWindUpDuration
+            : null,
+      );
+      _replaceStateIfChanged(handle, state, next);
+      return GuardianBehaviorTickResult(
+        guardianId: guardianId,
+        previousPhase: state.phase,
+        phase: next.phase,
+        positionChanged: false,
       );
     }
 
@@ -207,7 +240,7 @@ final class GuardianBehaviorSystem {
     );
     final next = state.transition(
       phase: GuardianBehaviorPhase.pursuing,
-      targetEntityId: targetId,
+      targetEntityId: effectiveTargetId,
     );
     _replaceStateIfChanged(handle, state, next);
     return GuardianBehaviorTickResult(
@@ -312,7 +345,8 @@ final class GuardianBehaviorSystem {
     GuardianBehaviorStateComponent next,
   ) {
     if (current.phase == next.phase &&
-        current.targetEntityId == next.targetEntityId) {
+        current.targetEntityId == next.targetEntityId &&
+        current.windUpCompletesAt == next.windUpCompletesAt) {
       return;
     }
     ecs.replaceComponent<GuardianBehaviorStateComponent>(handle, next);

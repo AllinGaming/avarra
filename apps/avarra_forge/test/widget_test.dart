@@ -353,12 +353,28 @@ void main() {
   testWidgets('stamps and undoes a complete combat mission atomically', (
     tester,
   ) async {
+    final current = createForgeStarterWorld();
+    final legacy = WorldDefinition(
+      id: current.id,
+      name: current.name,
+      worldFormatVersion: current.worldFormatVersion,
+      contentSchemaVersion: 8,
+      chunkSize: current.chunkSize,
+      assets: current.assets,
+      entities: current.entities,
+      chunks: current.chunks,
+    );
+    final storage = _MemoryForgeStorage();
+    final dialogs = _FakeForgeFileDialogs()
+      ..savePaths.add('build/mission-undone.avarra')
+      ..savePaths.add('build/mission-redone.avarra');
     await tester.binding.setSurfaceSize(const Size(1280, 760));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       AvarraForgeApp(
-        projectStorage: _MemoryForgeStorage(),
-        fileDialogs: _FakeForgeFileDialogs(),
+        initialWorld: legacy,
+        projectStorage: storage,
+        fileDialogs: dialogs,
         enableRenderer: false,
       ),
     );
@@ -419,6 +435,14 @@ void main() {
           .value,
       isNull,
     );
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+    expect(
+      WorldPackageCodec()
+          .decode(storage.files['build/mission-undone.avarra']!)
+          .contentSchemaVersion,
+      8,
+    );
 
     await tester.tap(find.byKey(const Key('redo')));
     await tester.pump();
@@ -429,6 +453,20 @@ void main() {
             find.byKey(const Key('palette_guardian_reference')),
           )
           .value,
+      isNotNull,
+    );
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+    final redone = WorldPackageCodec().decode(
+      storage.files['build/mission-redone.avarra']!,
+    );
+    expect(redone.contentSchemaVersion, currentContentSchemaVersion);
+    expect(
+      redone.allEntities
+          .singleWhere(
+            (entity) => entity.component<ItemTurnInDefinition>() != null,
+          )
+          .component<MissionNarrativeDefinition>(),
       isNotNull,
     );
   });
@@ -524,6 +562,11 @@ void main() {
       console.component<RenderableReferenceDefinition>()!.assetId,
       consoleAssetId,
     );
+    final narrative = console.component<MissionNarrativeDefinition>()!;
+    expect(narrative.title, 'Emberfall Oath');
+    expect(narrative.openingText, contains('Hollow Warden'));
+    expect(narrative.returnText, contains('relay shrine'));
+    expect(narrative.completionText, contains('path through the ash'));
   });
 
   testWidgets('paints and erases one asset-backed floor stroke atomically', (

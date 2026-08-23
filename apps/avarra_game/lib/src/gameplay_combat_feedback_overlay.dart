@@ -58,6 +58,16 @@ final class GameplayCombatFeedbackOverlay extends StatelessWidget {
                 anchor.y > size.height + 80) {
               continue;
             }
+            if (event.kind == CombatPresentationEventKind.damageApplied &&
+                active.elapsed < _impactBurstDuration) {
+              labels.add(
+                _CombatImpactBurst(
+                  active: active,
+                  anchor: Offset(anchor.x, anchor.y),
+                  targetsPlayer: event.targetEntityId == playerEntityId,
+                ),
+              );
+            }
             labels.add(
               _CombatFeedbackLabel(
                 active: active,
@@ -72,6 +82,85 @@ final class GameplayCombatFeedbackOverlay extends StatelessWidget {
     );
   }
 }
+
+const _impactBurstDuration = Duration(milliseconds: 280);
+
+final class _CombatImpactBurst extends StatelessWidget {
+  const _CombatImpactBurst({
+    required this.active,
+    required this.anchor,
+    required this.targetsPlayer,
+  });
+
+  final ActiveCombatPresentationEvent active;
+  final Offset anchor;
+  final bool targetsPlayer;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress =
+        (active.elapsed.inMicroseconds / _impactBurstDuration.inMicroseconds)
+            .clamp(0, 1)
+            .toDouble();
+    return Positioned(
+      key: Key('combat_impact_${active.event.sequence}'),
+      left: anchor.dx - 44,
+      top: anchor.dy - 44,
+      width: 88,
+      height: 88,
+      child: CustomPaint(
+        painter: _CombatImpactPainter(
+          progress: progress,
+          color: targetsPlayer
+              ? const Color(0xFFFF544D)
+              : const Color(0xFFFFA34A),
+        ),
+      ),
+    );
+  }
+}
+
+final class _CombatImpactPainter extends CustomPainter {
+  const _CombatImpactPainter({required this.progress, required this.color});
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final eased = Curves.easeOutCubic.transform(progress);
+    final opacity = (1 - progress).clamp(0, 1).toDouble();
+    final radius = 7 + 29 * eased;
+    final ring = Paint()
+      ..color = color.withValues(alpha: opacity * 0.82)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.2 - progress * 1.8;
+    canvas.drawCircle(center, radius, ring);
+
+    final ray = Paint()
+      ..color = const Color(0xFFFFE0A3).withValues(alpha: opacity * 0.9)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.4 - progress;
+    for (var index = 0; index < 8; index += 1) {
+      final angle = (math.pi * 2 * index / 8) + _impactAngle(progress);
+      final inner = radius * 0.55;
+      final outer = radius + 8 + 8 * eased;
+      canvas.drawLine(
+        center + Offset(math.cos(angle), math.sin(angle)) * inner,
+        center + Offset(math.cos(angle), math.sin(angle)) * outer,
+        ray,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CombatImpactPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.color != color;
+  }
+}
+
+double _impactAngle(double progress) => progress * math.pi / 5;
 
 final class _CombatFeedbackLabel extends StatelessWidget {
   const _CombatFeedbackLabel({

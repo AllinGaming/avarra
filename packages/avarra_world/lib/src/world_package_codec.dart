@@ -465,6 +465,14 @@ final class WorldPackageCodec {
         );
       }
     }
+    if (types.contains(AvarraComponentType.missionNarrative) &&
+        turnIn == null) {
+      _invalid(
+        '$path.components',
+        'A mission narrative must be attached to an item turn-in.',
+        context: {'entityId': entityId.value},
+      );
+    }
   }
 
   void _validateObjectiveGroups(List<WorldEntityDefinition> entities) {

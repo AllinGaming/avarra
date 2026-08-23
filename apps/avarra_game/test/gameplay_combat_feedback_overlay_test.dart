@@ -52,6 +52,7 @@ void main() {
 
     await pumpAt(const Duration(milliseconds: 1));
     expect(find.text('-12'), findsOneWidget);
+    expect(find.byKey(const Key('combat_impact_1')), findsOneWidget);
     expect(
       tester
           .widget<IgnorePointer>(
@@ -69,6 +70,7 @@ void main() {
         .widget<Positioned>(find.byKey(const Key('combat_feedback_1')))
         .top!;
     expect(laterTop, lessThan(initialTop));
+    expect(find.byKey(const Key('combat_impact_1')), findsNothing);
 
     await pumpAt(const Duration(milliseconds: 900));
     expect(find.text('-12'), findsNothing);

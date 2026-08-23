@@ -347,6 +347,10 @@ final class _ForgeWorkspaceScreenState extends State<ForgeWorkspaceScreen> {
       CreatorCommandBatch(
         description: 'Place combat mission',
         commands: [
+          if (_world.contentSchemaVersion < currentContentSchemaVersion)
+            const SetWorldContentSchemaVersionCommand(
+              currentContentSchemaVersion,
+            ),
           for (final entity in mission.entities)
             CreateEntityCommand(entity: entity),
         ],

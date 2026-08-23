@@ -25,10 +25,13 @@ final class AuthoredObjectiveGroupProgress {
 
 /// World-wide objective progress derived from authored definitions and saves.
 final class AuthoredObjectiveProgress {
-  AuthoredObjectiveProgress(Map<String, AuthoredObjectiveGroupProgress> groups)
-    : groups = Map.unmodifiable(SplayTreeMap.of(groups));
+  AuthoredObjectiveProgress(
+    Map<String, AuthoredObjectiveGroupProgress> groups, {
+    this.nextObjectiveEntityId,
+  }) : groups = Map.unmodifiable(SplayTreeMap.of(groups));
 
   final Map<String, AuthoredObjectiveGroupProgress> groups;
+  final EntityId? nextObjectiveEntityId;
 
   int get totalCount =>
       groups.values.fold(0, (total, progress) => total + progress.totalCount);
@@ -85,6 +88,7 @@ AuthoredObjectiveProgress authoredObjectiveProgress(
   final totals = <String, int>{};
   final completed = <String, int>{};
   final nextLabels = <String, String>{};
+  EntityId? nextObjectiveEntityId;
 
   for (final entity in objectives) {
     final objective = entity.component<ObjectiveDefinition>()!;
@@ -103,6 +107,7 @@ AuthoredObjectiveProgress authoredObjectiveProgress(
       );
     } else {
       nextLabels.putIfAbsent(objective.group, () => interactable.label);
+      nextObjectiveEntityId ??= entity.id;
     }
   }
 
@@ -114,5 +119,5 @@ AuthoredObjectiveProgress authoredObjectiveProgress(
         completedCount: completed[entry.key] ?? 0,
         nextLabel: nextLabels[entry.key],
       ),
-  });
+  }, nextObjectiveEntityId: nextObjectiveEntityId);
 }

@@ -25,10 +25,21 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'src/action_targeting.dart';
 import 'src/authored_world_movement_bounds.dart';
 import 'src/fixed_step_frame_clock.dart';
+import 'src/game_experience_settings.dart';
+import 'src/game_front_end.dart';
 import 'src/game_launch_configuration.dart';
+import 'src/gameplay_action_bar.dart';
 import 'src/gameplay_atmosphere_overlay.dart';
+import 'src/gameplay_camera_follow.dart';
 import 'src/gameplay_combat_feedback_overlay.dart';
+import 'src/gameplay_enemy_health_overlay.dart';
+import 'src/gameplay_enemy_telegraph_overlay.dart';
+import 'src/gameplay_loot_presentation.dart';
 import 'src/gameplay_motion.dart';
+import 'src/gameplay_navigation_feedback.dart';
+import 'src/gameplay_player_danger_overlay.dart';
+import 'src/gameplay_quest_guidance.dart';
+import 'src/gameplay_story_presentation.dart';
 import 'src/gameplay_target_frame.dart';
 import 'src/hold_direction_button.dart';
 import 'src/host_device_metrics.dart';
@@ -116,10 +127,12 @@ String interactionRejectionStatus(InteractionRejection rejection) {
 class AvarraGameApp extends StatelessWidget {
   const AvarraGameApp({
     this.enableRenderer = true,
+    this.showFrontDoor,
     this.worldPackageSourceLoader,
     this.worldSelectionLoader,
     this.worldLibraryOpener,
     this.saveStoreLoader,
+    this.experienceSettingsStoreLoader,
     this.multiplayerClientConnector,
     this.multiplayerHostStarter,
     this.launchConfiguration = const GameLaunchConfiguration(),
@@ -128,10 +141,12 @@ class AvarraGameApp extends StatelessWidget {
   });
 
   final bool enableRenderer;
+  final bool? showFrontDoor;
   final WorldPackageSourceLoader? worldPackageSourceLoader;
   final RuntimeWorldSelectionLoader? worldSelectionLoader;
   final RuntimeWorldLibraryOpener? worldLibraryOpener;
   final SaveStoreLoader? saveStoreLoader;
+  final GameExperienceSettingsStoreLoader? experienceSettingsStoreLoader;
   final MultiplayerClientConnector? multiplayerClientConnector;
   final MultiplayerHostStarter? multiplayerHostStarter;
   final GameLaunchConfiguration launchConfiguration;
@@ -144,47 +159,65 @@ class AvarraGameApp extends StatelessWidget {
       title: '$avarraProductName Game',
       theme: ThemeData(
         brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF08090B),
         colorScheme: ColorScheme.fromSeed(
           brightness: Brightness.dark,
-          seedColor: const Color(0xFF70B7A5),
+          seedColor: const Color(0xFFC85D2D),
+          surface: const Color(0xFF171210),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFB84B26),
+            foregroundColor: const Color(0xFFFFE8C5),
+          ),
         ),
       ),
-      home: _WorldBootstrapScreen(
-        enableRenderer: enableRenderer,
-        selectionLoader:
-            worldSelectionLoader ??
-            (worldPackageSourceLoader == null
-                ? launchConfiguration.isForgeTestPlay
-                      ? () async => RuntimeWorldSelection(
-                          source: await launchConfiguration
-                              .readForgeTestPlayWorldSource(),
-                          label:
-                              'Forge Test Play · '
-                              '${launchConfiguration.forgeTestPlayWorldPath}',
-                          isImported: true,
-                          session: const RuntimeSessionConfiguration(),
-                        )
-                      : _loadDefaultWorldSelection
-                : () async => RuntimeWorldSelection(
-                    source: await worldPackageSourceLoader!(),
-                    label: 'Injected world source',
-                    isImported: _configuredWorldPath.isNotEmpty,
-                  )),
-        worldLibraryOpener: worldLibraryOpener ?? _openDefaultWorldLibrary,
-        saveStoreLoader:
-            saveStoreLoader ??
-            (launchConfiguration.isForgeTestPlay
-                ? () async => MemorySaveStore()
-                : _loadDefaultSaveStore),
-        multiplayerClientConnector: multiplayerClientConnector == null
-            ? _connectRuntimeMultiplayer
-            : (content, playerId, _) =>
-                  multiplayerClientConnector!(content, playerId),
-        multiplayerHostStarter: multiplayerHostStarter == null
-            ? _startRuntimeMultiplayerHost
-            : (source, playerId, store, saveId, _) =>
-                  multiplayerHostStarter!(source, playerId, store, saveId),
-        hostDeviceMetricsSampler: hostDeviceMetricsSampler,
+      home: GameExperienceSettingsHost(
+        storeLoader:
+            experienceSettingsStoreLoader ??
+            _loadDefaultExperienceSettingsStore,
+        builder: (context, settings, updateSettings) => _WorldBootstrapScreen(
+          enableRenderer: enableRenderer,
+          showFrontDoor:
+              (showFrontDoor ?? enableRenderer) &&
+              !launchConfiguration.isForgeTestPlay,
+          settings: settings,
+          onSettingsChanged: updateSettings,
+          selectionLoader:
+              worldSelectionLoader ??
+              (worldPackageSourceLoader == null
+                  ? launchConfiguration.isForgeTestPlay
+                        ? () async => RuntimeWorldSelection(
+                            source: await launchConfiguration
+                                .readForgeTestPlayWorldSource(),
+                            label:
+                                'Forge Test Play · '
+                                '${launchConfiguration.forgeTestPlayWorldPath}',
+                            isImported: true,
+                            session: const RuntimeSessionConfiguration(),
+                          )
+                        : _loadDefaultWorldSelection
+                  : () async => RuntimeWorldSelection(
+                      source: await worldPackageSourceLoader!(),
+                      label: 'Injected world source',
+                      isImported: _configuredWorldPath.isNotEmpty,
+                    )),
+          worldLibraryOpener: worldLibraryOpener ?? _openDefaultWorldLibrary,
+          saveStoreLoader:
+              saveStoreLoader ??
+              (launchConfiguration.isForgeTestPlay
+                  ? () async => MemorySaveStore()
+                  : _loadDefaultSaveStore),
+          multiplayerClientConnector: multiplayerClientConnector == null
+              ? _connectRuntimeMultiplayer
+              : (content, playerId, _) =>
+                    multiplayerClientConnector!(content, playerId),
+          multiplayerHostStarter: multiplayerHostStarter == null
+              ? _startRuntimeMultiplayerHost
+              : (source, playerId, store, saveId, _) =>
+                    multiplayerHostStarter!(source, playerId, store, saveId),
+          hostDeviceMetricsSampler: hostDeviceMetricsSampler,
+        ),
       ),
     );
   }
@@ -193,6 +226,9 @@ class AvarraGameApp extends StatelessWidget {
 class _WorldBootstrapScreen extends StatefulWidget {
   const _WorldBootstrapScreen({
     required this.enableRenderer,
+    required this.showFrontDoor,
+    required this.settings,
+    required this.onSettingsChanged,
     required this.selectionLoader,
     required this.worldLibraryOpener,
     required this.saveStoreLoader,
@@ -202,6 +238,9 @@ class _WorldBootstrapScreen extends StatefulWidget {
   });
 
   final bool enableRenderer;
+  final bool showFrontDoor;
+  final GameExperienceSettings settings;
+  final GameExperienceSettingsUpdater onSettingsChanged;
   final RuntimeWorldSelectionLoader selectionLoader;
   final RuntimeWorldLibraryOpener worldLibraryOpener;
   final SaveStoreLoader saveStoreLoader;
@@ -214,9 +253,44 @@ class _WorldBootstrapScreen extends StatefulWidget {
 }
 
 class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
-  late Future<_LoadedWorld> _loadedWorld = _loadWorld();
+  late Future<RuntimeWorldSelection> _selectedWorld;
+  Future<_LoadedWorld>? _loadedWorld;
+  late bool _frontDoorVisible;
   RuntimeWorldSelection? _selectionOverride;
   GlobalKey<_PresentationBoundaryScreenState> _presentationKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedWorld = widget.selectionLoader();
+    _frontDoorVisible = widget.showFrontDoor;
+    if (!_frontDoorVisible) {
+      _loadedWorld = _loadWorld();
+    }
+  }
+
+  void _enterWorld() {
+    setState(() {
+      _frontDoorVisible = false;
+      _loadedWorld = _loadWorld();
+    });
+  }
+
+  Future<void> _showSettings() => showGameExperienceSettingsDialog(
+    context,
+    settings: widget.settings,
+    onChanged: widget.onSettingsChanged,
+  );
+
+  Future<void> _returnToTitle() async {
+    await _presentationKey.currentState?.prepareForWorldReplacement();
+    if (!mounted) return;
+    setState(() {
+      _presentationKey = GlobalKey<_PresentationBoundaryScreenState>();
+      _loadedWorld = null;
+      _frontDoorVisible = true;
+    });
+  }
 
   Future<void> _openWorldLibrary() async {
     try {
@@ -228,6 +302,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       if (!mounted) return;
       setState(() {
         _selectionOverride = selection;
+        _selectedWorld = Future.value(selection);
+        _frontDoorVisible = false;
         _presentationKey = GlobalKey<_PresentationBoundaryScreenState>();
         _loadedWorld = _loadWorld();
       });
@@ -253,8 +329,43 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_frontDoorVisible) {
+      return FutureBuilder<RuntimeWorldSelection>(
+        future: _selectedWorld,
+        builder: (context, snapshot) {
+          final selection = snapshot.data;
+          final preview = selection == null
+              ? GameFrontDoorPreview(
+                  worldName: 'The Ashfall Frontier',
+                  sourceLabel: snapshot.hasError
+                      ? 'Selected world unavailable: ${snapshot.error}'
+                      : 'Reading selected world',
+                  missionTitle: 'A Signal in the Dark',
+                  missionText: snapshot.hasError
+                      ? 'Choose another world to continue the journey.'
+                      : 'A creator-built world waits beyond the veil.',
+                )
+              : _frontDoorPreview(selection);
+          return GameFrontDoor(
+            preview: preview,
+            settings: widget.settings,
+            onEnter: selection == null ? null : _enterWorld,
+            onWorlds: _openWorldLibrary,
+            onSettings: () => unawaited(_showSettings()),
+          );
+        },
+      );
+    }
+    final loadedWorld = _loadedWorld;
+    if (loadedWorld == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(key: Key('world_loading')),
+        ),
+      );
+    }
     return FutureBuilder<_LoadedWorld>(
-      future: _loadedWorld,
+      future: loadedWorld,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Scaffold(
@@ -299,7 +410,10 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           multiplayerStatus: loadedWorld.multiplayerStatus,
           localPlayerId: loadedWorld.localPlayerId,
           sourceLabel: loadedWorld.sourceLabel,
+          settings: widget.settings,
+          onSettingsChanged: widget.onSettingsChanged,
           onOpenWorldLibrary: _openWorldLibrary,
+          onReturnToTitle: _returnToTitle,
           hostDeviceMetricsSampler: widget.hostDeviceMetricsSampler,
         );
       },
@@ -307,7 +421,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
   }
 
   Future<_LoadedWorld> _loadWorld() async {
-    final selection = _selectionOverride ?? await widget.selectionLoader();
+    final selection = _selectionOverride ?? await _selectedWorld;
     final source = selection.source;
     final configuredPlayerId = PlayerId.parse(_configuredPlayerId);
     final definition = WorldPackageCodec().decode(source);
@@ -420,6 +534,38 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       sourceLabel: selection.label,
     );
   }
+
+  GameFrontDoorPreview _frontDoorPreview(RuntimeWorldSelection selection) {
+    try {
+      final definition = WorldPackageCodec().decode(selection.source);
+      final narratives =
+          [
+            for (final entity in definition.allEntities)
+              if (entity.component<MissionNarrativeDefinition>()
+                  case final narrative?)
+                (entityId: entity.id, narrative: narrative),
+          ]..sort(
+            (left, right) =>
+                left.entityId.value.compareTo(right.entityId.value),
+          );
+      final narrative = narratives.isEmpty ? null : narratives.first.narrative;
+      return GameFrontDoorPreview(
+        worldName: definition.name,
+        sourceLabel: selection.label,
+        missionTitle: narrative?.title ?? definition.name,
+        missionText:
+            narrative?.openingText ??
+            'A creator-built world waits beyond the veil.',
+      );
+    } on Object {
+      return GameFrontDoorPreview(
+        worldName: 'Uncharted World',
+        sourceLabel: selection.label,
+        missionTitle: 'A Signal in the Dark',
+        missionText: 'Enter the world to discover what survived the ash.',
+      );
+    }
+  }
 }
 
 final class _LoadedWorld {
@@ -459,7 +605,10 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.multiplayerStatus,
     required this.localPlayerId,
     required this.sourceLabel,
+    required this.settings,
+    required this.onSettingsChanged,
     required this.onOpenWorldLibrary,
+    required this.onReturnToTitle,
     required this.hostDeviceMetricsSampler,
   });
 
@@ -473,7 +622,10 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final String multiplayerStatus;
   final PlayerId localPlayerId;
   final String sourceLabel;
+  final GameExperienceSettings settings;
+  final GameExperienceSettingsUpdater onSettingsChanged;
   final Future<void> Function() onOpenWorldLibrary;
+  final Future<void> Function() onReturnToTitle;
   final HostDeviceMetricsSampler hostDeviceMetricsSampler;
 
   @override
@@ -513,6 +665,8 @@ class _PresentationBoundaryScreenState
   );
   late final Ticker _gameLoopTicker;
   late IsometricCameraRig _cameraRig;
+  late Vector3 _cameraFollowTarget;
+  Duration? _previousCameraFrameElapsed;
   EntityId? _selectedEntityId;
   SetGroundTargetIntent? _groundTarget;
   EntityId? _attackMoveTargetId;
@@ -538,11 +692,21 @@ class _PresentationBoundaryScreenState
   bool _rendererReady = false;
   bool _cameraFramingInitialized = false;
   bool _showDiagnostics = false;
+  bool _isPaused = false;
+  bool _showMissionBriefing = false;
   bool _worldEdgeMovementBlocked = false;
   bool _preparedForWorldReplacement = false;
   Duration _simulationTime = Duration.zero;
   final CombatPresentationTimeline _combatPresentationTimeline =
       CombatPresentationTimeline();
+  Set<String> _presentedInventoryItemIds = const {};
+  bool _hasPresentedReplicatedInventorySnapshot = false;
+  PickupPresentationNotice? _pickupNotice;
+  int _nextPickupNoticeSequence = 1;
+  GameplayStoryNotice? _storyNotice;
+  String? _presentedStoryBeatKey;
+  int _nextStoryNoticeSequence = 1;
+  bool _storyPresentationReady = false;
   WorldChunkCoordinate? _lastRequestedPlayerChunk;
   String _interactionStatus = 'Select a world object, then interact';
 
@@ -602,11 +766,33 @@ class _PresentationBoundaryScreenState
       target: _playerPosition,
       maximumVerticalSpan: 24,
     );
+    _cameraFollowTarget = Vector3.copy(_playerPosition);
     _lastRequestedPlayerChunk = _currentChunkCoordinate;
     _assetUriResolver = MapThermionAssetUriResolver({
       for (final entry in widget.runtimeWorld.assetPaths.entries)
         entry.key: 'asset://${entry.value}',
     });
+    _presentedInventoryItemIds = Set.unmodifiable(
+      _adventureProgress.inventoryItemIds,
+    );
+    _hasPresentedReplicatedInventorySnapshot =
+        multiplayerClient == null ||
+        multiplayerClient.latestGameplayStateRevision != null;
+    _storyPresentationReady = _hasPresentedReplicatedInventorySnapshot;
+    if (_storyPresentationReady) {
+      final initialStoryBeat = _missionNarrative;
+      _presentedStoryBeatKey = initialStoryBeat?.stableKey;
+      _showMissionBriefing =
+          widget.enableRenderer &&
+          !widget.restoredSave &&
+          initialStoryBeat?.phase == AuthoredMissionNarrativePhase.opening;
+      if (initialStoryBeat != null && !_showMissionBriefing) {
+        _storyNotice = GameplayStoryNotice(
+          sequence: _nextStoryNoticeSequence++,
+          beat: initialStoryBeat,
+        );
+      }
+    }
     if (multiplayerClient != null) {
       _replicationSubscription = multiplayerClient.events.listen(
         _handleReplicationEvent,
@@ -713,10 +899,45 @@ class _PresentationBoundaryScreenState
     }
   }
 
+  bool get _isGameplaySuspended => _isPaused || _showMissionBriefing;
+
+  void _beginMission() {
+    if (!_showMissionBriefing) return;
+    setState(() => _showMissionBriefing = false);
+    _keyboardFocus.requestFocus();
+    _startGameLoop();
+  }
+
+  void _togglePause() {
+    if (_showMissionBriefing || _preparedForWorldReplacement) return;
+    final nextPaused = !_isPaused;
+    setState(() {
+      _isPaused = nextPaused;
+      _pressedKeys.clear();
+      _touchMovementByPointer.clear();
+    });
+    if (nextPaused) {
+      _gameLoopTicker.stop();
+      _frameClock.reset();
+      unawaited(_flushSave());
+    } else {
+      _keyboardFocus.requestFocus();
+      _startGameLoop();
+    }
+  }
+
+  Future<void> _showSettings() => showGameExperienceSettingsDialog(
+    context,
+    settings: widget.settings,
+    onChanged: widget.onSettingsChanged,
+  );
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final compactLayout = MediaQuery.sizeOf(context).width < 700;
+    final missionNarrative = _missionNarrative;
+    final questMarker = widget.settings.showQuestGuidance ? _questMarker : null;
     final status = !widget.enableRenderer || _showDiagnostics
         ? Column(
             mainAxisSize: MainAxisSize.min,
@@ -799,58 +1020,164 @@ class _PresentationBoundaryScreenState
               valueListenable: _presentationMotionTime,
               builder: (context, elapsed, _) {
                 final combatFrame = _combatPresentationFrame;
-                final animatedSnapshot = applyGameplayMotion(
-                  snapshot: _presentation,
-                  motionKinds: _presentationMotionKinds,
-                  elapsed: elapsed,
-                  priorityEntityIds: {_playerEntityId, ?_selectedEntityId},
-                  activeCharacterEntityIds:
-                      _activePresentationCharacterEntityIds,
-                );
+                final animatedSnapshot = widget.settings.reducedMotion
+                    ? _presentation
+                    : applyGameplayMotion(
+                        snapshot: _presentation,
+                        motionKinds: _presentationMotionKinds,
+                        elapsed: elapsed,
+                        priorityEntityIds: {
+                          _playerEntityId,
+                          ?_selectedEntityId,
+                        },
+                        activeCharacterEntityIds:
+                            _activePresentationCharacterEntityIds,
+                      );
                 final hitFlashIntensities = <EntityId, double>{
                   for (final entity in animatedSnapshot.entities)
                     if (combatFrame.hitFlashFor(entity.entityId)
                         case final value when value > 0)
                       entity.entityId: value,
                 };
+                final playerHealth = _healthFor(_playerEntityId);
+                final playerHitIntensity = combatFrame.hitFlashFor(
+                  _playerEntityId,
+                );
+                final sceneShake =
+                    gameplayPlayerHitShakeOffset(
+                      frame: combatFrame,
+                      playerEntityId: _playerEntityId,
+                    ) *
+                    widget.settings.effectiveCameraShakeStrength;
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    AvarraThermionViewport(
-                      snapshot: animatedSnapshot,
-                      assetUriResolver: _assetUriResolver,
-                      cameraRig: _cameraRig,
-                      occlusionTargetEntityId: _playerEntityId,
-                      occludedOpacity: 0.12,
-                      occluderEntityIds: {
-                        ...widget.runtimeWorld.isometricOccluderEntityIds,
-                        ...widget.streaming.activeOccluderEntityIds,
-                      },
-                      selectedEntityId: _selectedEntityId,
-                      animationRequests: _presentationAnimationRequests,
-                      hitFlashIntensities: hitFlashIntensities,
-                      onReady: _handleRendererReady,
-                      onPick: _handlePick,
-                      onZoom: (factor) =>
-                          _dispatchIntent(ZoomCameraIntent(factor)),
+                    Transform.translate(
+                      key: const Key('gameplay_combat_scene_shake'),
+                      offset: sceneShake,
+                      transformHitTests: false,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          AvarraThermionViewport(
+                            snapshot: animatedSnapshot,
+                            assetUriResolver: _assetUriResolver,
+                            cameraRig: _cameraRig,
+                            occlusionTargetEntityId: _playerEntityId,
+                            occludedOpacity: 0.12,
+                            occluderEntityIds: {
+                              ...widget.runtimeWorld.isometricOccluderEntityIds,
+                              ...widget.streaming.activeOccluderEntityIds,
+                            },
+                            selectedEntityId: _selectedEntityId,
+                            animationRequests: _presentationAnimationRequests,
+                            hitFlashIntensities: hitFlashIntensities,
+                            onReady: _handleRendererReady,
+                            onPick: _handlePick,
+                            onZoom: (factor) =>
+                                _dispatchIntent(ZoomCameraIntent(factor)),
+                          ),
+                          GameplayDestinationOverlay(
+                            indicator: _destinationIndicator,
+                            cameraRig: _cameraRig,
+                          ),
+                          GameplayEnemyTelegraphOverlay(
+                            snapshot: animatedSnapshot,
+                            cameraRig: _cameraRig,
+                            telegraphs: _enemyTelegraphStates,
+                            reducedMotion: widget.settings.reducedMotion,
+                          ),
+                          GameplayLootBeamOverlay(
+                            snapshot: animatedSnapshot,
+                            cameraRig: _cameraRig,
+                            lootEntityIds: _availableLootEntityIds,
+                          ),
+                          if (widget.settings.showEnemyHealthBars)
+                            GameplayEnemyHealthOverlay(
+                              snapshot: animatedSnapshot,
+                              cameraRig: _cameraRig,
+                              enemies: _enemyHealthStates,
+                            ),
+                          GameplayQuestMarkerOverlay(
+                            marker: questMarker,
+                            cameraRig: _cameraRig,
+                          ),
+                          if (widget.settings.showCombatText)
+                            GameplayCombatFeedbackOverlay(
+                              frame: combatFrame,
+                              snapshot: animatedSnapshot,
+                              cameraRig: _cameraRig,
+                              playerEntityId: _playerEntityId,
+                            ),
+                        ],
+                      ),
                     ),
-                    GameplayCombatFeedbackOverlay(
-                      frame: combatFrame,
-                      snapshot: animatedSnapshot,
-                      cameraRig: _cameraRig,
-                      playerEntityId: _playerEntityId,
+                    GameplayPlayerDangerOverlay(
+                      currentHealth: playerHealth?.currentHealth ?? 1,
+                      maximumHealth: playerHealth?.maximumHealth ?? 1,
+                      confirmedHitIntensity: playerHitIntensity,
+                      elapsed: elapsed,
+                      defeated: playerHealth?.isDead ?? false,
                     ),
                   ],
                 );
               },
             ),
-            GameplayAtmosphereOverlay(compact: compactLayout),
+            if (!widget.settings.reducedMotion)
+              GameplayAtmosphereOverlay(compact: compactLayout),
             SafeArea(
               child: Align(
                 alignment: Alignment.topLeft,
                 child: _gameplayHud(
                   diagnostics: status,
                   compactLayout: compactLayout,
+                  questMarker: questMarker,
+                ),
+              ),
+            ),
+            if (!compactLayout)
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: GameplayQuestJournal(
+                      beat: _missionNarrative,
+                      guidanceLabel: questMarker?.label,
+                      guidanceDistanceLabel: questMarker == null
+                          ? null
+                          : gameplayQuestDistanceLabel(
+                              questMarker.distanceMeters,
+                            ),
+                    ),
+                  ),
+                ),
+              ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(top: compactLayout ? 242 : 104),
+                  child: GameplayPickupToast(
+                    notice: _pickupNotice,
+                    onFinished: _handlePickupToastFinished,
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: compactLayout ? 10 : 24,
+                    left: compactLayout ? 10 : 0,
+                  ),
+                  child: GameplayStoryToast(
+                    notice: _storyNotice,
+                    compact: compactLayout,
+                    onFinished: _handleStoryNoticeFinished,
+                  ),
                 ),
               ),
             ),
@@ -873,8 +1200,11 @@ class _PresentationBoundaryScreenState
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 128),
-                  child: _actionControls,
+                  padding: EdgeInsets.only(bottom: compactLayout ? 128 : 12),
+                  child: ValueListenableBuilder<Duration>(
+                    valueListenable: _presentationMotionTime,
+                    builder: (context, _, _) => _actionControls,
+                  ),
                 ),
               ),
             ),
@@ -884,6 +1214,35 @@ class _PresentationBoundaryScreenState
                 child: _cameraControls,
               ),
             ),
+            if (_isPaused)
+              GameplayPauseOverlay(
+                worldName: widget.runtimeWorld.definition.name,
+                missionTitle: _missionNarrative?.title ?? 'The road ahead',
+                missionText:
+                    _missionNarrative?.text ??
+                    'No authored mission narrative is active in this world.',
+                objective: _adventureProgress.status(
+                  widget.runtimeWorld.definition,
+                ),
+                inventory: _adventureProgress.inventoryStatus,
+                connectedSession:
+                    widget.multiplayerClient != null ||
+                    widget.multiplayerHost != null,
+                onResume: _togglePause,
+                onSettings: () => unawaited(_showSettings()),
+                onWorlds: () => unawaited(widget.onOpenWorldLibrary()),
+                onReturnToTitle: () => unawaited(widget.onReturnToTitle()),
+              ),
+            if (_showMissionBriefing && missionNarrative != null)
+              GameMissionBriefingOverlay(
+                worldName: widget.runtimeWorld.definition.name,
+                missionTitle: missionNarrative.title,
+                missionText: missionNarrative.text,
+                objective: _adventureProgress.status(
+                  widget.runtimeWorld.definition,
+                ),
+                onBegin: _beginMission,
+              ),
           ],
         ),
       ),
@@ -893,6 +1252,7 @@ class _PresentationBoundaryScreenState
   Widget _gameplayHud({
     required Widget diagnostics,
     required bool compactLayout,
+    required GameplayQuestMarker? questMarker,
   }) {
     final health = _healthFor(_playerEntityId);
     final healthText = health == null
@@ -946,6 +1306,18 @@ class _PresentationBoundaryScreenState
                           ),
                         ),
                         IconButton(
+                          key: const Key('open_pause_menu'),
+                          tooltip: 'Pause',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints.tightFor(
+                            width: 36,
+                            height: 36,
+                          ),
+                          padding: EdgeInsets.zero,
+                          onPressed: _togglePause,
+                          icon: const Icon(Icons.pause, size: 20),
+                        ),
+                        IconButton(
                           key: const Key('open_world_session_browser'),
                           tooltip: 'Worlds & multiplayer',
                           visualDensity: VisualDensity.compact,
@@ -966,6 +1338,19 @@ class _PresentationBoundaryScreenState
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (compactLayout && _missionNarrative != null) ...[
+                      const SizedBox(height: 7),
+                      GameplayQuestJournal(
+                        beat: _missionNarrative,
+                        compact: true,
+                        guidanceLabel: questMarker?.label,
+                        guidanceDistanceLabel: questMarker == null
+                            ? null
+                            : gameplayQuestDistanceLabel(
+                                questMarker.distanceMeters,
+                              ),
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
@@ -1047,7 +1432,7 @@ class _PresentationBoundaryScreenState
     if (interactable == null) {
       return const SizedBox.shrink();
     }
-    var actionHint = 'Selected · choose Interact';
+    var actionHint = 'Selected · choose Interact or press E';
     if (_interactionMoveTargetId == selectedEntityId) {
       actionHint = 'Approaching · uses automatically in range';
     }
@@ -1149,28 +1534,31 @@ class _PresentationBoundaryScreenState
     }
     final compactLayout = MediaQuery.sizeOf(context).width < 700;
     final attackTargetId = _attackTargetId;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: [
-        FilledButton.icon(
-          key: const Key('basic_attack'),
-          onPressed: !_rendererReady || attackTargetId == null
-              ? null
-              : _attackSelected,
-          icon: const Icon(Icons.flash_on),
-          label: Text(compactLayout ? 'Attack' : 'Attack (Space)'),
-        ),
-        OutlinedButton.icon(
-          key: const Key('interact'),
-          onPressed: !_rendererReady || _selectedEntityId == null
-              ? null
-              : () => _dispatchIntent(InteractEntityIntent(_selectedEntityId!)),
-          icon: const Icon(Icons.touch_app),
-          label: Text(compactLayout ? 'Use' : 'Interact'),
-        ),
-      ],
+    final interactionTargetId = _interactionActionTargetId;
+    final health = _healthFor(_playerEntityId);
+    final attack = _playerBasicAttack;
+    if (health == null || attack == null) {
+      return OutlinedButton.icon(
+        key: const Key('interact'),
+        onPressed: !_rendererReady || interactionTargetId == null
+            ? null
+            : _interactSelected,
+        icon: const Icon(Icons.touch_app),
+        label: Text(compactLayout ? 'Use' : 'Interact (E)'),
+      );
+    }
+    return GameplayActionBar(
+      currentHealth: health.currentHealth,
+      maximumHealth: health.maximumHealth,
+      primaryCooldown: _playerAttackCooldown(attack),
+      primaryEngaged: _attackMoveTargetId != null,
+      onPrimary: !_rendererReady || attackTargetId == null
+          ? null
+          : _attackSelected,
+      onInteract: !_rendererReady || interactionTargetId == null
+          ? null
+          : _interactSelected,
+      compact: compactLayout,
     );
   }
 
@@ -1483,22 +1871,53 @@ class _PresentationBoundaryScreenState
   }
 
   void _startGameLoop() {
-    if (_gameLoopTicker.isActive) {
+    if (_gameLoopTicker.isActive ||
+        !_rendererReady ||
+        _isGameplaySuspended ||
+        _preparedForWorldReplacement) {
       return;
     }
     _frameClock.reset();
+    _previousCameraFrameElapsed = null;
     _gameLoopTicker.start();
   }
 
   void _handleGameFrame(Duration elapsed) {
+    if (_isGameplaySuspended || _preparedForWorldReplacement) return;
     final steps = _frameClock.advance(elapsed);
     for (var index = 0; index < steps; index += 1) {
       _tickMovement();
     }
+    _advanceCameraFollow(elapsed);
     if (_hasExpiredDefeatPresentation) {
       setState(() => _presentation = _extractPresentation());
     }
     _presentationMotionTime.value = elapsed;
+  }
+
+  void _advanceCameraFollow(Duration elapsed) {
+    final previousElapsed = _previousCameraFrameElapsed;
+    _previousCameraFrameElapsed = elapsed;
+    if (previousElapsed == null || elapsed <= previousElapsed) {
+      return;
+    }
+    final currentTarget = _cameraRig.target;
+    final nextTarget = smoothGameplayCameraTarget(
+      current: currentTarget,
+      desired: _cameraFollowTarget,
+      delta: elapsed - previousElapsed,
+    );
+    if ((nextTarget - currentTarget).length2 <= 1e-12) {
+      return;
+    }
+    _cameraRig = _cameraRig.copyWith(target: nextTarget);
+  }
+
+  void _setCameraFollowTarget(Vector3 target, {bool snap = false}) {
+    _cameraFollowTarget = Vector3.copy(target);
+    if (snap) {
+      _cameraRig = _cameraRig.copyWith(target: target);
+    }
   }
 
   Vector3 get _playerPosition {
@@ -1541,6 +1960,38 @@ class _PresentationBoundaryScreenState
     widget.localPlayerId,
   );
 
+  AuthoredMissionNarrative? get _missionNarrative => _storyPresentationReady
+      ? authoredMissionNarrative(
+          widget.runtimeWorld.definition,
+          _adventureProgress,
+        )
+      : null;
+
+  AuthoredQuestGuidanceTarget? get _questGuidance => authoredQuestGuidance(
+    widget.runtimeWorld.definition,
+    _adventureProgress,
+    defeatedEntityIds: _deadEntityIds,
+  );
+
+  GameplayQuestMarker? get _questMarker {
+    final guidance = _questGuidance;
+    if (guidance == null) return null;
+    final livePosition = _transformFor(guidance.entityId)?.position;
+    final authoredPosition = guidance.worldPosition;
+    final position =
+        livePosition ??
+        Vector3(authoredPosition.x, authoredPosition.y, authoredPosition.z);
+    final player = _playerPosition;
+    final deltaX = position.x - player.x;
+    final deltaZ = position.z - player.z;
+    return GameplayQuestMarker(
+      kind: guidance.kind,
+      label: guidance.label,
+      worldPosition: position,
+      distanceMeters: math.sqrt(deltaX * deltaX + deltaZ * deltaZ),
+    );
+  }
+
   AdventureStateView get _adventureStateView {
     final client = widget.multiplayerClient;
     return client == null
@@ -1563,6 +2014,63 @@ class _PresentationBoundaryScreenState
       if (!(_healthFor(entry.component.guardedByEntityId)?.isDead ?? false))
         entry.entityId,
   };
+
+  Set<EntityId> get _availableLootEntityIds {
+    final lockedEntityIds = _lockedCollectibleEntityIds;
+    final collectedEntityIds = _collectedItemEntityIds;
+    return {
+      for (final entry
+          in widget.runtimeWorld.ecs.query<CollectibleItemComponent>())
+        if (!lockedEntityIds.contains(entry.entityId) &&
+            !collectedEntityIds.contains(entry.entityId))
+          entry.entityId,
+    };
+  }
+
+  GameplayDestinationIndicator? get _destinationIndicator {
+    final attackTargetId = _attackMoveTargetId;
+    final attackPosition = attackTargetId == null
+        ? null
+        : _transformFor(attackTargetId)?.position;
+    if (attackPosition != null) {
+      return GameplayDestinationIndicator(
+        kind: GameplayDestinationKind.attack,
+        worldPosition: attackPosition,
+      );
+    }
+    final interactionTargetId = _interactionMoveTargetId;
+    final interactionPosition = interactionTargetId == null
+        ? null
+        : _transformFor(interactionTargetId)?.position;
+    if (interactionPosition != null) {
+      return GameplayDestinationIndicator(
+        kind: GameplayDestinationKind.interact,
+        worldPosition: interactionPosition,
+      );
+    }
+    final groundTarget = _groundTarget;
+    return groundTarget == null
+        ? null
+        : GameplayDestinationIndicator(
+            kind: GameplayDestinationKind.move,
+            worldPosition: groundTarget.position,
+          );
+  }
+
+  EntityId? _revealedLootForGuardian(EntityId guardianEntityId) {
+    final candidates =
+        widget.runtimeWorld.ecs
+            .query<CollectibleItemComponent>()
+            .where(
+              (entry) =>
+                  entry.component.guardedByEntityId == guardianEntityId &&
+                  !_collectedItemEntityIds.contains(entry.entityId),
+            )
+            .map((entry) => entry.entityId)
+            .toList()
+          ..sort((left, right) => left.value.compareTo(right.value));
+    return candidates.firstOrNull;
+  }
 
   Set<EntityId> get _excludedGameplayEntityIds => {
     ..._deadEntityIds,
@@ -1643,6 +2151,60 @@ class _PresentationBoundaryScreenState
       _authoredCombatantEntityIds.contains(entityId) &&
       !(_healthFor(entityId)?.isDead ?? true);
 
+  List<GameplayEnemyHealthState> get _enemyHealthStates {
+    final entityIds = _authoredCombatantEntityIds.toList()
+      ..sort((left, right) => left.value.compareTo(right.value));
+    return List.unmodifiable([
+      for (final entityId in entityIds)
+        if (_healthFor(entityId) case final health? when !health.isDead)
+          GameplayEnemyHealthState(
+            entityId: entityId,
+            label: 'Guardian',
+            currentHealth: health.currentHealth,
+            maximumHealth: health.maximumHealth,
+            selected:
+                _selectedEntityId == entityId ||
+                _attackMoveTargetId == entityId,
+          ),
+    ]);
+  }
+
+  List<GameplayEnemyTelegraphState> get _enemyTelegraphStates {
+    final states = <GameplayEnemyTelegraphState>[];
+    for (final entry
+        in widget.runtimeWorld.ecs.query<GuardianBehaviorStateComponent>()) {
+      final state = entry.component;
+      final targetId = state.targetEntityId;
+      final attack = widget.runtimeWorld.ecs.tryComponent<BasicAttackComponent>(
+        entry.handle,
+      );
+      final remaining = state.remainingWindUpAt(_simulationTime);
+      if (state.phase != GuardianBehaviorPhase.windingUp ||
+          targetId == null ||
+          attack == null ||
+          remaining <= Duration.zero ||
+          (_healthFor(entry.entityId)?.isDead ?? true)) {
+        continue;
+      }
+      states.add(
+        GameplayEnemyTelegraphState(
+          guardianEntityId: entry.entityId,
+          targetEntityId: targetId,
+          attackRange: attack.range,
+          remaining: remaining,
+          total: guardianAttackWindUpDuration,
+          targetsLocalPlayer: targetId == _playerEntityId,
+        ),
+      );
+    }
+    states.sort(
+      (left, right) => left.guardianEntityId.value.compareTo(
+        right.guardianEntityId.value,
+      ),
+    );
+    return List.unmodifiable(states);
+  }
+
   Set<EntityId> get _activePresentationCharacterEntityIds => {
     if (!_isPlayerDead &&
         !_combatPresentationFrame.hasAttackFor(_playerEntityId) &&
@@ -1707,6 +2269,12 @@ class _PresentationBoundaryScreenState
                 clipName: 'Attack',
                 crossfadeSeconds: 0.08,
               ),
+              GuardianBehaviorPhase.windingUp =>
+                const ThermionAnimationRequest(
+                  clipName: 'Attack',
+                  loop: false,
+                  crossfadeSeconds: 0.06,
+                ),
               GuardianBehaviorPhase.defeated => throw StateError(
                 'Defeat animation is selected before the phase switch.',
               ),
@@ -1756,6 +2324,36 @@ class _PresentationBoundaryScreenState
     return handle == null
         ? null
         : widget.runtimeWorld.ecs.tryComponent<BasicAttackComponent>(handle);
+  }
+
+  BasicAttackStateComponent? get _playerBasicAttackState {
+    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId);
+    return handle == null
+        ? null
+        : widget.runtimeWorld.ecs.tryComponent<BasicAttackStateComponent>(
+            handle,
+          );
+  }
+
+  EntityId? get _interactionActionTargetId {
+    final selectedEntityId = _selectedEntityId;
+    if (selectedEntityId == null ||
+        _excludedGameplayEntityIds.contains(selectedEntityId) ||
+        _interactableFor(selectedEntityId) == null) {
+      return null;
+    }
+    return selectedEntityId;
+  }
+
+  GameplaySkillCooldown _playerAttackCooldown(BasicAttackComponent attack) {
+    final nextReadyAt = widget.multiplayerClient == null
+        ? _playerBasicAttackState?.nextReadyAt ?? Duration.zero
+        : _nextNetworkAutoAttackAt;
+    return GameplaySkillCooldown.at(
+      total: attack.cooldown,
+      now: _simulationTime,
+      nextReadyAt: nextReadyAt,
+    );
   }
 
   void _clearActionTargets() {
@@ -1834,7 +2432,13 @@ class _PresentationBoundaryScreenState
 
     final targetTransform = _transformFor(targetId);
     final attack = _playerBasicAttack;
-    if (targetTransform != null && attack != null) {
+    if (attack == null) {
+      setState(() {
+        _interactionStatus = 'Basic Strike is unavailable in this world';
+      });
+      return;
+    }
+    if (targetTransform != null) {
       final approach = decideActionApproach(
         actorPosition: _playerPosition,
         targetPosition: targetTransform.position,
@@ -1850,11 +2454,21 @@ class _PresentationBoundaryScreenState
     }
 
     if (widget.multiplayerClient != null) {
+      if (_simulationTime < _nextNetworkAutoAttackAt) {
+        final remaining = _nextNetworkAutoAttackAt - _simulationTime;
+        setState(() {
+          _interactionStatus =
+              'Basic Strike queued · '
+              '${GameplaySkillCooldown(total: attack.cooldown, remaining: remaining).remainingLabel}';
+        });
+        return;
+      }
       final submission = widget.multiplayerClient!.submitGameplayCommand(
         kind: GameplayCommandKind.attack,
         targetEntityId: targetId,
       );
       _watchGameplayCommand(submission.sent);
+      _nextNetworkAutoAttackAt = _simulationTime + attack.cooldown;
       _recordPlayerAttackAnimation(targetId);
       setState(() {
         _interactionStatus = 'Attack submitted · target remains engaged';
@@ -1872,7 +2486,7 @@ class _PresentationBoundaryScreenState
       _recordAcceptedCombatResult(result);
       _selectedEntityId = targetId;
       if (result.targetKilled) {
-        _selectedEntityId = null;
+        _selectedEntityId = _revealedLootForGuardian(targetId);
         _attackMoveTargetId = null;
       }
       _rebuildGameplayQueries();
@@ -1894,7 +2508,7 @@ class _PresentationBoundaryScreenState
     }
     if (result.rejection == CombatAttackRejection.cooldown) {
       final milliseconds = math.max(1, result.remainingCooldown.inMilliseconds);
-      return 'Attack cooling down · ${milliseconds}ms remaining';
+      return 'Basic Strike queued · ${milliseconds}ms remaining';
     }
     return switch (result.rejection!) {
       CombatAttackRejection.targetMissing => 'That object cannot be attacked',
@@ -1911,6 +2525,23 @@ class _PresentationBoundaryScreenState
   }
 
   void _interactWith(EntityId entityId) {
+    final targetTransform = _transformFor(entityId);
+    final interactable = _interactableFor(entityId);
+    if (targetTransform != null && interactable != null) {
+      final approach = decideActionApproach(
+        actorPosition: _playerPosition,
+        targetPosition: targetTransform.position,
+        actionRange: interactable.range,
+      );
+      if (approach.kind == ActionApproachKind.approach) {
+        _attackMoveTargetId = null;
+        _interactionMoveTargetId = entityId;
+        _groundTarget = null;
+        _interactionStatus =
+            'Approaching ${interactable.label} · uses automatically in range';
+        return;
+      }
+    }
     _interactionMoveTargetId = null;
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
@@ -1933,6 +2564,7 @@ class _PresentationBoundaryScreenState
       return;
     }
     final openGatesBefore = _openObjectiveGateEntityIds;
+    final inventoryItemsBefore = _adventureProgress.inventoryItemIds;
     final effect = _interactionEffects.apply(entityId);
     if (!effect.handled) {
       return;
@@ -1977,13 +2609,80 @@ class _PresentationBoundaryScreenState
               '${progress.completedCount}/${progress.totalCount} complete';
         }
       case AuthoredInteractionEffectKind.collectibleItem:
+        if (!inventoryItemsBefore.contains(effect.itemId)) {
+          _recordPickupPresentation(effect.itemLabel!);
+        }
         _selectedEntityId = null;
         _interactionStatus =
             '${effect.itemLabel} recovered · added to inventory';
       case AuthoredInteractionEffectKind.itemTurnIn:
         _interactionStatus = '${effect.completionLabel} · mission complete';
     }
+    _presentedInventoryItemIds = Set.unmodifiable(
+      _adventureProgress.inventoryItemIds,
+    );
+    _recordStoryPresentationIfChanged();
     _scheduleSave();
+  }
+
+  void _interactSelected() {
+    final targetId = _interactionActionTargetId;
+    if (targetId == null) {
+      setState(() {
+        _interactionStatus = 'Select an interactable object first';
+      });
+      return;
+    }
+    _dispatchIntent(InteractEntityIntent(targetId));
+  }
+
+  void _recordPickupPresentation(String itemLabel) {
+    _pickupNotice = PickupPresentationNotice(
+      sequence: _nextPickupNoticeSequence++,
+      itemLabel: itemLabel,
+    );
+  }
+
+  void _recordReplicatedInventoryPresentation(ReplicationClient client) {
+    final nextItems = Set<String>.of(client.inventoryItemIds);
+    if (!_hasPresentedReplicatedInventorySnapshot) {
+      _hasPresentedReplicatedInventorySnapshot = true;
+      _presentedInventoryItemIds = Set.unmodifiable(nextItems);
+      return;
+    }
+    final addedItems = newlyAddedInventoryItemIds(
+      previous: _presentedInventoryItemIds,
+      next: nextItems,
+    );
+    if (addedItems.isNotEmpty) {
+      final labels = _adventureProgress.itemLabels;
+      _recordPickupPresentation(
+        addedItems.map((itemId) => labels[itemId] ?? itemId).join(' + '),
+      );
+    }
+    _presentedInventoryItemIds = Set.unmodifiable(nextItems);
+  }
+
+  void _handlePickupToastFinished(int sequence) {
+    if (!mounted || _pickupNotice?.sequence != sequence) return;
+    setState(() => _pickupNotice = null);
+  }
+
+  void _recordStoryPresentationIfChanged() {
+    final beat = _missionNarrative;
+    if (beat == null || beat.stableKey == _presentedStoryBeatKey) {
+      return;
+    }
+    _presentedStoryBeatKey = beat.stableKey;
+    _storyNotice = GameplayStoryNotice(
+      sequence: _nextStoryNoticeSequence++,
+      beat: beat,
+    );
+  }
+
+  void _handleStoryNoticeFinished(int sequence) {
+    if (!mounted || _storyNotice?.sequence != sequence) return;
+    setState(() => _storyNotice = null);
   }
 
   void _restartPlayer() {
@@ -2015,7 +2714,7 @@ class _PresentationBoundaryScreenState
     _rebuildGameplayQueries();
     setState(() {
       _presentation = _extractPresentation();
-      _cameraRig = _cameraRig.copyWith(target: _playerPosition);
+      _setCameraFollowTarget(_playerPosition, snap: true);
       _interactionStatus = 'Restarted at the Relay Zero entry point';
     });
     widget.persistence.markPlayerDirty(widget.localPlayerId);
@@ -2117,9 +2816,21 @@ class _PresentationBoundaryScreenState
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    if (event.logicalKey == LogicalKeyboardKey.space) {
+    if (event.logicalKey == LogicalKeyboardKey.escape &&
+        event is KeyDownEvent) {
+      _togglePause();
+      return;
+    }
+    if (_isGameplaySuspended) return;
+    final action = gameplayHotkeyActionFor(event.logicalKey);
+    if (action != null) {
       if (event is KeyDownEvent) {
-        _attackSelected();
+        switch (action) {
+          case GameplayHotkeyAction.primarySkill:
+            _attackSelected();
+          case GameplayHotkeyAction.interact:
+            _interactSelected();
+        }
       }
       return;
     }
@@ -2136,7 +2847,7 @@ class _PresentationBoundaryScreenState
   }
 
   void _beginTouchMovement(int pointer, Vector3 direction) {
-    if (!_rendererReady || _isPlayerDead) {
+    if (!_rendererReady || _isPlayerDead || _isGameplaySuspended) {
       return;
     }
     _touchMovementByPointer[pointer] = direction;
@@ -2153,11 +2864,14 @@ class _PresentationBoundaryScreenState
   }
 
   void _pulseTouchMovement(Vector3 direction) {
+    if (_isGameplaySuspended) return;
     _dispatchIntent(MoveCharacterIntent(direction));
   }
 
   void _tickMovement() {
-    if (!mounted || (widget.enableRenderer && !_rendererReady)) {
+    if (!mounted ||
+        _isGameplaySuspended ||
+        (widget.enableRenderer && !_rendererReady)) {
       return;
     }
     _simulationTime += _simulationStep;
@@ -2309,7 +3023,7 @@ class _PresentationBoundaryScreenState
                 _recordAcceptedCombatResult(playerAttack);
                 if (playerAttack.targetKilled) {
                   _attackMoveTargetId = null;
-                  _selectedEntityId = null;
+                  _selectedEntityId = _revealedLootForGuardian(targetId);
                 }
                 _rebuildGameplayQueries();
               }
@@ -2417,7 +3131,7 @@ class _PresentationBoundaryScreenState
 
   void _applyMovement(CharacterMovementResult result) {
     _presentation = _extractPresentation();
-    _cameraRig = _cameraRig.copyWith(target: result.position);
+    _setCameraFollowTarget(result.position);
     if (result.collidedEntityIds.isNotEmpty) {
       _interactionStatus = 'Path blocked';
     }
@@ -2524,7 +3238,7 @@ class _PresentationBoundaryScreenState
     }
     setState(() {
       _presentation = _extractPresentation();
-      _cameraRig = _cameraRig.copyWith(target: result.position);
+      _setCameraFollowTarget(result.position);
       if (result.collidedEntityIds.isNotEmpty) {
         _interactionStatus = 'Path blocked';
       }
@@ -2562,13 +3276,16 @@ class _PresentationBoundaryScreenState
       _applyReplicatedEntities(client);
       if (event is ReplicationGameplayStateApplied) {
         _applyAuthoritativeGameplayState(client, emitCombatFeedback: true);
+        _recordReplicatedInventoryPresentation(client);
+        _storyPresentationReady = true;
+        _recordStoryPresentationIfChanged();
         _rebuildGameplayQueries();
       }
       if (event case ReplicationGameplayCommandResult(:final result)) {
         _interactionStatus = result.detail;
       }
       if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) != null) {
-        _cameraRig = _cameraRig.copyWith(target: _playerPosition);
+        _setCameraFollowTarget(_playerPosition);
       }
       _multiplayerStatus = switch (event) {
         ReplicationClientJoined(:final connectionId) =>
@@ -2663,6 +3380,27 @@ class _PresentationBoundaryScreenState
         widget.runtimeWorld.ecs.addComponent(handle, health);
       }
     }
+    for (final state in client.guardianStates.values) {
+      final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
+      if (handle == null) continue;
+      final current = widget.runtimeWorld.ecs
+          .tryComponent<GuardianBehaviorStateComponent>(handle);
+      if (current == null) continue;
+      final phase = _guardianPhaseFromNetwork(state.phase);
+      widget.runtimeWorld.ecs.replaceComponent(
+        handle,
+        current.transition(
+          phase: phase,
+          targetEntityId: state.targetEntityId,
+          windUpCompletesAt: phase == GuardianBehaviorPhase.windingUp
+              ? _simulationTime +
+                    Duration(
+                      microseconds: state.windUpRemainingMicroseconds,
+                    )
+              : null,
+        ),
+      );
+    }
     for (final state in client.persistentFlagStates.values) {
       final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
       if (handle == null ||
@@ -2680,7 +3418,7 @@ class _PresentationBoundaryScreenState
     if (attackTargetId != null && !_isLivingCombatant(attackTargetId)) {
       _attackMoveTargetId = null;
       if (_selectedEntityId == attackTargetId) {
-        _selectedEntityId = null;
+        _selectedEntityId = _revealedLootForGuardian(attackTargetId);
       }
       _interactionStatus = 'Hostile defeated · loot revealed';
     }
@@ -3066,6 +3804,16 @@ class _PresentationBoundaryScreenState
   }
 }
 
+GuardianBehaviorPhase _guardianPhaseFromNetwork(NetworkGuardianPhase phase) =>
+    switch (phase) {
+      NetworkGuardianPhase.idle => GuardianBehaviorPhase.idle,
+      NetworkGuardianPhase.pursuing => GuardianBehaviorPhase.pursuing,
+      NetworkGuardianPhase.windingUp => GuardianBehaviorPhase.windingUp,
+      NetworkGuardianPhase.attacking => GuardianBehaviorPhase.attacking,
+      NetworkGuardianPhase.returning => GuardianBehaviorPhase.returning,
+      NetworkGuardianPhase.defeated => GuardianBehaviorPhase.defeated,
+    };
+
 TransformComponent _runtimeTransform(TransformDefinition transform) {
   return TransformComponent(
     position: Vector3(
@@ -3153,6 +3901,14 @@ Future<RuntimeWorldSelection?> _openDefaultWorldLibrary(BuildContext context) {
 
 Future<SaveStore> _loadDefaultSaveStore() async {
   return FileSaveStore(await getApplicationSupportDirectory());
+}
+
+Future<GameExperienceSettingsStore>
+_loadDefaultExperienceSettingsStore() async {
+  final support = await getApplicationSupportDirectory();
+  return FileGameExperienceSettingsStore(
+    Directory('${support.path}${Platform.pathSeparator}settings'),
+  );
 }
 
 RuntimeSessionConfiguration _configuredRuntimeSession() {

@@ -42,6 +42,43 @@ Stage 12.17 adds a bounded material hit flash plus Flutter world-anchored combat
 text and makes the existing Death clip visible. These remain replaceable
 presentation consumers and do not close the renderer, material-effect,
 animation-schema, or physical Android performance decision.
+Stage 12.18 adds projected impact rings, capped loot beams, and a pickup toast
+at the same replaceable presentation boundary. It does not select a renderer
+particle system, rarity vocabulary, audio backend, or explicit replicated
+gameplay-event format, and therefore closes none of those decisions.
+Stage 12.19 adds a replaceable frame-rate-independent camera follower and one
+projected move/attack/interact destination indicator at that same boundary. It
+does not select a permanent camera configuration, navigation backend, renderer
+effect system, or physical Android performance policy, and closes none of those
+decisions.
+Stage 12.20 presents existing player health and Basic Strike cooldown through a
+replaceable action bar. It does not define a permanent ability/loadout schema,
+resource economy, input-remapping policy, audio backend, or replicated
+authoritative cooldown timestamp, and closes none of those decisions.
+Stage 12.21 renders derived authored mission beats as Flutter journal/notice
+widgets. It does not choose a permanent quest graph, dialogue/cinematic system,
+localization representation, audio backend, or renderer text/effect system.
+The linear content-v9 contract is recorded separately in ADR-033.
+Stage 12.22 adds one derived projected target and off-screen arrow. It does not
+select a navigation/pathfinding backend, minimap, fog-of-war policy, permanent
+world-unit-to-metric scale, renderer marker system, or physical Android
+performance policy, and closes none of those decisions.
+Stage 12.23 adds a bounded Flutter vignette and deterministic scene translation
+for confirmed player damage. It does not select a permanent camera-shake,
+reduced-motion/accessibility, haptics, audio, renderer post-processing, or
+physical Android performance policy, and closes none of those decisions.
+Stage 12.24 adds bounded Flutter world-space health bars from authoritative
+health. It does not define authored enemy display names, elite/boss tiers,
+attack wind-up replication, telegraph language, health-bar user settings,
+renderer-native labels, or physical Android performance policy, and closes none
+of those decisions.
+Stage 12.25 adds a replaceable Flutter title/prologue/pause shell and a
+versioned Game-only preference file for presentation toggles. It does not select
+a permanent UI theme system, audio/haptics backend, input-remapping policy,
+localization representation, branching story/dialogue/cinematic schema,
+authoritative global-pause protocol, or physical Android performance policy.
+The preference representation is provisional app storage, not a world/save
+format, and closes none of those decisions.
 See ADR-015 through ADR-017.
 
 Decision criteria:

@@ -657,6 +657,90 @@ simultaneous damage values, red impact tint, lethal `DEFEATED` feedback, death
 motion, and loot reveal. Analysis, the release build, the profiled pipeline,
 and the 18-suite matrix pass 264 tests. Protocol v3 still carries health state,
 not explicit combat-impact events.
+Stage 12.18 adds a 280 ms projected impact burst downstream of those confirmed
+damage events, caps pulsing world-space beams to available authored
+collectibles, and displays a 2.4-second accessible toast only for accepted
+offline or replicated inventory additions. Live packaged acceptance exposed
+that post-combat Interact could stop at an out-of-range rejection; the same
+request now enters the existing fixed-step, collision-aware approach loop and
+uses the target on arrival. Two preserved Windows frames prove loot reveal and
+the inventory/objective transition. Formatting, analysis, the release build,
+the profiled pipeline, and the 18-suite matrix pass 267 tests. No schema or
+authority boundary changed.
+Stage 12.19 replaces instant local camera recentering with a frame-rate-
+independent 110 ms half-life follower and snaps corrections of at least six
+world units. Existing move, attack, and interaction targets now feed one
+pointer-transparent, projected destination indicator through the displayed
+isometric camera rig; no duplicate navigation or authority state was added. A
+45-frame packaged Windows Champion pursuit proves that the red attack marker,
+smooth camera motion, target frame, impacts, damage, defeat, and loot reveal
+remain aligned throughout play. Formatting, analysis, the release build, the
+profiled pipeline, and the 18-suite matrix pass 272 tests. No Android device was
+attached, so physical touch, frame-time, thermal, and battery validation remain
+open.
+Stage 12.20 replaces the generic combat-button row with a Diablo-style
+bottom-center health/action bar driven by existing runtime state. Basic Strike
+shows the authored cooldown through a radial recovery veil and tenths label;
+Space preserves engagement during recovery, E uses the existing interaction
+approach path, and connected immediate attacks share the local automatic-
+attack pacing deadline. The host remains authoritative. A 24-frame packaged
+Windows Champion fight proves the live 67/100 health globe, 0.3-second
+recovery, target marker, damage, and controls together. Formatting, analysis,
+the release build, profiled pipeline, and 18-suite matrix pass 276 tests. No
+schema changed; physical Android was explicitly deferred.
+Stage 12.21 adds one portable authored story contract instead of hard-coding
+quest prose in Game. Content schema v9 introduces
+`avarra.story.mission_narrative` on the existing item-turn-in entity with a
+bounded title, opening, return, and completion beat. Forge authors those fields
+and performs an explicit schema upgrade inside the same undoable mission batch.
+Game derives the current beat from authoritative inventory and completion
+state, displaying a responsive quest journal and transient live-region
+briefing. The bundled proof becomes “Ashfall's Last Signal.” Analysis, both
+Windows release builds, and the 18-suite matrix pass 280 tests. Branching,
+dialogue choices, localization, scripting, and physical Android validation
+remain open.
+Stage 12.22 derives one exact next target without introducing another quest
+state machine. `avarra_world` follows stable authored relationships through
+objective, Guardian, collectible, and item-turn-in entities, using chunk
+coordinates plus local transforms even before a target chunk is active. Game
+prefers a live ECS transform when available, projects a pulsing marker over an
+on-screen target, clamps a directional arrow at the viewport edge otherwise,
+and repeats the next action plus distance in the journal. Mission completion
+removes the marker. No content, save, protocol, or authority contract changed.
+Analysis, the Game Windows release, and the 18-suite matrix pass 283 tests;
+live packaged visual acceptance and physical Android remain open.
+Stage 12.23 consumes those same accepted combat moments to make danger legible.
+Only damage events targeting the player generate an at-most-seven-logical-pixel
+scene shake and screen-edge flash during the existing 180 ms hit window.
+Authoritative health at or below 30% adds a roughly 1.2-second critical pulse;
+death holds a persistent crimson veil behind the existing accessible restart
+prompt. World-space overlays move with the scene, while transformed hit testing
+is disabled so controls stay stable. No simulation, renderer adapter, schema,
+save, replication, or authority state changed. Formatting, analysis, the Game
+Windows release, and the 18-suite matrix pass 286 tests; live visual acceptance
+and physical Android remain open.
+Stage 12.24 projects compact health bars over active authored combatants using
+the same authoritative `HealthComponent` values and animated
+`PresentationSnapshot` transforms already consumed by Game. The overlay is
+pointer-transparent, caps itself at eight living on-screen enemies, prioritizes
+the selected target before stable-ID ordering, eases health changes for 180 ms,
+and removes bars immediately on death or deactivation. Selection receives a
+wider gold frame and exact HP while the existing top target frame remains.
+No attack wind-up is inferred: a real telegraph requires a future explicit
+server-visible state. No simulation, schema, save, protocol, renderer adapter,
+or authority contract changed. Formatting, analysis, the Game Windows release,
+and the 18-suite matrix pass 290 tests; live visual acceptance and physical
+Android remain open.
+Stage 12.25 wraps the runtime in a complete Game-owned experience flow. The
+selected `.avarra` package supplies the title-screen world and mission preview;
+new saves receive the same authored opening as a blocking prologue; and Escape
+opens a pause menu with current story, objective, inventory, Settings, Worlds,
+and Return to Title. Versioned recoverable app preferences control reduced
+motion, camera shake, quest guidance, enemy bars, and damage numbers without
+entering world/save/network authority. Forge Test Play bypasses this shell.
+Formatting, workspace analysis, the Game Windows release, and the 18-suite
+matrix pass 301 tests; live packaged visual acceptance and physical Android
+remain open.
 Android CI hardening separates native Game packaging from the combined
 quality/Windows job. A parallel Windows job pins Java 17, Android API 36,
 Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1. CI calls the shared
@@ -699,8 +783,16 @@ See
 `AVARRA_STAGE_12_15_LIVING_WORLD_MOTION_VALIDATION.md`,
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md`,
 `AVARRA_STAGE_12_17_AUTHORITATIVE_COMBAT_FEEDBACK_VALIDATION.md`,
+`AVARRA_STAGE_12_18_COMBAT_IMPACT_AND_LOOT_FLOW_VALIDATION.md`,
+`AVARRA_STAGE_12_19_SMOOTH_TRAVERSAL_AND_DESTINATION_FEEDBACK_VALIDATION.md`,
+`AVARRA_STAGE_12_20_PRIMARY_ACTION_BAR_VALIDATION.md`,
+`AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`,
+`AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`,
+`AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
+`AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
+`AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-032.
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-033.
 
 ---
 

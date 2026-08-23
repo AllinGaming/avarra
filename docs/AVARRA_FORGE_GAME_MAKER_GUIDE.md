@@ -47,6 +47,8 @@ launches the real Game application with a disposable export.
   one creator action;
 - configure Guardian balance, mission spacing, and player-facing loot/turn-in
   labels before stamping;
+- write the mission title, opening briefing, return beat, and completion
+  epilogue that Game presents from authoritative progress;
 - start from an Initiate, Sentinel, or Champion encounter profile and select
   separate declared assets for the Guardian, loot, and completion console;
 - undo and redo typed creator commands;
@@ -127,21 +129,26 @@ scripts or direct JSON editing.
 2. In **Template settings**, choose **Initiate**, **Sentinel**, or **Champion**
    as a starting profile, or edit health/damage/spacing for Custom tuning.
 3. Set the collectible item label and completion label.
-4. Choose declared assets independently for the Guardian, loot, and completion
+4. Write the mission title, opening briefing, return briefing, and completion
+   epilogue. Each beat is portable world data, not hard-coded Game dialogue.
+5. Choose declared assets independently for the Guardian, loot, and completion
    console. The built-in Gothic example uses Hollow Warden, Ember Shard, and
    Relay Shrine.
-5. Click the viewport where the center of the encounter should be.
-6. Forge creates the Guardian and locked loot the chosen distance forward and
+6. Click the viewport where the center of the encounter should be.
+7. Forge creates the Guardian and locked loot the chosen distance forward and
    the completion console the same distance back.
-7. The new Guardian and Loot references become active automatically.
-8. Move or tune the three entities with the normal viewport and Inspector.
-9. One Undo removes the entire stamp; Redo restores the same stable links.
-10. Leave the tool active and click again to create another independent chain
+8. The new Guardian and Loot references become active automatically.
+9. Move or tune the three entities with the normal viewport and Inspector.
+10. One Undo removes the entire stamp; Redo restores the same stable links.
+11. Leave the tool active and click again to create another independent chain
    with the current settings.
 
 The template is a fast composition of the same runtime components described
 below. Use the individual presets when you want to position each dependency
-separately.
+separately. The first narrative authoring controls belong to this complete
+template; individually placed legacy chains continue to use Game's derived
+objective text unless their turn-in entity already contains a schema-v9
+Mission Narrative component.
 
 ### Manual path: place each dependency
 
@@ -199,6 +206,7 @@ performance acceptance are still open.
 - A Guardian mission requires a combat-capable player.
 - A guarded collectible references an authored Guardian by stable entity ID.
 - An item turn-in references an authored collectible by stable item ID.
+- A mission narrative attaches to an item turn-in and bounds each prose field.
 - Renderable references must use assets declared by the world.
 - World definitions and runtime save state stay separate.
 

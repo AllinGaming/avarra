@@ -269,6 +269,34 @@ void main() {
       );
     });
 
+    test('upgrades the content schema as an undoable batch boundary', () {
+      final legacy = _copyWorld(_world(), contentSchemaVersion: 8);
+      final session = CreatorWorldSession(initialWorld: legacy);
+
+      session.execute(
+        CreatorCommandBatch(
+          description: 'Upgrade world content',
+          commands: [
+            const SetWorldContentSchemaVersionCommand(
+              currentContentSchemaVersion,
+            ),
+            const RenameWorldCommand('Upgraded creator world'),
+          ],
+        ),
+      );
+
+      expect(session.world.contentSchemaVersion, currentContentSchemaVersion);
+      expect(session.world.name, 'Upgraded creator world');
+      expect(session.undoHistory, hasLength(1));
+      expect(session.undo(), isTrue);
+      expect(session.world.contentSchemaVersion, 8);
+      expect(session.world.name, legacy.name);
+      expect(session.world.allEntities, hasLength(1));
+      expect(session.redo(), isTrue);
+      expect(session.world.contentSchemaVersion, currentContentSchemaVersion);
+      expect(session.world.name, 'Upgraded creator world');
+    });
+
     test('bounds inverse-command history for a measured creator fixture', () {
       final fixture = _measuredWorld(entityCount: 256);
       final fixtureBytes = WorldPackageCodec().encodeCanonical(fixture).length;
@@ -394,6 +422,7 @@ TransformDefinition _transform({double x = 0}) {
 
 WorldDefinition _copyWorld(
   WorldDefinition world, {
+  int? contentSchemaVersion,
   Iterable<WorldEntityDefinition>? entities,
   Iterable<WorldChunkDefinition>? chunks,
 }) {
@@ -401,7 +430,7 @@ WorldDefinition _copyWorld(
     id: world.id,
     name: world.name,
     worldFormatVersion: world.worldFormatVersion,
-    contentSchemaVersion: world.contentSchemaVersion,
+    contentSchemaVersion: contentSchemaVersion ?? world.contentSchemaVersion,
     chunkSize: world.chunkSize,
     assets: world.assets,
     entities: entities ?? world.entities,

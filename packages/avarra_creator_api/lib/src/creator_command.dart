@@ -269,6 +269,34 @@ final class RenameWorldCommand implements CreatorCommand {
   }
 }
 
+/// Changes the portable content schema version used to validate and encode a
+/// world. Forge uses this as an explicit, undoable migration boundary before
+/// authoring components introduced by a newer schema.
+final class SetWorldContentSchemaVersionCommand implements CreatorCommand {
+  const SetWorldContentSchemaVersionCommand(this.version);
+
+  final int version;
+
+  @override
+  String get toolId => 'world.set_content_schema_version';
+
+  @override
+  String get description => 'Set content schema version to $version';
+
+  @override
+  int get estimatedHistoryBytes => 32;
+
+  @override
+  CreatorCommand inverseFor(WorldDefinition world) =>
+      SetWorldContentSchemaVersionCommand(world.contentSchemaVersion);
+
+  @override
+  WorldDefinition apply(WorldDefinition world) {
+    ComponentSchemaRegistry.builtIn().requireContentSchemaVersion(version);
+    return _copyWorld(world, contentSchemaVersion: version);
+  }
+}
+
 /// Adds one typed component while preserving every other component.
 final class AddEntityComponentCommand implements CreatorCommand {
   const AddEntityComponentCommand({
@@ -509,6 +537,7 @@ WorldDefinition _replaceEntity(
 
 WorldDefinition _copyWorld(
   WorldDefinition world, {
+  int? contentSchemaVersion,
   Iterable<WorldEntityDefinition>? entities,
   Iterable<WorldChunkDefinition>? chunks,
 }) {
@@ -516,7 +545,7 @@ WorldDefinition _copyWorld(
     id: world.id,
     name: world.name,
     worldFormatVersion: world.worldFormatVersion,
-    contentSchemaVersion: world.contentSchemaVersion,
+    contentSchemaVersion: contentSchemaVersion ?? world.contentSchemaVersion,
     chunkSize: world.chunkSize,
     assets: world.assets,
     entities: entities ?? world.entities,
