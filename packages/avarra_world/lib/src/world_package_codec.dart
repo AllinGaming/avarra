@@ -362,6 +362,37 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
+    final boss = components.whereType<GuardianBossDefinition>().firstOrNull;
+    if (boss != null) {
+      final attack = components.whereType<BasicAttackDefinition>().firstOrNull;
+      if (!types.contains(AvarraComponentType.guardianBehavior) ||
+          attack == null ||
+          boss.meleeRange > attack.range ||
+          boss.sweepRange > attack.range) {
+        _invalid(
+          '$path.components',
+          'A Guardian boss requires Guardian behavior and a basic-attack range '
+              'covering every authored boss attack.',
+          context: {'entityId': entityId.value},
+        );
+      }
+    }
+    final arenaHazard = components
+        .whereType<GuardianArenaHazardDefinition>()
+        .firstOrNull;
+    if (arenaHazard != null) {
+      final attack = components.whereType<BasicAttackDefinition>().firstOrNull;
+      if (boss == null ||
+          attack == null ||
+          arenaHazard.outerRadius > attack.range) {
+        _invalid(
+          '$path.components',
+          'A Guardian arena hazard requires a Guardian boss and a basic-attack '
+              'range covering its outer radius.',
+          context: {'entityId': entityId.value},
+        );
+      }
+    }
     if (types.contains(AvarraComponentType.interactable) &&
         (!types.contains(AvarraComponentType.transform) ||
             collider?.bodyKind != ContentPhysicsBodyKind.staticBody ||
@@ -445,6 +476,14 @@ final class WorldPackageCodec {
           },
         );
       }
+    }
+    if (types.contains(AvarraComponentType.playerPowerReward) &&
+        collectible == null) {
+      _invalid(
+        '$path.components',
+        'A player power reward must be attached to a collectible item.',
+        context: {'entityId': entityId.value},
+      );
     }
     final turnIn = components.whereType<ItemTurnInDefinition>().firstOrNull;
     if (turnIn != null) {

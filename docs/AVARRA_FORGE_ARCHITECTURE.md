@@ -154,6 +154,26 @@ completion console nor Guardian invalidates the player spawn or playable area.
 These are starter/template corrections, not a new world component or generic
 navigation system.
 
+Stage 12.34 extends the same deterministic animation generator with Ashen
+Vanguard's dedicated Dodge clip, automatic buffer sizing, and a read-only
+`--check` mode enforced by CI. The tool writes both application bundles;
+Forge's asset-closure test still requires byte equality. This is repository
+asset tooling, not player presentation or animation editing UI inside Forge.
+
+Stage 12.30 extends the same mission input with an optional boss contract and
+the Ascendant profile. Boss identity, thresholds, attack shapes, encounter
+copy, and collectible power are validated before the factory emits existing
+`GuardianBossDefinition` and `PlayerPowerRewardDefinition` values. The boss,
+guarded reward, and completion console still enter one `CreatorCommandBatch`
+with exact stable references. No Forge-only component, serialized profile,
+generic encounter graph, or direct file mutation path is introduced.
+
+Stage 12.31 adds two ordered Ascendant settings for the fissure-ring safe core
+and danger edge. The same factory emits the optional content-v11
+`GuardianArenaHazardDefinition` and expands Basic Attack range when needed.
+The schema upgrade, boss, reward, and console remain one validated undoable
+batch; Forge does not add a parallel encounter representation.
+
 Stage 12.21 extends `ForgeGuardianMissionSettings` with a title and three
 bounded story beats. The same three-entity factory attaches
 `MissionNarrativeDefinition` to the completion console. Profiles still change
@@ -381,8 +401,13 @@ The required delivery order is:
 17. **Complete:** package and integrity-check the shared built-in Gothic catalog
     and prove a real profiled mission through Game import/restart; and
 18. **Complete:** author bounded opening, return, and completion story beats
-    through the same mission factory and portable content contract; and
-19. only after the human creator loop works, add Stage 10A transactions,
+    through the same mission factory and portable content contract;
+19. **Complete:** author the existing three-phase boss and persistent power
+    reward through an Ascendant mission profile and the same atomic command
+    boundary; and
+20. **Complete:** author the existing phase-three fissure-ring radii through
+    the Ascendant mission profile and content-v11 arena-hazard component; and
+21. only after the human creator loop works, add Stage 10A transactions,
     permissions, semantic diff, and agent adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
@@ -398,6 +423,8 @@ and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md`,
 `AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md`,
 `AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`,
+`AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-ADR-026, ADR-033, and
+ADR-026, ADR-033, ADR-037, and
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

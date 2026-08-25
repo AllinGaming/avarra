@@ -53,8 +53,15 @@ commit `caad37835e7d379621247b24b7de9d84071bd474` (`v0.5.0-pre.5`). Keep the
 Git dependency isolated to `avarra_thermion_bridge` and the root dependency
 override. Do not vendor or patch Thermion native source into AVARRA.
 
-Keep the Android compile-SDK workaround: the pre-release still declares
-compile SDK 33 and uses the legacy Kotlin Gradle Plugin path.
+Keep the exact source pin, but evaluate its Android subproject through Game's
+repository-owned `thermion_flutter_compat.gradle`. Gradle's project descriptor
+redirects only the build file; Thermion's Dart, Kotlin, C++, and platform source
+still comes from the immutable official commit.
+
+The overlay replaces the pre-release's embedded AGP 7.3/Kotlin 1.7 buildscript,
+compile SDK 33, Java 8 target, and legacy `kotlin-android` application with API
+36, Java 17, and the AGP 9 `kotlin.compilerOptions` contract. This supersedes
+the earlier root-project `afterEvaluate` compile-SDK mutation.
 
 ## Verification
 
@@ -68,6 +75,11 @@ Passed with the exact commit:
 - no `VK_ERROR_DEVICE_LOST` or unsupported widget update;
 - controlled Windows close and process exit;
 - Windows and Android packaging of all three cube asset files.
+
+Stage 12.35 additionally passed a clean Android debug APK build on Flutter
+3.44.4/AGP 9.0.1/Gradle 9.1 without Flutter's legacy-KGP warning. The
+repository-owned Android CI command also passes and now fails if that warning
+returns.
 
 The first human visual inspection subsequently found an AVARRA fixture defect:
 `Cube.gltf` referenced `Cube_BaseColor.png`, which had not been copied into the
@@ -87,6 +99,9 @@ open, so Stage 2 is not yet complete.
 - `flutter pub get` currently requires GitHub access in addition to pub.dev.
 - The full commit hash makes the dependency immutable and reviewable.
 - CI cold builds compile the newer native layer and may take longer.
+- The Game-owned Gradle overlay is temporary compatibility configuration and
+  must be reviewed whenever the immutable Thermion pin or Flutter/AGP toolchain
+  changes.
 - Move back to a published version when it contains the queue fix and passes
   the same Windows/Android compile and live runtime gates.
 - Any future Thermion update must be deliberate; never widen this pin to a
@@ -97,3 +112,4 @@ open, so Stage 2 is not yet complete.
 - <https://pub.dev/packages/thermion_flutter>
 - <https://github.com/nmfisher/thermion/tree/v0.5.0-pre.5>
 - <https://github.com/nmfisher/thermion/blob/caad37835e7d379621247b24b7de9d84071bd474/thermion_dart/native/src/vulkan/windows/WindowsVulkanContext.cpp>
+- <https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors>

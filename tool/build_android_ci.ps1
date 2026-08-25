@@ -160,9 +160,18 @@ try {
 Write-Host 'Building the Avarra Game debug APK...'
 Push-Location $gameDirectory
 try {
-    & flutter build apk --debug --no-pub
-    if ($LASTEXITCODE -ne 0) {
-        throw "Android APK build failed with exit code $LASTEXITCODE"
+    $buildOutput = [System.Collections.Generic.List[string]]::new()
+    & flutter build apk --debug --no-pub 2>&1 | ForEach-Object {
+        $line = $_.ToString()
+        $buildOutput.Add($line)
+        Write-Host $line
+    }
+    $buildExitCode = $LASTEXITCODE
+    if ($buildExitCode -ne 0) {
+        throw "Android APK build failed with exit code $buildExitCode"
+    }
+    if (($buildOutput -join "`n") -match 'apply Kotlin Gradle Plugin \(KGP\)') {
+        throw 'Android APK build used a Flutter plugin that still applies the legacy Kotlin Gradle Plugin.'
     }
 } finally {
     Pop-Location

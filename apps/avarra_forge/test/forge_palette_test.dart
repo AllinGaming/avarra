@@ -332,6 +332,79 @@ void main() {
     }
     const PlayableWorldValidator().validate(world).throwIfInvalid();
   });
+
+  test('ascendant profile authors a canonical boss and power reward chain', () {
+    var world = createForgeStarterWorld();
+    final profile = forgeGuardianMissionProfileById('ascendant')!;
+    final settings = profile
+        .applyTo(const ForgeGuardianMissionSettings())
+        .copyWith(
+          bossDisplayName: 'Mordren, Ember Tyrant',
+          itemLabel: 'Tyrant Heart',
+          bossEngageText: 'Mordren rises from the furnace throne.',
+          bossPhaseTwoText: 'The throne fractures beneath his rage.',
+          bossPhaseThreeText: 'Every buried ember answers Mordren.',
+          bossDefeatText: 'The tyrant falls and the heart remains.',
+        );
+    final mission = createForgeGuardianMissionTemplate(
+      guardianEntityId: EntityId.generate(),
+      collectibleEntityId: EntityId.generate(),
+      completionConsoleEntityId: EntityId.generate(),
+      assets: ForgeGuardianMissionAssets.uniform(forgeSampleAssetId),
+      groundPosition: const ContentVector3(0, 0, 0),
+      settings: settings,
+    );
+
+    expect(settings.bossEncounter, isTrue);
+    expect(forgeGuardianMissionProfileIdForSettings(settings), 'ascendant');
+    final boss = mission.guardian.component<GuardianBossDefinition>()!;
+    final hazard = mission.guardian.component<GuardianArenaHazardDefinition>()!;
+    expect(boss.displayName, 'Mordren, Ember Tyrant');
+    expect(boss.phaseTwoHealthFraction, 0.67);
+    expect(boss.phaseThreeHealthFraction, 0.34);
+    expect(
+      mission.guardian.component<BasicAttackDefinition>()!.range,
+      hazard.outerRadius,
+    );
+    expect(hazard.innerSafeRadius, 0.9);
+    expect(hazard.outerRadius, 3.2);
+    expect(
+      mission.collectible
+          .component<PlayerPowerRewardDefinition>()!
+          .maximumHealthBonus,
+      25,
+    );
+    for (final entity in mission.entities) {
+      world = _appendEntity(world, entity);
+    }
+    final decoded = WorldPackageCodec().decode(
+      WorldPackageCodec().encodeCanonical(world),
+    );
+    const PlayableWorldValidator().validate(decoded).throwIfInvalid();
+    expect(
+      decoded.allEntities
+          .singleWhere(
+            (entity) => entity.component<GuardianBossDefinition>() != null,
+          )
+          .component<HealthDefinition>()!
+          .maximumHealth,
+      120,
+    );
+    expect(
+      settings.copyWith(playerPowerMaximumHealthBonus: 0.5).validationIssue,
+      'Boss reward health bonus must be from 1 to 1000',
+    );
+    expect(
+      settings.copyWith(bossSweepRange: 11).validationIssue,
+      'Boss attack shapes must use positive, ordered ranges',
+    );
+    expect(
+      settings
+          .copyWith(bossFissureInnerSafeRadius: 2, bossFissureOuterRadius: 1)
+          .validationIssue,
+      'Boss attack shapes must use positive, ordered ranges',
+    );
+  });
 }
 
 WorldDefinition _withAssets(

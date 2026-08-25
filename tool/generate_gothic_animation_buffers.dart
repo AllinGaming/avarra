@@ -3,33 +3,49 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-void main() {
+void main(List<String> arguments) {
+  if (arguments.contains('--help')) {
+    stdout.writeln(
+      'Usage: dart run tool/generate_gothic_animation_buffers.dart [--check]',
+    );
+    stdout.writeln(
+      'Regenerates AVARRA Gothic animation buffers and glTF clip metadata.',
+    );
+    return;
+  }
+  final unknownArguments = arguments
+      .where((argument) => argument != '--check')
+      .toList(growable: false);
+  if (unknownArguments.isNotEmpty) {
+    throw ArgumentError('Unknown arguments: ${unknownArguments.join(', ')}');
+  }
+  final checkOnly = arguments.contains('--check');
   final repositoryRoot = _findRepositoryRoot();
   _writeAssetCopies(
     repositoryRoot,
     fileName: 'AshenVanguardAnimation.bin',
     gltfFileName: 'AshenVanguard.gltf',
     values: _ashenVanguardAnimationValues(),
-    expectedByteLength: 576,
     rootNodeIndex: 5,
     rootChildren: const [0, 1, 2, 3, 4],
     clips: const [
       _AnimationClip('Idle', 1.6),
       _AnimationClip('Run', 0.6),
       _AnimationClip('Attack', 0.6),
+      _AnimationClip('Dodge', 0.18),
     ],
     targets: const [
       _AnimationTarget(5, 'translation', 'VEC3'),
       _AnimationTarget(5, 'rotation', 'VEC4'),
       _AnimationTarget(4, 'rotation', 'VEC4'),
     ],
+    checkOnly: checkOnly,
   );
   _writeAssetCopies(
     repositoryRoot,
     fileName: 'HollowWardenAnimation.bin',
     gltfFileName: 'HollowWarden.gltf',
     values: _hollowWardenAnimationValues(),
-    expectedByteLength: 1280,
     rootNodeIndex: 6,
     rootChildren: const [0, 1, 2, 3, 4, 5],
     clips: const [
@@ -45,6 +61,7 @@ void main() {
       _AnimationTarget(2, 'rotation', 'VEC4'),
       _AnimationTarget(3, 'rotation', 'VEC4'),
     ],
+    checkOnly: checkOnly,
   );
 }
 
@@ -82,6 +99,17 @@ List<double> _ashenVanguardAnimationValues() {
       ],
       rootRotations: [_qy(0), _qy(-8), _qy(12), _qy(0)],
       swordRotations: [_qz(45), _qz(-65), _qz(100), _qz(45)],
+    ),
+    ..._ashenClip(
+      times: const [0, 0.045, 0.115, 0.18],
+      rootTranslations: const [
+        [0, 0, 0],
+        [0, -0.16, -0.14],
+        [0, -0.1, 0.06],
+        [0, 0, 0],
+      ],
+      rootRotations: [_qx(0), _qx(-18), _qx(-10), _qx(0)],
+      swordRotations: [_qz(45), _qz(10), _qz(25), _qz(45)],
     ),
   ];
 }
@@ -186,6 +214,11 @@ List<double> _qy(double degrees) {
   return [0, math.sin(halfRadians), 0, math.cos(halfRadians)];
 }
 
+List<double> _qx(double degrees) {
+  final halfRadians = degrees * math.pi / 360;
+  return [math.sin(halfRadians), 0, 0, math.cos(halfRadians)];
+}
+
 List<double> _qz(double degrees) {
   final halfRadians = degrees * math.pi / 360;
   return [0, 0, math.sin(halfRadians), math.cos(halfRadians)];
@@ -196,11 +229,11 @@ void _writeAssetCopies(
   required String fileName,
   required String gltfFileName,
   required List<double> values,
-  required int expectedByteLength,
   required int rootNodeIndex,
   required List<int> rootChildren,
   required List<_AnimationClip> clips,
   required List<_AnimationTarget> targets,
+  required bool checkOnly,
 }) {
   final bytes = ByteData(values.length * Float32List.bytesPerElement);
   for (var index = 0; index < values.length; index += 1) {
@@ -210,12 +243,8 @@ void _writeAssetCopies(
       Endian.little,
     );
   }
-  if (bytes.lengthInBytes != expectedByteLength) {
-    throw StateError(
-      '$fileName generated ${bytes.lengthInBytes} bytes; '
-      'expected $expectedByteLength.',
-    );
-  }
+  final generatedByteLength = bytes.lengthInBytes;
+  final generatedBytes = bytes.buffer.asUint8List();
   for (final app in const ['avarra_game', 'avarra_forge']) {
     final output = File(
       '${repositoryRoot.path}${Platform.pathSeparator}apps'
@@ -223,9 +252,6 @@ void _writeAssetCopies(
       '${Platform.pathSeparator}models${Platform.pathSeparator}gothic'
       '${Platform.pathSeparator}$fileName',
     );
-    output.writeAsBytesSync(bytes.buffer.asUint8List(), flush: true);
-    stdout.writeln('Wrote ${output.path} (${bytes.lengthInBytes} bytes)');
-
     final gltf = File(
       '${output.parent.path}${Platform.pathSeparator}$gltfFileName',
     );
@@ -234,18 +260,43 @@ void _writeAssetCopies(
     _installAnimationMetadata(
       document,
       animationBufferUri: fileName,
-      animationBufferByteLength: expectedByteLength,
+      animationBufferByteLength: generatedByteLength,
       rootNodeIndex: rootNodeIndex,
       rootChildren: rootChildren,
       clips: clips,
       targets: targets,
     );
-    gltf.writeAsStringSync(
-      '${const JsonEncoder.withIndent('  ').convert(document)}\n',
-      flush: true,
-    );
-    stdout.writeln('Updated ${gltf.path} with ${clips.length} clips');
+    final generatedGltf =
+        '${const JsonEncoder.withIndent('  ').convert(document)}\n';
+    if (checkOnly) {
+      if (!output.existsSync() ||
+          !_sameBytes(output.readAsBytesSync(), generatedBytes)) {
+        throw StateError(
+          '${output.path} is stale. Run the generator without --check.',
+        );
+      }
+      if (gltf.readAsStringSync() != generatedGltf) {
+        throw StateError(
+          '${gltf.path} is stale. Run the generator without --check.',
+        );
+      }
+      stdout.writeln('Verified ${output.path} and ${clips.length} glTF clips');
+      continue;
+    }
+    output.writeAsBytesSync(generatedBytes, flush: true);
+    gltf.writeAsStringSync(generatedGltf, flush: true);
+    stdout
+      ..writeln('Wrote ${output.path} (${bytes.lengthInBytes} bytes)')
+      ..writeln('Updated ${gltf.path} with ${clips.length} clips');
   }
+}
+
+bool _sameBytes(List<int> left, List<int> right) {
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index += 1) {
+    if (left[index] != right[index]) return false;
+  }
+  return true;
 }
 
 void _installAnimationMetadata(

@@ -77,6 +77,24 @@ final class CharacterMovementSystem {
     return _move(state, planar);
   }
 
+  /// Applies one bounded planar displacement through the same sweep/slide
+  /// authority as ordinary movement.
+  CharacterMovementResult moveDisplacement({
+    required EntityId entityId,
+    required Vector3 displacement,
+    double maximumDistance = 4,
+  }) {
+    final planar = Vector3(displacement.x, 0, displacement.z);
+    if (!maximumDistance.isFinite ||
+        maximumDistance <= 0 ||
+        maximumDistance > 10 ||
+        !planar.storage.every((value) => value.isFinite) ||
+        planar.length > maximumDistance + 1e-9) {
+      _invalidMovement('Movement displacement is invalid or too large.');
+    }
+    return _move(_state(entityId), planar);
+  }
+
   CharacterMovementResult _move(
     _CharacterState state,
     Vector3 desired, {

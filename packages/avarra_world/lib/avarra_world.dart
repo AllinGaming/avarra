@@ -2,6 +2,7 @@ export 'src/authored_adventure_progress.dart';
 export 'src/authored_interaction_effects.dart';
 export 'src/authored_mission_narrative.dart';
 export 'src/authored_objectives.dart';
+export 'src/authored_player_power.dart';
 export 'src/authored_quest_guidance.dart';
 export 'src/playable_world_profile.dart';
 export 'src/runtime_world.dart';

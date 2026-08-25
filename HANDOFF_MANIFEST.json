@@ -1,7 +1,7 @@
 {
   "architecture_version": "v8-reviewed",
-  "date": "2026-08-23",
-  "current_direction": "Stage 12.25 adds the complete Game-owned title, authored prologue, pause/story recap, world/title transition, and persistent presentation-settings flow without changing simulation or authority. Next prioritize a hands-on packaged UX pass, an audio backend POC/decision, an explicit server-authoritative enemy wind-up/telegraph contract, richer typed story authoring, and physical Android touch/performance/direct-LAN validation. Source-asset cooking/container design and production Android signing/publication remain explicit open work.",
+  "date": "2026-08-25",
+  "current_direction": "Stage 12.35 closes the pinned Thermion Android Kotlin warning with a repository-owned AGP 9 build overlay: the immutable renderer source remains unchanged, clean APK builds no longer apply legacy KGP, and Android CI rejects warning regressions. Stage 12.34 keeps dodge-feel iteration reproducible through one Game profile and one deterministic Game/Forge animation generator/check. Next prioritize packaged human encounter tuning, a production skinned-animation and renderer-native VFX POC, physical Android touch/performance/direct-LAN validation, input remapping/controller/haptics support, and production signing/publication.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
@@ -42,6 +42,17 @@
   "stage_12_23_validation": "docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md",
   "stage_12_24_validation": "docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md",
   "stage_12_25_validation": "docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md",
+  "stage_12_26_validation": "docs/AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md",
+  "stage_12_27_validation": "docs/AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md",
+  "stage_12_28_validation": "docs/AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md",
+  "stage_12_29_validation": "docs/AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md",
+  "stage_12_30_validation": "docs/AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md",
+  "stage_12_31_validation": "docs/AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md",
+  "stage_12_32_validation": "docs/AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md",
+  "stage_12_33_validation": "docs/AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md",
+  "stage_12_34_validation": "docs/AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md",
+  "stage_12_35_validation": "docs/AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md",
+  "combat_feel_authoring_guide": "docs/AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md",
   "forge_game_maker_guide": "docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md",
   "android_ci_cd": "docs/AVARRA_ANDROID_CI_CD.md",
   "first_playable": "docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md",
@@ -71,7 +82,12 @@
     "ADR-030-player-inventory-and-authored-item-turn-ins.md",
     "ADR-031-host-authoritative-adventure-commands.md",
     "ADR-032-durable-host-saves-and-player-retention.md",
-    "ADR-033-authored-mission-narrative.md"
+    "ADR-033-authored-mission-narrative.md",
+    "ADR-034-authoritative-guardian-wind-up-and-telegraph.md",
+    "ADR-035-provisional-game-audio-boundary.md",
+    "ADR-036-authored-vharos-boss-encounter.md",
+    "ADR-037-authored-guardian-fissure-ring.md",
+    "ADR-038-authority-owned-player-dodge.md"
   ],
   "ai_creator_docs": [
     "docs/AVARRA_AI_CREATOR_ARCHITECTURE.md",
@@ -79,7 +95,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through Stage 12.25 cinematic title, portable mission preview/prologue, pause/story recap, persistent presentation settings, authoritative gameplay feedback, smooth traversal, and world-space enemy health. The 18-suite matrix passes 301 tests and the Game Windows release builds. Live packaged visual acceptance, audio/haptics/input-remapping decisions, richer story authoring, authoritative enemy wind-ups, source-asset cooking/container design, production signing/publication, and physical Android direct-LAN, touch, performance, battery/thermal, and human playability remain open.",
+  "review_status": "Consistency-reviewed through Stage 12.35: content-schema-v11 and protocol-v6 add an authored authority-owned Vharos fissure ring and collision-swept player dodge; Game adds correction-aware motion and projected effects; Ashen Vanguard packages a dedicated generated Dodge clip controlled with the effects by one Game profile. A deterministic Game/Forge generator, read-only check, CI gate, asset tests, and authoring guide make iteration reproducible. A Game-owned Gradle overlay preserves the immutable Thermion source pin while replacing its obsolete Android build instructions; clean APK builds no longer emit the legacy-KGP warning and CI rejects its return. The 18-suite matrix passes 340 tests; Game and Forge Windows releases, server executable, and Android debug APK build, with all 17 WAVs present in source/Windows/APK. Human packaged play/listen/balance and creator-usability acceptance, production skinned boss/dodge animation and renderer-native VFX, permanent audio/spatial/haptics/input-remapping policy, production signing/publication, and physical Android direct-LAN, touch, performance, battery/thermal validation remain open.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

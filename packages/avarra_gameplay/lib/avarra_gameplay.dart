@@ -2,6 +2,7 @@ export 'src/character_components.dart';
 export 'src/character_movement_system.dart';
 export 'src/combat_components.dart';
 export 'src/combat_system.dart';
+export 'src/dodge_system.dart';
 export 'src/gameplay_error_codes.dart';
 export 'src/guardian_behavior_components.dart';
 export 'src/guardian_behavior_system.dart';

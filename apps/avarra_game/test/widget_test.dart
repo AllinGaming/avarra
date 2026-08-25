@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_game/main.dart';
+import 'package:avarra_game/src/game_audio.dart';
 import 'package:avarra_game/src/game_experience_settings.dart';
 import 'package:avarra_game/src/host_device_metrics.dart';
 import 'package:avarra_game/src/runtime_world_library.dart';
@@ -107,17 +108,20 @@ void main() {
     final settingsStore = MemoryGameExperienceSettingsStore(
       const GameExperienceSettings(reducedMotion: true).encode(),
     );
+    final audio = _RecordingGameAudioController();
     await tester.pumpWidget(
       AvarraGameApp(
         enableRenderer: false,
         showFrontDoor: true,
         experienceSettingsStoreLoader: () async => settingsStore,
+        audioControllerLoader: () async => audio,
         saveStoreLoader: () async => MemorySaveStore(),
         worldPackageSourceLoader: () async => bundledSource!,
       ),
     );
     await tester.pumpAndSettle();
 
+    expect(audio.ambienceStarts, 1);
     expect(find.byKey(const Key('game_front_door')), findsOneWidget);
     expect(find.text('RELAY ZERO: ASHFALL'), findsOneWidget);
     expect(find.byKey(const Key('front_door_mission_title')), findsOneWidget);
@@ -133,6 +137,7 @@ void main() {
     await tester.tap(find.byKey(const Key('enter_world')));
     await _pumpUntilSaveReady(tester);
 
+    expect(audio.cues, contains(GameAudioCue.uiConfirm));
     expect(find.byKey(const Key('game_front_door')), findsNothing);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
   });
@@ -293,6 +298,10 @@ void main() {
             entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000015'),
             flags: const {'collected': true},
           ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000023'),
+            flags: const {'collected': true},
+          ),
         ],
         players: [
           PlayerSave(
@@ -305,7 +314,7 @@ void main() {
               localY: 0.4,
               localZ: 4,
             ),
-            inventoryItemIds: const {'relay.core'},
+            inventoryItemIds: const {'relay.core', 'relic.ashen_heart'},
           ),
         ],
       ),
@@ -324,7 +333,8 @@ void main() {
       find.text('Objective · Return Relay Core to the control console'),
       findsOneWidget,
     );
-    expect(find.text('Inventory · Relay Core'), findsOneWidget);
+    expect(find.text('Inventory · Relay Core, Ashen Heart'), findsOneWidget);
+    expect(find.textContaining('Health 125/125'), findsOneWidget);
   });
 
   testWidgets('restores the persisted mission-complete state', (tester) async {
@@ -724,6 +734,34 @@ final class _FakeHostDeviceMetricsSampler implements HostDeviceMetricsSampler {
       platformBytesReceived: 4096,
     );
   }
+}
+
+final class _RecordingGameAudioController implements GameAudioController {
+  final List<GameAudioCue> cues = [];
+  final List<GameAudioCombatIntensity> intensities = [];
+  int ambienceStarts = 0;
+
+  @override
+  Future<void> configure(GameAudioMix mix) async {}
+
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  Future<void> play(GameAudioCue cue) async => cues.add(cue);
+
+  @override
+  Future<void> setCombatIntensity(GameAudioCombatIntensity intensity) async =>
+      intensities.add(intensity);
+
+  @override
+  Future<void> setDucked(bool ducked) async {}
+
+  @override
+  Future<void> setSuspended(bool suspended) async {}
+
+  @override
+  Future<void> startAmbience() async => ambienceStarts += 1;
 }
 
 WorldDefinition _rootOnlyForgeWorld() {

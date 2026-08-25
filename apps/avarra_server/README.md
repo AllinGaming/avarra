@@ -25,6 +25,27 @@ flush preserve authored flags, player position, and per-player inventory.
 Remote runtime avatars despawn on disconnect while their stable save records
 remain available for reconnect. See ADR-032.
 
+Stage 12.26 upgrades the handshake to protocol v4. Guardian authority now
+publishes bounded phase, locked-target, and remaining-wind-up state before
+resolving the existing combat attempt. The 650 ms commitment and final
+range/obstruction validation run in the server-safe gameplay package; Game
+clients only present the warning. See ADR-034.
+
+Stage 12.28 upgrades the handshake to protocol v5. The server-safe Guardian
+authority now derives Vharos's health phase, deterministic melee/sweep/eruption
+pattern, commitment time, and locked target geometry. Snapshots carry those
+bounded values; Game cannot declare a hit. Accepted Ashen Heart collection
+updates existing per-player inventory and derives the authoritative health
+bonus without changing save format. See ADR-036.
+
+Stages 12.31 and 12.32 advance the handshake to protocol v6. An optional
+content-v11 Guardian arena hazard adds Vharos's phase-three fissure ring; the
+host locks its center and resolves damage only inside the authored annulus.
+The same protocol adds a target-free bounded planar dodge command. The
+server-safe Dodge system owns its 1.8-unit collision sweep and 1.5-second
+cooldown for every connected avatar; client movement is only prediction. See
+ADR-037 and ADR-038.
+
 Listen-host player movement uses the shared deterministic kinematic
 box-sweep/wall-slide system. Dynamic proof avatars copy the authored character
 controller and collider rather than bypassing authoritative collision.

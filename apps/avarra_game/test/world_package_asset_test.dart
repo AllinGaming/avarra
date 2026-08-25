@@ -47,10 +47,10 @@ void main() {
 
       expect(definition.name, 'Relay Zero: Ashfall');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 9);
+      expect(definition.contentSchemaVersion, 11);
       expect(definition.chunkSize, 8);
       expect(definition.chunks, hasLength(3));
-      expect(definition.allEntities, hasLength(22));
+      expect(definition.allEntities, hasLength(23));
       expect(runtime.ecs.entityCount, 10);
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
@@ -65,6 +65,10 @@ void main() {
       expect(
         runtime.ecs.component<BasicAttackComponent>(playerHandle).cooldown,
         const Duration(milliseconds: 450),
+      );
+      expect(
+        runtime.ecs.component<DodgeStateComponent>(playerHandle).nextReadyAt,
+        Duration.zero,
       );
       final guardianId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000009');
       expect(
@@ -99,17 +103,22 @@ void main() {
           .whereType<MissionNarrativeDefinition>()
           .single;
       expect(narrative.title, "Ashfall's Last Signal");
-      expect(narrative.openingText, contains('three stabilizers'));
-      expect(narrative.returnText, contains('ash storm'));
+      expect(narrative.openingText, contains('Vharos'));
+      expect(narrative.returnText, contains('Ashen Heart'));
       expect(narrative.completionText, contains('answers in return'));
       final collectibles = definition.allEntities
           .map((entity) => entity.component<CollectibleItemDefinition>())
           .whereType<CollectibleItemDefinition>()
           .toList();
-      expect(collectibles, hasLength(3));
+      expect(collectibles, hasLength(4));
       expect(
         collectibles.map((item) => item.itemId),
-        containsAll(['relay.core', 'loot.ash_sigil', 'loot.warden_iron']),
+        containsAll([
+          'relay.core',
+          'loot.ash_sigil',
+          'loot.warden_iron',
+          'relic.ashen_heart',
+        ]),
       );
       expect(
         definition.allEntities
@@ -136,13 +145,33 @@ void main() {
       expect(core.guardedByEntityId, guardianId);
       expect(
         runtime.ecs.component<HealthComponent>(guardianHandle).currentHealth,
-        60,
+        120,
       );
       expect(
         runtime.ecs
             .component<GuardianBehaviorComponent>(guardianHandle)
             .perceptionRange,
-        3.5,
+        4.5,
+      );
+      final boss = runtime.ecs.component<GuardianBossComponent>(guardianHandle);
+      expect(boss.sweepRange, 2.6);
+      expect(boss.eruptionRadius, 0.9);
+      final arenaHazard = runtime.ecs.component<GuardianArenaHazardComponent>(
+        guardianHandle,
+      );
+      expect(arenaHazard.innerSafeRadius, 0.9);
+      expect(arenaHazard.outerRadius, 3.2);
+      expect(
+        runtime.ecs.component<BasicAttackComponent>(guardianHandle).range,
+        arenaHazard.outerRadius,
+      );
+      expect(
+        authoredPlayerMaximumHealth(
+          definition,
+          EntityId.parse('01890f47-e8b8-7a68-8000-000000000001'),
+          const {'relic.ashen_heart'},
+        ),
+        125,
       );
       expect(
         runtime.ecs
@@ -177,7 +206,7 @@ void main() {
       );
       expect(
         runtime.ecs.component<HealthComponent>(playerHandle).currentHealth,
-        90,
+        88,
       );
       for (final entry in runtime.assetPaths.entries) {
         expect(entry.key, isA<AssetId>());

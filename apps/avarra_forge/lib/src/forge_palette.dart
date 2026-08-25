@@ -80,6 +80,21 @@ final class ForgeGuardianMissionSettings {
     this.guardianMaximumHealth = 36,
     this.guardianDamage = 7,
     this.spacing = 2,
+    this.bossEncounter = false,
+    this.bossDisplayName = 'Ash Warden',
+    this.bossPhaseTwoHealthFraction = 0.67,
+    this.bossPhaseThreeHealthFraction = 0.34,
+    this.bossMeleeRange = 1.15,
+    this.bossSweepRange = 2.6,
+    this.bossSweepHalfAngleDegrees = 55,
+    this.bossEruptionRadius = 0.9,
+    this.bossFissureInnerSafeRadius = 0.9,
+    this.bossFissureOuterRadius = 3.2,
+    this.playerPowerMaximumHealthBonus = 25,
+    this.bossEngageText = 'The Warden wakes beneath the ash.',
+    this.bossPhaseTwoText = 'Its chains break. The chamber becomes its weapon.',
+    this.bossPhaseThreeText = 'The buried fire answers its final command.',
+    this.bossDefeatText = 'The Warden falls. Its heart still burns.',
     this.itemLabel = 'Ember Shard',
     this.completionLabel = 'Ember relay restored',
     this.missionTitle = 'Emberfall Oath',
@@ -97,6 +112,21 @@ final class ForgeGuardianMissionSettings {
   final double guardianMaximumHealth;
   final double guardianDamage;
   final double spacing;
+  final bool bossEncounter;
+  final String bossDisplayName;
+  final double bossPhaseTwoHealthFraction;
+  final double bossPhaseThreeHealthFraction;
+  final double bossMeleeRange;
+  final double bossSweepRange;
+  final double bossSweepHalfAngleDegrees;
+  final double bossEruptionRadius;
+  final double bossFissureInnerSafeRadius;
+  final double bossFissureOuterRadius;
+  final double playerPowerMaximumHealthBonus;
+  final String bossEngageText;
+  final String bossPhaseTwoText;
+  final String bossPhaseThreeText;
+  final String bossDefeatText;
   final String itemLabel;
   final String completionLabel;
   final String missionTitle;
@@ -113,6 +143,58 @@ final class ForgeGuardianMissionSettings {
     }
     if (!spacing.isFinite || spacing <= 0) {
       return 'Mission spacing must be greater than zero';
+    }
+    if (bossEncounter) {
+      final normalizedBossName = bossDisplayName.trim();
+      if (normalizedBossName.isEmpty || normalizedBossName.length > 80) {
+        return 'Boss name must contain 1 to 80 characters';
+      }
+      if (!bossPhaseTwoHealthFraction.isFinite ||
+          !bossPhaseThreeHealthFraction.isFinite ||
+          bossPhaseTwoHealthFraction < 0.01 ||
+          bossPhaseTwoHealthFraction > 0.99 ||
+          bossPhaseThreeHealthFraction < 0.01 ||
+          bossPhaseThreeHealthFraction > 0.98 ||
+          bossPhaseThreeHealthFraction >= bossPhaseTwoHealthFraction) {
+        return 'Boss phase thresholds must descend inside zero and one';
+      }
+      if (!bossMeleeRange.isFinite ||
+          bossMeleeRange < 0.1 ||
+          bossMeleeRange > 10 ||
+          !bossSweepRange.isFinite ||
+          bossSweepRange > 10 ||
+          bossSweepRange < bossMeleeRange ||
+          !bossSweepHalfAngleDegrees.isFinite ||
+          bossSweepHalfAngleDegrees < 1 ||
+          bossSweepHalfAngleDegrees > 179 ||
+          !bossEruptionRadius.isFinite ||
+          bossEruptionRadius < 0.1 ||
+          bossEruptionRadius > 10 ||
+          !bossFissureInnerSafeRadius.isFinite ||
+          bossFissureInnerSafeRadius < 0.1 ||
+          bossFissureInnerSafeRadius > 10 ||
+          !bossFissureOuterRadius.isFinite ||
+          bossFissureOuterRadius < 0.2 ||
+          bossFissureOuterRadius > 10 ||
+          bossFissureOuterRadius <= bossFissureInnerSafeRadius) {
+        return 'Boss attack shapes must use positive, ordered ranges';
+      }
+      if (!playerPowerMaximumHealthBonus.isFinite ||
+          playerPowerMaximumHealthBonus < 1 ||
+          playerPowerMaximumHealthBonus > 1000) {
+        return 'Boss reward health bonus must be from 1 to 1000';
+      }
+      for (final value in [
+        bossEngageText,
+        bossPhaseTwoText,
+        bossPhaseThreeText,
+        bossDefeatText,
+      ]) {
+        final normalized = value.trim();
+        if (normalized.isEmpty || normalized.length > 280) {
+          return 'Boss story beats must contain 1 to 280 characters';
+        }
+      }
     }
     final normalizedItemLabel = itemLabel.trim();
     if (normalizedItemLabel.isEmpty || normalizedItemLabel.length > 80) {
@@ -144,6 +226,21 @@ final class ForgeGuardianMissionSettings {
     double? guardianMaximumHealth,
     double? guardianDamage,
     double? spacing,
+    bool? bossEncounter,
+    String? bossDisplayName,
+    double? bossPhaseTwoHealthFraction,
+    double? bossPhaseThreeHealthFraction,
+    double? bossMeleeRange,
+    double? bossSweepRange,
+    double? bossSweepHalfAngleDegrees,
+    double? bossEruptionRadius,
+    double? bossFissureInnerSafeRadius,
+    double? bossFissureOuterRadius,
+    double? playerPowerMaximumHealthBonus,
+    String? bossEngageText,
+    String? bossPhaseTwoText,
+    String? bossPhaseThreeText,
+    String? bossDefeatText,
     String? itemLabel,
     String? completionLabel,
     String? missionTitle,
@@ -156,6 +253,27 @@ final class ForgeGuardianMissionSettings {
           guardianMaximumHealth ?? this.guardianMaximumHealth,
       guardianDamage: guardianDamage ?? this.guardianDamage,
       spacing: spacing ?? this.spacing,
+      bossEncounter: bossEncounter ?? this.bossEncounter,
+      bossDisplayName: bossDisplayName ?? this.bossDisplayName,
+      bossPhaseTwoHealthFraction:
+          bossPhaseTwoHealthFraction ?? this.bossPhaseTwoHealthFraction,
+      bossPhaseThreeHealthFraction:
+          bossPhaseThreeHealthFraction ?? this.bossPhaseThreeHealthFraction,
+      bossMeleeRange: bossMeleeRange ?? this.bossMeleeRange,
+      bossSweepRange: bossSweepRange ?? this.bossSweepRange,
+      bossSweepHalfAngleDegrees:
+          bossSweepHalfAngleDegrees ?? this.bossSweepHalfAngleDegrees,
+      bossEruptionRadius: bossEruptionRadius ?? this.bossEruptionRadius,
+      bossFissureInnerSafeRadius:
+          bossFissureInnerSafeRadius ?? this.bossFissureInnerSafeRadius,
+      bossFissureOuterRadius:
+          bossFissureOuterRadius ?? this.bossFissureOuterRadius,
+      playerPowerMaximumHealthBonus:
+          playerPowerMaximumHealthBonus ?? this.playerPowerMaximumHealthBonus,
+      bossEngageText: bossEngageText ?? this.bossEngageText,
+      bossPhaseTwoText: bossPhaseTwoText ?? this.bossPhaseTwoText,
+      bossPhaseThreeText: bossPhaseThreeText ?? this.bossPhaseThreeText,
+      bossDefeatText: bossDefeatText ?? this.bossDefeatText,
       itemLabel: itemLabel ?? this.itemLabel,
       completionLabel: completionLabel ?? this.completionLabel,
       missionTitle: missionTitle ?? this.missionTitle,
@@ -174,6 +292,8 @@ final class ForgeGuardianMissionProfile {
     required this.guardianMaximumHealth,
     required this.guardianDamage,
     required this.spacing,
+    this.bossEncounter = false,
+    this.playerPowerMaximumHealthBonus = 25,
   });
 
   final String id;
@@ -182,19 +302,27 @@ final class ForgeGuardianMissionProfile {
   final double guardianMaximumHealth;
   final double guardianDamage;
   final double spacing;
+  final bool bossEncounter;
+  final double playerPowerMaximumHealthBonus;
 
   ForgeGuardianMissionSettings applyTo(ForgeGuardianMissionSettings settings) {
     return settings.copyWith(
       guardianMaximumHealth: guardianMaximumHealth,
       guardianDamage: guardianDamage,
       spacing: spacing,
+      bossEncounter: bossEncounter,
+      playerPowerMaximumHealthBonus: playerPowerMaximumHealthBonus,
     );
   }
 
   bool matches(ForgeGuardianMissionSettings settings) {
     return settings.guardianMaximumHealth == guardianMaximumHealth &&
         settings.guardianDamage == guardianDamage &&
-        settings.spacing == spacing;
+        settings.spacing == spacing &&
+        settings.bossEncounter == bossEncounter &&
+        (!bossEncounter ||
+            settings.playerPowerMaximumHealthBonus ==
+                playerPowerMaximumHealthBonus);
   }
 }
 
@@ -475,6 +603,16 @@ const forgeGuardianMissionProfiles = <ForgeGuardianMissionProfile>[
     guardianDamage: 11,
     spacing: 3,
   ),
+  ForgeGuardianMissionProfile(
+    id: 'ascendant',
+    label: 'Ascendant',
+    description: 'Three-phase boss and permanent power reward',
+    guardianMaximumHealth: 120,
+    guardianDamage: 12,
+    spacing: 4,
+    bossEncounter: true,
+    playerPowerMaximumHealthBonus: 25,
+  ),
 ];
 
 const forgeObjectPalette = <ForgePaletteItem>[
@@ -623,11 +761,34 @@ ForgeGuardianMissionTemplate createForgeGuardianMissionTemplate({
         else if (component is BasicAttackDefinition)
           BasicAttackDefinition(
             damage: settings.guardianDamage,
-            range: component.range,
+            range: settings.bossEncounter
+                ? settings.bossFissureOuterRadius > settings.bossSweepRange
+                      ? settings.bossFissureOuterRadius
+                      : settings.bossSweepRange
+                : component.range,
             cooldownSeconds: component.cooldownSeconds,
           )
         else
           component,
+      if (settings.bossEncounter)
+        GuardianBossDefinition(
+          displayName: settings.bossDisplayName.trim(),
+          phaseTwoHealthFraction: settings.bossPhaseTwoHealthFraction,
+          phaseThreeHealthFraction: settings.bossPhaseThreeHealthFraction,
+          meleeRange: settings.bossMeleeRange,
+          sweepRange: settings.bossSweepRange,
+          sweepHalfAngleDegrees: settings.bossSweepHalfAngleDegrees,
+          eruptionRadius: settings.bossEruptionRadius,
+          engageText: settings.bossEngageText.trim(),
+          phaseTwoText: settings.bossPhaseTwoText.trim(),
+          phaseThreeText: settings.bossPhaseThreeText.trim(),
+          defeatText: settings.bossDefeatText.trim(),
+        ),
+      if (settings.bossEncounter)
+        GuardianArenaHazardDefinition(
+          innerSafeRadius: settings.bossFissureInnerSafeRadius,
+          outerRadius: settings.bossFissureOuterRadius,
+        ),
     ],
   );
   final collectiblePreset = byKind[ForgePaletteItemKind.collectibleItem]!
@@ -656,6 +817,10 @@ ForgeGuardianMissionTemplate createForgeGuardianMissionTemplate({
           )
         else
           component,
+      if (settings.bossEncounter)
+        PlayerPowerRewardDefinition(
+          maximumHealthBonus: settings.playerPowerMaximumHealthBonus,
+        ),
     ],
   );
   final collectibleItemId = collectible

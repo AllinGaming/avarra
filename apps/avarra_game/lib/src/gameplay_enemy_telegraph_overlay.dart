@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:avarra_client/avarra_client.dart';
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_isometric/avarra_isometric.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
@@ -12,10 +13,14 @@ final class GameplayEnemyTelegraphState {
     required this.guardianEntityId,
     required this.targetEntityId,
     required this.attackRange,
+    required this.attackPattern,
+    required Vector3 telegraphTargetPosition,
     required this.remaining,
     required this.total,
     required this.targetsLocalPlayer,
-  }) {
+    this.sweepHalfAngleDegrees = 55,
+    this.innerSafeRadius = 0,
+  }) : _telegraphTargetPosition = Vector3.copy(telegraphTargetPosition) {
     if (!attackRange.isFinite || attackRange <= 0) {
       throw ArgumentError.value(
         attackRange,
@@ -23,17 +28,36 @@ final class GameplayEnemyTelegraphState {
         'Must be finite and positive.',
       );
     }
-    if (remaining <= Duration.zero || total <= Duration.zero || remaining > total) {
+    if (remaining <= Duration.zero ||
+        total <= Duration.zero ||
+        remaining > total) {
       throw ArgumentError('Telegraph timing must be positive and bounded.');
+    }
+    if (!sweepHalfAngleDegrees.isFinite ||
+        sweepHalfAngleDegrees <= 0 ||
+        sweepHalfAngleDegrees >= 180) {
+      throw ArgumentError.value(sweepHalfAngleDegrees, 'sweepHalfAngleDegrees');
+    }
+    if (!innerSafeRadius.isFinite ||
+        innerSafeRadius < 0 ||
+        (attackPattern == GuardianAttackPattern.fissureRing &&
+            (innerSafeRadius <= 0 || innerSafeRadius >= attackRange))) {
+      throw ArgumentError.value(innerSafeRadius, 'innerSafeRadius');
     }
   }
 
   final EntityId guardianEntityId;
   final EntityId targetEntityId;
   final double attackRange;
+  final GuardianAttackPattern attackPattern;
+  final Vector3 _telegraphTargetPosition;
+  final double sweepHalfAngleDegrees;
+  final double innerSafeRadius;
   final Duration remaining;
   final Duration total;
   final bool targetsLocalPlayer;
+
+  Vector3 get telegraphTargetPosition => Vector3.copy(_telegraphTargetPosition);
 
   double get progress =>
       (1 - remaining.inMicroseconds / total.inMicroseconds).clamp(0, 1);
@@ -89,8 +113,13 @@ final class GameplayEnemyTelegraphOverlay extends StatelessWidget {
             final labels = <Widget>[];
             for (final telegraph in visible) {
               final guardian = presentationById[telegraph.guardianEntityId]!;
+              final guardianPosition = guardian.transform.position;
               final point = cameraRig.screenPointForWorld(
-                worldPoint: guardian.transform.position + Vector3(0, 1.25, 0),
+                worldPoint: Vector3(
+                  guardianPosition.x,
+                  guardianPosition.y + 1.25,
+                  guardianPosition.z,
+                ),
                 viewportWidth: size.width,
                 viewportHeight: size.height,
               );
@@ -101,9 +130,9 @@ final class GameplayEnemyTelegraphOverlay extends StatelessWidget {
                 continue;
               }
               final seconds = telegraph.remaining.inMilliseconds / 1000;
-              final label = telegraph.targetsLocalPlayer
-                  ? 'DODGE · ${seconds.toStringAsFixed(1)}s'
-                  : 'WARDEN STRIKE · ${seconds.toStringAsFixed(1)}s';
+              final label =
+                  '${_telegraphActionLabel(telegraph)} - '
+                  '${seconds.toStringAsFixed(1)}s';
               labels.add(
                 Positioned(
                   key: Key(
@@ -113,6 +142,9 @@ final class GameplayEnemyTelegraphOverlay extends StatelessWidget {
                   top: (point.y - 74).clamp(4, math.max(4, size.height - 34)),
                   width: 152,
                   child: Semantics(
+                    key: Key(
+                      'enemy_telegraph_semantics_${telegraph.guardianEntityId.value}',
+                    ),
                     liveRegion: telegraph.targetsLocalPlayer,
                     label: label,
                     child: DecoratedBox(
@@ -191,16 +223,42 @@ final class _EnemyTelegraphPainter extends CustomPainter {
     for (final telegraph in telegraphs) {
       final guardian = presentationById[telegraph.guardianEntityId];
       if (guardian == null) continue;
-      final centerWorld = guardian.transform.position + Vector3(0, 0.04, 0);
+      final guardianPosition = guardian.transform.position;
+      final centerWorld = Vector3(
+        guardianPosition.x,
+        guardianPosition.y + 0.04,
+        guardianPosition.z,
+      );
       final urgency = telegraph.progress;
       final pulse = reducedMotion
           ? 1.0
           : 0.82 + 0.18 * math.sin(urgency * math.pi * 8).abs();
-      final rangePath = _projectedCircle(
-        centerWorld: centerWorld,
-        radius: telegraph.attackRange,
-        size: size,
-      );
+      final shapeCenter =
+          telegraph.attackPattern == GuardianAttackPattern.eruption ||
+              telegraph.attackPattern == GuardianAttackPattern.fissureRing
+          ? telegraph.telegraphTargetPosition
+          : centerWorld;
+      final rangePath = switch (telegraph.attackPattern) {
+        GuardianAttackPattern.sweep => _projectedSector(
+          centerWorld: centerWorld,
+          targetWorld: telegraph.telegraphTargetPosition,
+          radius: telegraph.attackRange,
+          halfAngleDegrees: telegraph.sweepHalfAngleDegrees,
+          size: size,
+        ),
+        GuardianAttackPattern.fissureRing => _projectedAnnulus(
+          centerWorld: shapeCenter,
+          innerRadius: telegraph.innerSafeRadius,
+          outerRadius: telegraph.attackRange,
+          size: size,
+        ),
+        GuardianAttackPattern.melee ||
+        GuardianAttackPattern.eruption => _projectedCircle(
+          centerWorld: shapeCenter,
+          radius: telegraph.attackRange,
+          size: size,
+        ),
+      };
       canvas.drawPath(
         rangePath,
         Paint()
@@ -209,6 +267,19 @@ final class _EnemyTelegraphPainter extends CustomPainter {
           ).withValues(alpha: (0.1 + urgency * 0.13) * pulse)
           ..style = PaintingStyle.fill,
       );
+      if (telegraph.attackPattern == GuardianAttackPattern.fissureRing) {
+        canvas.drawPath(
+          _projectedCircle(
+            centerWorld: shapeCenter,
+            radius: telegraph.innerSafeRadius,
+            size: size,
+          ),
+          Paint()
+            ..color = const Color(0xFF70FFD4).withValues(alpha: 0.82)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.3,
+        );
+      }
       canvas.drawPath(
         rangePath,
         Paint()
@@ -220,7 +291,7 @@ final class _EnemyTelegraphPainter extends CustomPainter {
       );
 
       final progressPath = _projectedArc(
-        centerWorld: centerWorld,
+        centerWorld: shapeCenter,
         radius: telegraph.attackRange * 1.07,
         progress: math.max(0.025, urgency),
         size: size,
@@ -235,12 +306,10 @@ final class _EnemyTelegraphPainter extends CustomPainter {
       );
 
       final target = presentationById[telegraph.targetEntityId];
-      if (target != null) {
+      if (target != null &&
+          telegraph.attackPattern != GuardianAttackPattern.fissureRing) {
         final guardianPoint = _project(centerWorld, size);
-        final targetPoint = _project(
-          target.transform.position + Vector3(0, 0.06, 0),
-          size,
-        );
+        final targetPoint = _project(telegraph.telegraphTargetPosition, size);
         final line = Paint()
           ..color = const Color(
             0xFFFFC25B,
@@ -292,6 +361,54 @@ final class _EnemyTelegraphPainter extends CustomPainter {
     return path..close();
   }
 
+  Path _projectedAnnulus({
+    required Vector3 centerWorld,
+    required double innerRadius,
+    required double outerRadius,
+    required Size size,
+  }) {
+    final path = _projectedCircle(
+      centerWorld: centerWorld,
+      radius: outerRadius,
+      size: size,
+    )..fillType = PathFillType.evenOdd;
+    path.addPath(
+      _projectedCircle(
+        centerWorld: centerWorld,
+        radius: innerRadius,
+        size: size,
+      ),
+      Offset.zero,
+    );
+    return path;
+  }
+
+  Path _projectedSector({
+    required Vector3 centerWorld,
+    required Vector3 targetWorld,
+    required double radius,
+    required double halfAngleDegrees,
+    required Size size,
+  }) {
+    final direction = targetWorld - centerWorld;
+    final heading = math.atan2(direction.z, direction.x);
+    final halfAngle = halfAngleDegrees * math.pi / 180;
+    final path = Path();
+    final center = _project(centerWorld, size);
+    path.moveTo(center.dx, center.dy);
+    const steps = 32;
+    for (var index = 0; index <= steps; index += 1) {
+      final angle = heading - halfAngle + index / steps * halfAngle * 2;
+      final point = _project(
+        centerWorld +
+            Vector3(math.cos(angle) * radius, 0, math.sin(angle) * radius),
+        size,
+      );
+      path.lineTo(point.dx, point.dy);
+    }
+    return path..close();
+  }
+
   Path _projectedArc({
     required Vector3 centerWorld,
     required double radius,
@@ -316,12 +433,25 @@ final class _EnemyTelegraphPainter extends CustomPainter {
     return path;
   }
 
-  Offset _project(Vector3 point, Size size) => cameraRig.screenPointForWorld(
-    worldPoint: point,
-    viewportWidth: size.width,
-    viewportHeight: size.height,
-  );
+  Offset _project(Vector3 point, Size size) {
+    final projected = cameraRig.screenPointForWorld(
+      worldPoint: point,
+      viewportWidth: size.width,
+      viewportHeight: size.height,
+    );
+    return Offset(projected.x, projected.y);
+  }
 
   @override
   bool shouldRepaint(_EnemyTelegraphPainter oldDelegate) => true;
+}
+
+String _telegraphActionLabel(GameplayEnemyTelegraphState telegraph) {
+  final action = switch (telegraph.attackPattern) {
+    GuardianAttackPattern.melee => 'BREAK RANGE',
+    GuardianAttackPattern.sweep => 'DODGE SWEEP',
+    GuardianAttackPattern.eruption => 'LEAVE THE MARK',
+    GuardianAttackPattern.fissureRing => 'ENTER SAFE CORE',
+  };
+  return telegraph.targetsLocalPlayer ? action : 'ALLY: $action';
 }

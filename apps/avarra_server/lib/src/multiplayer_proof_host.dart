@@ -53,6 +53,10 @@ final class MultiplayerProofHost {
          ecs: runtimeWorld.ecs,
          collisionWorld: collisionWorld,
        ),
+       _dodgeSystem = DodgeSystem(
+         ecs: runtimeWorld.ecs,
+         collisionWorld: collisionWorld,
+       ),
        _combatSystem = CombatSystem(
          ecs: runtimeWorld.ecs,
          collisionWorld: collisionWorld,
@@ -193,6 +197,7 @@ final class MultiplayerProofHost {
       restoredSave: restoreResult.found,
       primaryPlayerSpawn: primaryPlayerSpawn,
     );
+    host._applyPlayerPower(player.entityId, primaryPlayerId);
     host._rebuildCollisionAuthority();
     host._connectionSubscription = transport.connections.listen(
       (connection) => unawaited(host._accept(connection)),
@@ -227,6 +232,7 @@ final class MultiplayerProofHost {
   final Map<EntityId, TransformComponent> _playerSpawns = {};
   late DeterministicPhysicsCollisionWorld _collisionWorld;
   late CharacterMovementSystem _movementSystem;
+  late DodgeSystem _dodgeSystem;
   late CombatSystem _combatSystem;
   late InteractionSystem _interactionSystem;
   late GuardianBehaviorSystem _guardianSystem;
@@ -315,6 +321,7 @@ final class MultiplayerProofHost {
     }
     if (playerId == primaryPlayerId) {
       adventureState.registerPlayer(playerId, playerEntityId);
+      _applyPlayerPower(playerEntityId, playerId);
       _controlledEntities[connectionId] = playerEntityId;
       _connectedPlayers[connectionId] = playerId;
       return playerEntityId;
@@ -393,10 +400,12 @@ final class MultiplayerProofHost {
         )
         ..addComponent(handle, const BasicAttackStateComponent());
     }
+    runtimeWorld.ecs.addComponent(handle, const DodgeStateComponent());
     final reconnectSpawn = runtimeWorld.ecs
         .component<TransformComponent>(handle)
         .copyWith();
     adventureState.registerPlayer(playerId, entityId);
+    _applyPlayerPower(entityId, playerId);
     replication.registerEntity(
       entityId,
       alwaysRelevant: true,
@@ -629,8 +638,27 @@ final class MultiplayerProofHost {
             ? _effectRejectionDetail(effect.rejection!)
             : interaction.label!;
         if (effect.changed) {
+          _applyPlayerPower(actorId, replication.playerIdFor(connectionId));
           _gameplayStateRevision += 1;
           _rebuildCollisionAuthority();
+        }
+      case GameplayCommandKind.dodge:
+        final result = _dodgeSystem.dodge(
+          entityId: actorId,
+          direction: Vector3(command.directionX!, 0, command.directionZ!),
+          simulationTime: _simulationTime,
+        );
+        accepted = result.accepted;
+        detail = result.accepted
+            ? 'Dodged ${playerDodgeDistance.toStringAsFixed(1)} units.'
+            : switch (result.rejection!) {
+                DodgeRejection.cooldown => 'Dodge is recovering.',
+                DodgeRejection.noDirection => 'Dodge needs a direction.',
+                DodgeRejection.defeated => 'Defeated players cannot dodge.',
+                DodgeRejection.blocked => 'Dodge path is blocked.',
+              };
+        if (result.accepted) {
+          adventureState.markPlayerDirty(replication.playerIdFor(connectionId));
         }
       case GameplayCommandKind.restart:
         accepted = _combatSystem.restart(
@@ -641,6 +669,7 @@ final class MultiplayerProofHost {
             ? 'Restarted at the session entry point.'
             : 'Restart is unavailable.';
         if (accepted) {
+          _dodgeSystem.reset(actorId);
           _gameplayStateRevision += 1;
           _guardianSystem.resetActiveGuardians();
           adventureState.markPlayerDirty(replication.playerIdFor(connectionId));
@@ -670,7 +699,8 @@ final class MultiplayerProofHost {
     if (results.any(
       (result) =>
           result.previousPhase != result.phase ||
-          (result.attack?.accepted ?? false),
+          result.previousEncounterPhase != result.encounterPhase ||
+          result.attack != null,
     )) {
       _gameplayStateRevision += 1;
     }
@@ -730,10 +760,18 @@ final class MultiplayerProofHost {
           NetworkGuardianState(
             entityId: entry.entityId,
             phase: _networkGuardianPhase(entry.component.phase),
+            encounterPhase: _networkGuardianEncounterPhase(
+              entry.component.encounterPhase,
+            ),
+            attackPattern: _networkGuardianAttackPattern(
+              entry.component.attackPattern,
+            ),
             targetEntityId: entry.component.targetEntityId,
             windUpRemainingMicroseconds: entry.component
                 .remainingWindUpAt(_simulationTime)
                 .inMicroseconds,
+            telegraphTargetX: entry.component.telegraphTargetPosition?.x,
+            telegraphTargetZ: entry.component.telegraphTargetPosition?.z,
           ),
       ],
       inventoryItemIds: adventureState.inventoryFor(playerId),
@@ -775,6 +813,10 @@ final class MultiplayerProofHost {
       ecs: runtimeWorld.ecs,
       collisionWorld: replacement,
     );
+    _dodgeSystem = DodgeSystem(
+      ecs: runtimeWorld.ecs,
+      collisionWorld: replacement,
+    );
     _combatSystem = CombatSystem(
       ecs: runtimeWorld.ecs,
       collisionWorld: replacement,
@@ -788,6 +830,27 @@ final class MultiplayerProofHost {
       collisionWorld: replacement,
     );
   }
+
+  void _applyPlayerPower(EntityId entityId, PlayerId playerId) {
+    final handle = runtimeWorld.ecs.handleFor(entityId);
+    if (handle == null) return;
+    final health = runtimeWorld.ecs.tryComponent<HealthComponent>(handle);
+    if (health == null) return;
+    final maximum = authoredPlayerMaximumHealth(
+      runtimeWorld.definition,
+      playerEntityId,
+      adventureState.inventoryFor(playerId),
+    );
+    if (maximum == health.maximumHealth) return;
+    final difference = maximum - health.maximumHealth;
+    final current = health.isDead
+        ? 0.0
+        : (health.currentHealth + difference).clamp(0, maximum).toDouble();
+    runtimeWorld.ecs.replaceComponent(
+      handle,
+      HealthComponent(maximumHealth: maximum, currentHealth: current),
+    );
+  }
 }
 
 NetworkGuardianPhase _networkGuardianPhase(GuardianBehaviorPhase phase) =>
@@ -799,6 +862,24 @@ NetworkGuardianPhase _networkGuardianPhase(GuardianBehaviorPhase phase) =>
       GuardianBehaviorPhase.returning => NetworkGuardianPhase.returning,
       GuardianBehaviorPhase.defeated => NetworkGuardianPhase.defeated,
     };
+
+NetworkGuardianEncounterPhase _networkGuardianEncounterPhase(
+  GuardianEncounterPhase phase,
+) => switch (phase) {
+  GuardianEncounterPhase.standard => NetworkGuardianEncounterPhase.standard,
+  GuardianEncounterPhase.phaseOne => NetworkGuardianEncounterPhase.phaseOne,
+  GuardianEncounterPhase.phaseTwo => NetworkGuardianEncounterPhase.phaseTwo,
+  GuardianEncounterPhase.phaseThree => NetworkGuardianEncounterPhase.phaseThree,
+};
+
+NetworkGuardianAttackPattern _networkGuardianAttackPattern(
+  GuardianAttackPattern pattern,
+) => switch (pattern) {
+  GuardianAttackPattern.melee => NetworkGuardianAttackPattern.melee,
+  GuardianAttackPattern.sweep => NetworkGuardianAttackPattern.sweep,
+  GuardianAttackPattern.eruption => NetworkGuardianAttackPattern.eruption,
+  GuardianAttackPattern.fissureRing => NetworkGuardianAttackPattern.fissureRing,
+};
 
 String _attackRejectionDetail(CombatAttackRejection rejection) =>
     switch (rejection) {

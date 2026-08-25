@@ -45,17 +45,29 @@ completion label before placement. Each stamp receives those values as ordinary
 typed runtime components while retaining the same single-batch Undo/Redo
 boundary.
 
-The same card now provides **Initiate**, **Sentinel**, and **Champion** tuning
-profiles plus independent declared-asset selectors for the Guardian, loot, and
-completion console. Profiles preserve creator labels, manual numeric changes
-become Custom tuning, and the three role assets are validated before the same
-atomic mission factory runs.
+The same card now provides **Initiate**, **Sentinel**, **Champion**, and
+**Ascendant** tuning profiles plus independent declared-asset selectors for the
+Guardian, loot, and completion console. Ascendant enables the typed
+three-phase boss contract and a persistent player-power reward. Creators can
+tune the boss name, health thresholds, melee/sweep/eruption shapes, encounter
+beats, fissure-ring inner safe/outer danger radii, and reward maximum-health
+bonus before placement. The ring values serialize as the optional
+content-schema-v11 Guardian arena hazard and must be strictly ordered. Profiles
+preserve creator labels, manual changes become Custom tuning, and the three
+role assets are validated before the same atomic mission factory runs. See
+`docs/AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md` and
+`docs/AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`.
 
 New projects declare Forge's built-in AVARRA Gothic catalog: Ashen Vanguard,
 Hollow Warden, Basalt, Relay Shrine, Core Gate, and Ember Shard. These are the
 same Game-compatible paths and stable IDs supplied by Avarra Game. The starter
 uses Gothic player, ground, and relay visuals while keeping the cube available
 for simple construction.
+
+The shared Ashen Vanguard now contains Idle, Run, Attack, and dedicated Dodge
+clips. `tool/generate_gothic_animation_buffers.dart` writes the Game and Forge
+copies together; `--check` and Forge's asset-closure test prevent drift. See
+`docs/AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`.
 
 **Test Play** validates and exports the current in-memory world to an isolated
 temporary `.avarra` package, launches the real Avarra Game Windows

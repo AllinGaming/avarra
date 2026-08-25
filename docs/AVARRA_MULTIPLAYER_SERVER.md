@@ -91,9 +91,12 @@ v3 adds monotonic typed attack, interaction, and restart commands. The host
 resolves their outcome; clients never declare damage, inventory grants, or
 objective completion.
 
-Protocol v3 retains the stable controlled entity returned by v2. The host consumes
-movement per connection and never routes two players to the same authored
-avatar.
+Protocols v3-v5 retain the stable controlled entity returned by v2. The host
+consumes movement per connection and never routes two players to the same
+authored avatar. Protocol v4 additionally carries bounded Guardian
+phase/target/wind-up state; clients still never declare the strike result.
+Protocol v5 adds encounter phase, attack pattern, and paired locked planar
+target coordinates for boss presentation.
 
 Client does not send:
 
@@ -136,6 +139,30 @@ Stage 11.5 adds revisioned gameplay snapshots containing authoritative combat
 health, world persistent flags, and the receiving player's inventory. Clients
 ignore stale revisions. These are still full JSON state messages, not the final
 bandwidth representation.
+
+Stage 12.26 advances the handshake to protocol v4 and adds a bounded,
+stable-ID-ordered Guardian-state list to those revisioned snapshots. Phase,
+optional locked target, and remaining wind-up microseconds let connected Game
+show the same server-owned 650 ms commitment used offline. The host increments
+gameplay revision on Guardian phase transitions and accepted attacks. Clients
+may count down from the received remaining duration for presentation, but only
+the host's completion-time `CombatSystem` result changes health. Clock
+synchronization, latency compensation, deltas, and degraded-network tuning
+remain open.
+
+Stage 12.28 advances the handshake to protocol v5. Guardian snapshots add the
+encounter phase, selected melee/sweep/eruption pattern, and paired finite X/Z
+telegraph target. The host validates the true attack shape before CombatSystem
+may damage a target. Clients use receipt-relative timing only for warnings;
+clock synchronization and latency compensation remain open.
+
+Stages 12.31-12.32 advance the handshake to protocol v6. Guardian snapshots can
+select the fissure-ring pattern; authored radii remain world data already
+shared by the content handshake. Gameplay commands add a target-free dodge with
+a complete finite non-zero bounded planar direction. The host executes the
+shared collision sweep and cooldown and replicates the resulting transform;
+client prediction cannot declare acceptance. Clock synchronization, rollback,
+loss/jitter tuning, and compact event/delta representation remain open.
 
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape

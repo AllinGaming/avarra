@@ -34,6 +34,9 @@ jobs:
       - name: Analyze workspace
         run: dart analyze .
 
+      - name: Verify generated Gothic animations
+        run: dart run tool/generate_gothic_animation_buffers.dart --check
+
       - name: Test Core
         working-directory: packages/avarra_core
         run: dart test

@@ -25,13 +25,19 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'src/action_targeting.dart';
 import 'src/authored_world_movement_bounds.dart';
 import 'src/fixed_step_frame_clock.dart';
+import 'src/game_audio.dart';
+import 'src/game_audio_audioplayers.dart';
 import 'src/game_experience_settings.dart';
 import 'src/game_front_end.dart';
 import 'src/game_launch_configuration.dart';
 import 'src/gameplay_action_bar.dart';
 import 'src/gameplay_atmosphere_overlay.dart';
+import 'src/gameplay_boss_fx.dart';
+import 'src/gameplay_boss_presentation.dart';
 import 'src/gameplay_camera_follow.dart';
+import 'src/gameplay_character_animation.dart';
 import 'src/gameplay_combat_feedback_overlay.dart';
+import 'src/gameplay_dodge_presentation.dart';
 import 'src/gameplay_enemy_health_overlay.dart';
 import 'src/gameplay_enemy_telegraph_overlay.dart';
 import 'src/gameplay_loot_presentation.dart';
@@ -103,6 +109,7 @@ void main(List<String> arguments) {
   runApp(
     AvarraGameApp(
       launchConfiguration: GameLaunchConfiguration.parse(arguments),
+      audioControllerLoader: loadDefaultGameAudioController,
     ),
   );
 }
@@ -133,6 +140,7 @@ class AvarraGameApp extends StatelessWidget {
     this.worldLibraryOpener,
     this.saveStoreLoader,
     this.experienceSettingsStoreLoader,
+    this.audioControllerLoader,
     this.multiplayerClientConnector,
     this.multiplayerHostStarter,
     this.launchConfiguration = const GameLaunchConfiguration(),
@@ -147,6 +155,7 @@ class AvarraGameApp extends StatelessWidget {
   final RuntimeWorldLibraryOpener? worldLibraryOpener;
   final SaveStoreLoader? saveStoreLoader;
   final GameExperienceSettingsStoreLoader? experienceSettingsStoreLoader;
+  final GameAudioControllerLoader? audioControllerLoader;
   final MultiplayerClientConnector? multiplayerClientConnector;
   final MultiplayerHostStarter? multiplayerHostStarter;
   final GameLaunchConfiguration launchConfiguration;
@@ -176,47 +185,52 @@ class AvarraGameApp extends StatelessWidget {
         storeLoader:
             experienceSettingsStoreLoader ??
             _loadDefaultExperienceSettingsStore,
-        builder: (context, settings, updateSettings) => _WorldBootstrapScreen(
-          enableRenderer: enableRenderer,
-          showFrontDoor:
-              (showFrontDoor ?? enableRenderer) &&
-              !launchConfiguration.isForgeTestPlay,
+        builder: (context, settings, updateSettings) => GameAudioHost(
+          loader: audioControllerLoader ?? loadSilentGameAudioController,
           settings: settings,
-          onSettingsChanged: updateSettings,
-          selectionLoader:
-              worldSelectionLoader ??
-              (worldPackageSourceLoader == null
-                  ? launchConfiguration.isForgeTestPlay
-                        ? () async => RuntimeWorldSelection(
-                            source: await launchConfiguration
-                                .readForgeTestPlayWorldSource(),
-                            label:
-                                'Forge Test Play · '
-                                '${launchConfiguration.forgeTestPlayWorldPath}',
-                            isImported: true,
-                            session: const RuntimeSessionConfiguration(),
-                          )
-                        : _loadDefaultWorldSelection
-                  : () async => RuntimeWorldSelection(
-                      source: await worldPackageSourceLoader!(),
-                      label: 'Injected world source',
-                      isImported: _configuredWorldPath.isNotEmpty,
-                    )),
-          worldLibraryOpener: worldLibraryOpener ?? _openDefaultWorldLibrary,
-          saveStoreLoader:
-              saveStoreLoader ??
-              (launchConfiguration.isForgeTestPlay
-                  ? () async => MemorySaveStore()
-                  : _loadDefaultSaveStore),
-          multiplayerClientConnector: multiplayerClientConnector == null
-              ? _connectRuntimeMultiplayer
-              : (content, playerId, _) =>
-                    multiplayerClientConnector!(content, playerId),
-          multiplayerHostStarter: multiplayerHostStarter == null
-              ? _startRuntimeMultiplayerHost
-              : (source, playerId, store, saveId, _) =>
-                    multiplayerHostStarter!(source, playerId, store, saveId),
-          hostDeviceMetricsSampler: hostDeviceMetricsSampler,
+          builder: (context, audioController) => _WorldBootstrapScreen(
+            enableRenderer: enableRenderer,
+            showFrontDoor:
+                (showFrontDoor ?? enableRenderer) &&
+                !launchConfiguration.isForgeTestPlay,
+            settings: settings,
+            audioController: audioController,
+            onSettingsChanged: updateSettings,
+            selectionLoader:
+                worldSelectionLoader ??
+                (worldPackageSourceLoader == null
+                    ? launchConfiguration.isForgeTestPlay
+                          ? () async => RuntimeWorldSelection(
+                              source: await launchConfiguration
+                                  .readForgeTestPlayWorldSource(),
+                              label:
+                                  'Forge Test Play · '
+                                  '${launchConfiguration.forgeTestPlayWorldPath}',
+                              isImported: true,
+                              session: const RuntimeSessionConfiguration(),
+                            )
+                          : _loadDefaultWorldSelection
+                    : () async => RuntimeWorldSelection(
+                        source: await worldPackageSourceLoader!(),
+                        label: 'Injected world source',
+                        isImported: _configuredWorldPath.isNotEmpty,
+                      )),
+            worldLibraryOpener: worldLibraryOpener ?? _openDefaultWorldLibrary,
+            saveStoreLoader:
+                saveStoreLoader ??
+                (launchConfiguration.isForgeTestPlay
+                    ? () async => MemorySaveStore()
+                    : _loadDefaultSaveStore),
+            multiplayerClientConnector: multiplayerClientConnector == null
+                ? _connectRuntimeMultiplayer
+                : (content, playerId, _) =>
+                      multiplayerClientConnector!(content, playerId),
+            multiplayerHostStarter: multiplayerHostStarter == null
+                ? _startRuntimeMultiplayerHost
+                : (source, playerId, store, saveId, _) =>
+                      multiplayerHostStarter!(source, playerId, store, saveId),
+            hostDeviceMetricsSampler: hostDeviceMetricsSampler,
+          ),
         ),
       ),
     );
@@ -228,6 +242,7 @@ class _WorldBootstrapScreen extends StatefulWidget {
     required this.enableRenderer,
     required this.showFrontDoor,
     required this.settings,
+    required this.audioController,
     required this.onSettingsChanged,
     required this.selectionLoader,
     required this.worldLibraryOpener,
@@ -240,6 +255,7 @@ class _WorldBootstrapScreen extends StatefulWidget {
   final bool enableRenderer;
   final bool showFrontDoor;
   final GameExperienceSettings settings;
+  final GameAudioController audioController;
   final GameExperienceSettingsUpdater onSettingsChanged;
   final RuntimeWorldSelectionLoader selectionLoader;
   final RuntimeWorldLibraryOpener worldLibraryOpener;
@@ -270,6 +286,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
   }
 
   void _enterWorld() {
+    unawaited(widget.audioController.play(GameAudioCue.uiConfirm));
     setState(() {
       _frontDoorVisible = false;
       _loadedWorld = _loadWorld();
@@ -283,6 +300,8 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
   );
 
   Future<void> _returnToTitle() async {
+    await widget.audioController.setDucked(false);
+    unawaited(widget.audioController.play(GameAudioCue.uiConfirm));
     await _presentationKey.currentState?.prepareForWorldReplacement();
     if (!mounted) return;
     setState(() {
@@ -300,6 +319,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
       }
       await _presentationKey.currentState?.prepareForWorldReplacement();
       if (!mounted) return;
+      unawaited(widget.audioController.play(GameAudioCue.uiConfirm));
       setState(() {
         _selectionOverride = selection;
         _selectedWorld = Future.value(selection);
@@ -411,6 +431,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           localPlayerId: loadedWorld.localPlayerId,
           sourceLabel: loadedWorld.sourceLabel,
           settings: widget.settings,
+          audioController: widget.audioController,
           onSettingsChanged: widget.onSettingsChanged,
           onOpenWorldLibrary: _openWorldLibrary,
           onReturnToTitle: _returnToTitle,
@@ -606,6 +627,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.localPlayerId,
     required this.sourceLabel,
     required this.settings,
+    required this.audioController,
     required this.onSettingsChanged,
     required this.onOpenWorldLibrary,
     required this.onReturnToTitle,
@@ -623,6 +645,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final PlayerId localPlayerId;
   final String sourceLabel;
   final GameExperienceSettings settings;
+  final GameAudioController audioController;
   final GameExperienceSettingsUpdater onSettingsChanged;
   final Future<void> Function() onOpenWorldLibrary;
   final Future<void> Function() onReturnToTitle;
@@ -645,12 +668,14 @@ class _PresentationBoundaryScreenState
   late final ThermionAssetUriResolver _assetUriResolver;
   late DeterministicPhysicsCollisionWorld _collisionWorld;
   late CharacterMovementSystem _movementSystem;
+  late DodgeSystem _dodgeSystem;
   late InteractionSystem _interactionSystem;
   late CombatSystem _combatSystem;
   late GuardianBehaviorSystem _guardianBehaviorSystem;
   late AuthoredInteractionEffectExecutor _interactionEffects;
   late final AuthoredWorldMovementBounds _movementBounds;
   late final EntityId _playerEntityId;
+  late final EntityId _authoredPlayerEntityId;
   late final TransformComponent _playerSpawnTransform;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
@@ -672,6 +697,9 @@ class _PresentationBoundaryScreenState
   EntityId? _attackMoveTargetId;
   EntityId? _interactionMoveTargetId;
   Duration _nextNetworkAutoAttackAt = Duration.zero;
+  Duration _nextNetworkDodgeAt = Duration.zero;
+  Vector3 _lastDodgeDirection = Vector3(0, 0, -1);
+  GameplayDodgePresentation? _dodgePresentation;
   Timer? _saveTimer;
   Timer? _hostMetricsTimer;
   StreamSubscription<ReplicationClientEvent>? _replicationSubscription;
@@ -704,8 +732,12 @@ class _PresentationBoundaryScreenState
   PickupPresentationNotice? _pickupNotice;
   int _nextPickupNoticeSequence = 1;
   GameplayStoryNotice? _storyNotice;
+  GameplayBossNotice? _bossNotice;
   String? _presentedStoryBeatKey;
   int _nextStoryNoticeSequence = 1;
+  int _nextBossNoticeSequence = 1;
+  GameAudioCombatIntensity _audioCombatIntensity =
+      GameAudioCombatIntensity.exploration;
   bool _storyPresentationReady = false;
   WorldChunkCoordinate? _lastRequestedPlayerChunk;
   String _interactionStatus = 'Select a world object, then interact';
@@ -723,6 +755,7 @@ class _PresentationBoundaryScreenState
         .query<PlayerControlledComponent>()
         .single
         .entityId;
+    _authoredPlayerEntityId = authoredPlayerEntityId;
     _playerEntityId =
         widget.multiplayerClient?.controlledEntityId ?? authoredPlayerEntityId;
     final multiplayerClient = widget.multiplayerClient;
@@ -733,6 +766,7 @@ class _PresentationBoundaryScreenState
       widget.runtimeWorld.definition,
     );
     _playerSpawnTransform = _authoredPlayerSpawn(authoredPlayerEntityId);
+    _applyAuthoredPlayerPower();
     _presentation = _extractPresentation();
     if (multiplayerClient != null) {
       _applyAuthoritativeGameplayState(multiplayerClient);
@@ -742,6 +776,10 @@ class _PresentationBoundaryScreenState
       excludedEntityIds: _excludedGameplayEntityIds,
     );
     _movementSystem = CharacterMovementSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
+    _dodgeSystem = DodgeSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
@@ -793,6 +831,8 @@ class _PresentationBoundaryScreenState
         );
       }
     }
+    unawaited(widget.audioController.setDucked(_showMissionBriefing));
+    _syncBossAudioIntensity();
     if (multiplayerClient != null) {
       _replicationSubscription = multiplayerClient.events.listen(
         _handleReplicationEvent,
@@ -829,7 +869,25 @@ class _PresentationBoundaryScreenState
   }
 
   @override
+  void didUpdateWidget(_PresentationBoundaryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.audioController != widget.audioController) {
+      unawaited(
+        widget.audioController.setDucked(_isPaused || _showMissionBriefing),
+      );
+      unawaited(
+        widget.audioController.setCombatIntensity(_audioCombatIntensity),
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    unawaited(
+      widget.audioController.setCombatIntensity(
+        GameAudioCombatIntensity.exploration,
+      ),
+    );
     _acceptReplicationEvents = false;
     _gameLoopTicker.dispose();
     _presentationMotionTime.dispose();
@@ -871,6 +929,10 @@ class _PresentationBoundaryScreenState
     _saveTimer = null;
     _hostMetricsTimer?.cancel();
     _hostMetricsTimer = null;
+    await widget.audioController.setDucked(false);
+    await widget.audioController.setCombatIntensity(
+      GameAudioCombatIntensity.exploration,
+    );
     final subscription = _replicationSubscription;
     _replicationSubscription = null;
     if (subscription != null) unawaited(subscription.cancel());
@@ -904,6 +966,8 @@ class _PresentationBoundaryScreenState
   void _beginMission() {
     if (!_showMissionBriefing) return;
     setState(() => _showMissionBriefing = false);
+    unawaited(widget.audioController.setDucked(false));
+    unawaited(widget.audioController.play(GameAudioCue.objective));
     _keyboardFocus.requestFocus();
     _startGameLoop();
   }
@@ -917,10 +981,14 @@ class _PresentationBoundaryScreenState
       _touchMovementByPointer.clear();
     });
     if (nextPaused) {
+      unawaited(widget.audioController.setDucked(true));
+      unawaited(widget.audioController.play(GameAudioCue.uiConfirm));
       _gameLoopTicker.stop();
       _frameClock.reset();
       unawaited(_flushSave());
     } else {
+      unawaited(widget.audioController.setDucked(false));
+      unawaited(widget.audioController.play(GameAudioCue.uiConfirm));
       _keyboardFocus.requestFocus();
       _startGameLoop();
     }
@@ -1020,7 +1088,8 @@ class _PresentationBoundaryScreenState
               valueListenable: _presentationMotionTime,
               builder: (context, elapsed, _) {
                 final combatFrame = _combatPresentationFrame;
-                final animatedSnapshot = widget.settings.reducedMotion
+                final bossFxStates = _bossFxStates;
+                final ambientSnapshot = widget.settings.reducedMotion
                     ? _presentation
                     : applyGameplayMotion(
                         snapshot: _presentation,
@@ -1029,10 +1098,24 @@ class _PresentationBoundaryScreenState
                         priorityEntityIds: {
                           _playerEntityId,
                           ?_selectedEntityId,
+                          ...bossFxStates.map((state) => state.entityId),
                         },
                         activeCharacterEntityIds:
                             _activePresentationCharacterEntityIds,
                       );
+                final bossSnapshot = widget.settings.reducedMotion
+                    ? ambientSnapshot
+                    : applyGameplayBossMotion(
+                        snapshot: ambientSnapshot,
+                        bosses: bossFxStates,
+                        elapsed: elapsed,
+                      );
+                final animatedSnapshot = applyGameplayDodgeMotion(
+                  snapshot: bossSnapshot,
+                  dodge: _dodgePresentation,
+                  elapsed: elapsed,
+                  reducedMotion: widget.settings.reducedMotion,
+                );
                 final hitFlashIntensities = <EntityId, double>{
                   for (final entity in animatedSnapshot.entities)
                     if (combatFrame.hitFlashFor(entity.entityId)
@@ -1043,11 +1126,22 @@ class _PresentationBoundaryScreenState
                 final playerHitIntensity = combatFrame.hitFlashFor(
                   _playerEntityId,
                 );
+                final playerShake = gameplayPlayerHitShakeOffset(
+                  frame: combatFrame,
+                  playerEntityId: _playerEntityId,
+                );
+                final bossShake = gameplayBossImpactShakeOffset(
+                  frame: combatFrame,
+                  bossEntityIds: {
+                    for (final state in bossFxStates) state.entityId,
+                  },
+                  phaseByBossId: {
+                    for (final state in bossFxStates)
+                      state.entityId: state.encounterPhase,
+                  },
+                );
                 final sceneShake =
-                    gameplayPlayerHitShakeOffset(
-                      frame: combatFrame,
-                      playerEntityId: _playerEntityId,
-                    ) *
+                    (playerShake + bossShake) *
                     widget.settings.effectiveCameraShakeStrength;
                 return Stack(
                   fit: StackFit.expand,
@@ -1080,6 +1174,20 @@ class _PresentationBoundaryScreenState
                           GameplayDestinationOverlay(
                             indicator: _destinationIndicator,
                             cameraRig: _cameraRig,
+                          ),
+                          GameplayDodgeFxOverlay(
+                            snapshot: _presentation,
+                            cameraRig: _cameraRig,
+                            dodge: _dodgePresentation,
+                            elapsed: elapsed,
+                            reducedMotion: widget.settings.reducedMotion,
+                          ),
+                          GameplayBossFxOverlay(
+                            snapshot: animatedSnapshot,
+                            cameraRig: _cameraRig,
+                            bosses: bossFxStates,
+                            elapsed: elapsed,
+                            reducedMotion: widget.settings.reducedMotion,
                           ),
                           GameplayEnemyTelegraphOverlay(
                             snapshot: animatedSnapshot,
@@ -1177,6 +1285,19 @@ class _PresentationBoundaryScreenState
                     notice: _storyNotice,
                     compact: compactLayout,
                     onFinished: _handleStoryNoticeFinished,
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: const Alignment(0, -0.55),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: GameplayBossToast(
+                    notice: _bossNotice,
+                    compact: compactLayout,
+                    onFinished: _handleBossNoticeFinished,
                   ),
                 ),
               ),
@@ -1421,7 +1542,7 @@ class _PresentationBoundaryScreenState
       }
       return GameplayTargetFrame(
         kind: GameplayTargetFrameKind.hostile,
-        label: 'Guardian',
+        label: _guardianLabel(selectedEntityId),
         actionHint: actionHint,
         currentHealth: health.currentHealth,
         maximumHealth: health.maximumHealth,
@@ -1552,9 +1673,11 @@ class _PresentationBoundaryScreenState
       maximumHealth: health.maximumHealth,
       primaryCooldown: _playerAttackCooldown(attack),
       primaryEngaged: _attackMoveTargetId != null,
+      dodgeCooldown: _playerDodgeCooldown(),
       onPrimary: !_rendererReady || attackTargetId == null
           ? null
           : _attackSelected,
+      onDodge: !_rendererReady ? null : _triggerDodge,
       onInteract: !_rendererReady || interactionTargetId == null
           ? null
           : _interactSelected,
@@ -1744,10 +1867,11 @@ class _PresentationBoundaryScreenState
     }
     final state = guardians.first.component;
     final health = _healthFor(guardians.first.entityId);
+    final label = _guardianLabel(guardians.first.entityId);
     if (health?.isDead ?? false) {
-      return 'Guardian: defeated';
+      return '$label: defeated';
     }
-    return 'Guardian: ${state.phase.name} · '
+    return '$label: ${state.encounterPhase.name} · ${state.phase.name} · '
         '${_formatHealth(health!.currentHealth)}/'
         '${_formatHealth(health.maximumHealth)} health';
   }
@@ -1764,10 +1888,11 @@ class _PresentationBoundaryScreenState
     }
     final guardian = guardians.first;
     final health = _healthFor(guardian.entityId);
+    final label = _guardianLabel(guardian.entityId);
     if (health?.isDead ?? false) {
-      return 'Guardian defeated';
+      return '$label defeated';
     }
-    return '${guardian.component.phase.name} '
+    return '$label ${guardian.component.encounterPhase.name} '
         '${_formatHealth(health!.currentHealth)}/'
         '${_formatHealth(health.maximumHealth)}';
   }
@@ -1940,6 +2065,42 @@ class _PresentationBoundaryScreenState
     return handle == null
         ? null
         : widget.runtimeWorld.ecs.tryComponent<HealthComponent>(handle);
+  }
+
+  GuardianBossDefinition? _guardianBossDefinition(EntityId entityId) => widget
+      .runtimeWorld
+      .definition
+      .allEntities
+      .where((entity) => entity.id == entityId)
+      .map((entity) => entity.component<GuardianBossDefinition>())
+      .whereType<GuardianBossDefinition>()
+      .firstOrNull;
+
+  String _guardianLabel(EntityId entityId) =>
+      _guardianBossDefinition(entityId)?.displayName ?? 'Guardian';
+
+  void _applyAuthoredPlayerPower() {
+    if (widget.multiplayerClient != null) return;
+    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId);
+    if (handle == null) return;
+    final health = widget.runtimeWorld.ecs.tryComponent<HealthComponent>(
+      handle,
+    );
+    if (health == null) return;
+    final maximum = authoredPlayerMaximumHealth(
+      widget.runtimeWorld.definition,
+      _authoredPlayerEntityId,
+      widget.persistence.inventoryFor(widget.localPlayerId),
+    );
+    if (maximum == health.maximumHealth) return;
+    final difference = maximum - health.maximumHealth;
+    final current = health.isDead
+        ? 0.0
+        : (health.currentHealth + difference).clamp(0, maximum).toDouble();
+    widget.runtimeWorld.ecs.replaceComponent(
+      handle,
+      HealthComponent(maximumHealth: maximum, currentHealth: current),
+    );
   }
 
   bool get _isPlayerDead => _healthFor(_playerEntityId)?.isDead ?? false;
@@ -2159,7 +2320,7 @@ class _PresentationBoundaryScreenState
         if (_healthFor(entityId) case final health? when !health.isDead)
           GameplayEnemyHealthState(
             entityId: entityId,
-            label: 'Guardian',
+            label: _guardianLabel(entityId),
             currentHealth: health.currentHealth,
             maximumHealth: health.maximumHealth,
             selected:
@@ -2178,6 +2339,11 @@ class _PresentationBoundaryScreenState
       final attack = widget.runtimeWorld.ecs.tryComponent<BasicAttackComponent>(
         entry.handle,
       );
+      final boss = widget.runtimeWorld.ecs.tryComponent<GuardianBossComponent>(
+        entry.handle,
+      );
+      final arenaHazard = widget.runtimeWorld.ecs
+          .tryComponent<GuardianArenaHazardComponent>(entry.handle);
       final remaining = state.remainingWindUpAt(_simulationTime);
       if (state.phase != GuardianBehaviorPhase.windingUp ||
           targetId == null ||
@@ -2190,17 +2356,55 @@ class _PresentationBoundaryScreenState
         GameplayEnemyTelegraphState(
           guardianEntityId: entry.entityId,
           targetEntityId: targetId,
-          attackRange: attack.range,
+          attackRange: switch (state.attackPattern) {
+            GuardianAttackPattern.melee => boss?.meleeRange ?? attack.range,
+            GuardianAttackPattern.sweep => boss?.sweepRange ?? attack.range,
+            GuardianAttackPattern.eruption =>
+              boss?.eruptionRadius ?? attack.range,
+            GuardianAttackPattern.fissureRing =>
+              arenaHazard?.outerRadius ?? attack.range,
+          },
+          attackPattern: state.attackPattern,
+          telegraphTargetPosition: state.telegraphTargetPosition!,
+          sweepHalfAngleDegrees: boss?.sweepHalfAngleDegrees ?? 55,
+          innerSafeRadius: arenaHazard?.innerSafeRadius ?? 0,
           remaining: remaining,
-          total: guardianAttackWindUpDuration,
+          total: guardianWindUpDurationFor(state.attackPattern),
           targetsLocalPlayer: targetId == _playerEntityId,
         ),
       );
     }
     states.sort(
-      (left, right) => left.guardianEntityId.value.compareTo(
-        right.guardianEntityId.value,
-      ),
+      (left, right) =>
+          left.guardianEntityId.value.compareTo(right.guardianEntityId.value),
+    );
+    return List.unmodifiable(states);
+  }
+
+  List<GameplayBossFxState> get _bossFxStates {
+    final states = <GameplayBossFxState>[];
+    for (final entry
+        in widget.runtimeWorld.ecs.query<GuardianBehaviorStateComponent>()) {
+      if (!widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(
+        entry.handle,
+      )) {
+        continue;
+      }
+      final health = _healthFor(entry.entityId);
+      if (health == null) continue;
+      states.add(
+        GameplayBossFxState(
+          entityId: entry.entityId,
+          behaviorPhase: entry.component.phase,
+          encounterPhase: entry.component.encounterPhase,
+          attackPattern: entry.component.attackPattern,
+          currentHealth: health.currentHealth,
+          maximumHealth: health.maximumHealth,
+        ),
+      );
+    }
+    states.sort(
+      (left, right) => left.entityId.value.compareTo(right.entityId.value),
     );
     return List.unmodifiable(states);
   }
@@ -2227,19 +2431,18 @@ class _PresentationBoundaryScreenState
       for (final entity in _presentation.entities) entity.entityId,
     };
     final requests = <EntityId, ThermionAnimationRequest>{};
-    if (visibleEntityIds.contains(_playerEntityId) && !_isPlayerDead) {
-      requests[_playerEntityId] = combatFrame.hasAttackFor(_playerEntityId)
-          ? const ThermionAnimationRequest(
-              clipName: 'Attack',
-              loop: false,
-              crossfadeSeconds: 0.08,
-            )
-          : _activePresentationCharacterEntityIds.contains(_playerEntityId)
-          ? const ThermionAnimationRequest(
-              clipName: 'Run',
-              crossfadeSeconds: 0.1,
-            )
-          : const ThermionAnimationRequest(clipName: 'Idle');
+    if (visibleEntityIds.contains(_playerEntityId)) {
+      final playerRequest = gameplayPlayerAnimationRequest(
+        defeated: _isPlayerDead,
+        attacking: combatFrame.hasAttackFor(_playerEntityId),
+        dodging:
+            _dodgePresentation?.isActiveAt(_presentationMotionTime.value) ??
+            false,
+        moving: _activePresentationCharacterEntityIds.contains(_playerEntityId),
+      );
+      if (playerRequest != null) {
+        requests[_playerEntityId] = playerRequest;
+      }
     }
     for (final guardian
         in widget.runtimeWorld.ecs.query<GuardianBehaviorStateComponent>()) {
@@ -2269,12 +2472,11 @@ class _PresentationBoundaryScreenState
                 clipName: 'Attack',
                 crossfadeSeconds: 0.08,
               ),
-              GuardianBehaviorPhase.windingUp =>
-                const ThermionAnimationRequest(
-                  clipName: 'Attack',
-                  loop: false,
-                  crossfadeSeconds: 0.06,
-                ),
+              GuardianBehaviorPhase.windingUp => const ThermionAnimationRequest(
+                clipName: 'Attack',
+                loop: false,
+                crossfadeSeconds: 0.06,
+              ),
               GuardianBehaviorPhase.defeated => throw StateError(
                 'Defeat animation is selected before the phase switch.',
               ),
@@ -2301,6 +2503,29 @@ class _PresentationBoundaryScreenState
       targetEntityId: result.targetId,
       damage: result.damageDealt,
       defeated: result.targetKilled,
+      occurredAt: _simulationTime,
+    );
+    unawaited(
+      widget.audioController.play(
+        combatDamageAudioCue(
+          playerEntityId: _playerEntityId,
+          targetEntityId: result.targetId,
+          defeated: result.targetKilled,
+        ),
+      ),
+    );
+  }
+
+  void _recordDodgedBossAttack(CombatAttackResult result) {
+    if (result.accepted) return;
+    final handle = widget.runtimeWorld.ecs.handleFor(result.attackerId);
+    if (handle == null ||
+        !widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(handle)) {
+      return;
+    }
+    _combatPresentationTimeline.recordAttackStarted(
+      attackerEntityId: result.attackerId,
+      targetEntityId: result.targetId,
       occurredAt: _simulationTime,
     );
   }
@@ -2351,6 +2576,21 @@ class _PresentationBoundaryScreenState
         : _nextNetworkAutoAttackAt;
     return GameplaySkillCooldown.at(
       total: attack.cooldown,
+      now: _simulationTime,
+      nextReadyAt: nextReadyAt,
+    );
+  }
+
+  GameplaySkillCooldown _playerDodgeCooldown() {
+    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId);
+    final nextReadyAt = widget.multiplayerClient == null && handle != null
+        ? widget.runtimeWorld.ecs
+                  .tryComponent<DodgeStateComponent>(handle)
+                  ?.nextReadyAt ??
+              Duration.zero
+        : _nextNetworkDodgeAt;
+    return GameplaySkillCooldown.at(
+      total: playerDodgeCooldown,
       now: _simulationTime,
       nextReadyAt: nextReadyAt,
     );
@@ -2592,10 +2832,12 @@ class _PresentationBoundaryScreenState
     }
     final openGatesAfter = _openObjectiveGateEntityIds;
     final newlyOpenedGateIds = openGatesAfter.difference(openGatesBefore);
+    _applyAuthoredPlayerPower();
     _rebuildGameplayQueries();
     _presentation = _extractPresentation();
     switch (effect.kind!) {
       case AuthoredInteractionEffectKind.persistentFlag:
+        unawaited(widget.audioController.play(GameAudioCue.objective));
         if (newlyOpenedGateIds.isNotEmpty) {
           final gate = widget.runtimeWorld.definition.allEntities
               .firstWhere((entity) => newlyOpenedGateIds.contains(entity.id))
@@ -2637,6 +2879,7 @@ class _PresentationBoundaryScreenState
   }
 
   void _recordPickupPresentation(String itemLabel) {
+    unawaited(widget.audioController.play(GameAudioCue.pickup));
     _pickupNotice = PickupPresentationNotice(
       sequence: _nextPickupNoticeSequence++,
       itemLabel: itemLabel,
@@ -2678,6 +2921,13 @@ class _PresentationBoundaryScreenState
       sequence: _nextStoryNoticeSequence++,
       beat: beat,
     );
+    unawaited(
+      widget.audioController.play(
+        beat.phase == AuthoredMissionNarrativePhase.complete
+            ? GameAudioCue.missionComplete
+            : GameAudioCue.objective,
+      ),
+    );
   }
 
   void _handleStoryNoticeFinished(int sequence) {
@@ -2685,10 +2935,223 @@ class _PresentationBoundaryScreenState
     setState(() => _storyNotice = null);
   }
 
+  void _recordBossTransition({
+    required EntityId bossEntityId,
+    required GuardianBehaviorPhase previousPhase,
+    required GuardianBehaviorPhase phase,
+    required GuardianEncounterPhase previousEncounterPhase,
+    required GuardianEncounterPhase encounterPhase,
+  }) {
+    final boss = _guardianBossDefinition(bossEntityId);
+    if (boss == null) return;
+    GameplayBossNoticeKind? kind;
+    String? text;
+    if (previousPhase != GuardianBehaviorPhase.defeated &&
+        phase == GuardianBehaviorPhase.defeated) {
+      kind = GameplayBossNoticeKind.defeated;
+      text = boss.defeatText;
+    } else if (previousEncounterPhase != encounterPhase) {
+      switch (encounterPhase) {
+        case GuardianEncounterPhase.phaseTwo:
+          kind = GameplayBossNoticeKind.phaseTwo;
+          text = boss.phaseTwoText;
+          break;
+        case GuardianEncounterPhase.phaseThree:
+          kind = GameplayBossNoticeKind.phaseThree;
+          text = boss.phaseThreeText;
+          break;
+        case GuardianEncounterPhase.standard || GuardianEncounterPhase.phaseOne:
+          break;
+      }
+    }
+    if (kind == null &&
+        previousPhase == GuardianBehaviorPhase.idle &&
+        phase != GuardianBehaviorPhase.idle &&
+        phase != GuardianBehaviorPhase.returning &&
+        phase != GuardianBehaviorPhase.defeated) {
+      kind = GameplayBossNoticeKind.engaged;
+      text = boss.engageText;
+    }
+    if (kind == null || text == null) return;
+    _bossNotice = GameplayBossNotice(
+      sequence: _nextBossNoticeSequence++,
+      bossEntityId: bossEntityId,
+      bossName: boss.displayName,
+      kind: kind,
+      text: text,
+    );
+    unawaited(
+      widget.audioController.play(
+        kind == GameplayBossNoticeKind.defeated
+            ? GameAudioCue.bossDefeated
+            : GameAudioCue.bossPhaseShift,
+      ),
+    );
+  }
+
+  void _syncBossAudioIntensity() {
+    var next = GameAudioCombatIntensity.exploration;
+    for (final entry
+        in widget.runtimeWorld.ecs.query<GuardianBehaviorStateComponent>()) {
+      if (!widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(
+            entry.handle,
+          ) ||
+          entry.component.phase == GuardianBehaviorPhase.idle ||
+          entry.component.phase == GuardianBehaviorPhase.returning ||
+          entry.component.phase == GuardianBehaviorPhase.defeated ||
+          (_healthFor(entry.entityId)?.isDead ?? true)) {
+        continue;
+      }
+      final candidate = switch (entry.component.encounterPhase) {
+        GuardianEncounterPhase.standard || GuardianEncounterPhase.phaseOne =>
+          GameAudioCombatIntensity.bossPhaseOne,
+        GuardianEncounterPhase.phaseTwo =>
+          GameAudioCombatIntensity.bossPhaseTwo,
+        GuardianEncounterPhase.phaseThree =>
+          GameAudioCombatIntensity.bossPhaseThree,
+      };
+      if (candidate.index > next.index) next = candidate;
+    }
+    if (next == _audioCombatIntensity) return;
+    _audioCombatIntensity = next;
+    unawaited(widget.audioController.setCombatIntensity(next));
+  }
+
+  void _handleBossNoticeFinished(int sequence) {
+    if (!mounted || _bossNotice?.sequence != sequence) return;
+    setState(() => _bossNotice = null);
+  }
+
+  void _triggerDodge() {
+    if (_isGameplaySuspended || !_rendererReady || _isPlayerDead) return;
+    final cooldown = _playerDodgeCooldown();
+    if (!cooldown.isReady) {
+      setState(() {
+        _interactionStatus = 'Dodge recovering · ${cooldown.remainingLabel}';
+      });
+      return;
+    }
+    final direction = _preferredDodgeDirection()..normalize();
+    _rememberDodgeDirection(direction);
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      final dodgeStart = Vector3.copy(_playerPosition);
+      final submission = multiplayerClient.submitGameplayCommand(
+        kind: GameplayCommandKind.dodge,
+        directionX: direction.x,
+        directionZ: direction.z,
+      );
+      _watchGameplayCommand(submission.sent);
+      _nextNetworkDodgeAt = _simulationTime + playerDodgeCooldown;
+      final movement = _movePlayerWithinAuthoredWorld(
+        () => _movementSystem.moveDisplacement(
+          entityId: _playerEntityId,
+          displacement: direction * playerDodgeDistance,
+          maximumDistance: playerDodgeDistance,
+        ),
+      );
+      setState(() {
+        if (movement != null) {
+          _applyMovement(movement);
+          _recordDodgePresentation(dodgeStart);
+        }
+        _interactionStatus = 'Dodge submitted to host';
+      });
+      unawaited(widget.audioController.play(GameAudioCue.playerDodge));
+      return;
+    }
+
+    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId)!;
+    final beforeTransform = widget.runtimeWorld.ecs
+        .component<TransformComponent>(handle)
+        .copyWith();
+    final beforeState = widget.runtimeWorld.ecs.component<DodgeStateComponent>(
+      handle,
+    );
+    final result = _dodgeSystem.dodge(
+      entityId: _playerEntityId,
+      direction: direction,
+      simulationTime: _simulationTime,
+    );
+    if (!result.accepted) {
+      setState(() {
+        _interactionStatus = switch (result.rejection!) {
+          DodgeRejection.cooldown => 'Dodge is recovering',
+          DodgeRejection.noDirection => 'Choose a dodge direction',
+          DodgeRejection.defeated => 'Restart before dodging',
+          DodgeRejection.blocked => 'Dodge path is blocked',
+        };
+      });
+      return;
+    }
+    if (!_movementBounds.contains(result.position)) {
+      widget.runtimeWorld.ecs
+        ..replaceComponent<TransformComponent>(handle, beforeTransform)
+        ..replaceComponent<DodgeStateComponent>(handle, beforeState);
+      setState(() {
+        _presentation = _extractPresentation();
+        _interactionStatus = 'Dodge stopped at the authored world edge';
+      });
+      return;
+    }
+    setState(() {
+      _applyMovement(
+        CharacterMovementResult(
+          position: result.position,
+          arrived: false,
+          collidedEntityIds: result.collidedEntityIds,
+        ),
+      );
+      _recordDodgePresentation(beforeTransform.position);
+      _interactionStatus = result.collidedEntityIds.isEmpty
+          ? 'Dodged through danger'
+          : 'Dodge slid past an obstacle';
+    });
+    unawaited(widget.audioController.play(GameAudioCue.playerDodge));
+  }
+
+  Vector3 _preferredDodgeDirection() {
+    final direct = _directMovementDirection;
+    if (direct.length > 1e-9) return direct;
+    final targetPosition = switch (_groundTarget?.position ??
+        _transformFor(
+          _attackMoveTargetId ??
+              _interactionMoveTargetId ??
+              _selectedEntityId ??
+              _playerEntityId,
+        )?.position) {
+      final Vector3 position => position,
+      null => null,
+    };
+    if (targetPosition != null) {
+      final toward = targetPosition - _playerPosition;
+      toward.y = 0;
+      if (toward.length > 1e-9) return toward;
+    }
+    return Vector3.copy(_lastDodgeDirection);
+  }
+
+  void _rememberDodgeDirection(Vector3 direction) {
+    final planar = Vector3(direction.x, 0, direction.z);
+    if (planar.length <= 1e-9) return;
+    planar.normalize();
+    _lastDodgeDirection = planar;
+  }
+
+  void _recordDodgePresentation(Vector3 start) {
+    _dodgePresentation = GameplayDodgePresentation(
+      entityId: _playerEntityId,
+      start: PresentationVector3(start.x, start.y, start.z),
+      startedAt: _presentationMotionTime.value,
+    );
+  }
+
   void _restartPlayer() {
     _groundTarget = null;
     _clearActionTargets();
     _nextNetworkAutoAttackAt = Duration.zero;
+    _nextNetworkDodgeAt = Duration.zero;
+    _dodgePresentation = null;
     _combatPresentationTimeline.clear();
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
@@ -2710,7 +3173,10 @@ class _PresentationBoundaryScreenState
     _pressedKeys.clear();
     _touchMovementByPointer.clear();
     _simulationTime = Duration.zero;
+    _dodgeSystem.reset(_playerEntityId);
     _guardianBehaviorSystem.resetActiveGuardians();
+    _bossNotice = null;
+    _syncBossAudioIntensity();
     _rebuildGameplayQueries();
     setState(() {
       _presentation = _extractPresentation();
@@ -2748,6 +3214,7 @@ class _PresentationBoundaryScreenState
       final worldDirection = _cameraRig.worldDirectionForScreenMovement(
         direction,
       );
+      _rememberDodgeDirection(worldDirection);
       if (multiplayerClient != null) {
         setState(() {
           _groundTarget = null;
@@ -2828,6 +3295,8 @@ class _PresentationBoundaryScreenState
         switch (action) {
           case GameplayHotkeyAction.primarySkill:
             _attackSelected();
+          case GameplayHotkeyAction.dodge:
+            _triggerDodge();
           case GameplayHotkeyAction.interact:
             _interactSelected();
         }
@@ -2959,6 +3428,7 @@ class _PresentationBoundaryScreenState
         }
       }
       if (direction.length > 1e-9) {
+        _rememberDodgeDirection(direction);
         _sendMultiplayerMovement(multiplayerClient, direction);
       }
       return;
@@ -2970,6 +3440,7 @@ class _PresentationBoundaryScreenState
     if (!_isPlayerDead) {
       final direction = _directMovementDirection;
       if (direction.length > 1e-9) {
+        _rememberDodgeDirection(direction);
         result = _movePlayerWithinAuthoredWorld(
           () => _movementSystem.moveDirection(
             entityId: _playerEntityId,
@@ -3079,6 +3550,31 @@ class _PresentationBoundaryScreenState
       for (final guardian in guardianResults)
         if (guardian.attack case final attack? when attack.accepted) attack,
     ];
+    for (final guardian in guardianResults) {
+      _recordBossTransition(
+        bossEntityId: guardian.guardianId,
+        previousPhase: guardian.previousPhase,
+        phase: guardian.phase,
+        previousEncounterPhase: guardian.previousEncounterPhase,
+        encounterPhase: guardian.encounterPhase,
+      );
+      if (guardian.previousPhase != GuardianBehaviorPhase.windingUp &&
+          guardian.phase == GuardianBehaviorPhase.windingUp) {
+        final handle = widget.runtimeWorld.ecs.handleFor(guardian.guardianId);
+        final cue =
+            handle != null &&
+                widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(
+                  handle,
+                )
+            ? bossWindUpAudioCue(guardian.attackPattern)
+            : GameAudioCue.guardianWindUp;
+        unawaited(widget.audioController.play(cue));
+      }
+      if (guardian.attack case final attack? when !attack.accepted) {
+        _recordDodgedBossAttack(attack);
+      }
+    }
+    _syncBossAudioIntensity();
     for (final attack in acceptedGuardianAttacks) {
       _recordAcceptedCombatResult(attack);
     }
@@ -3283,6 +3779,9 @@ class _PresentationBoundaryScreenState
       }
       if (event case ReplicationGameplayCommandResult(:final result)) {
         _interactionStatus = result.detail;
+        if (result.kind == GameplayCommandKind.dodge && !result.accepted) {
+          _nextNetworkDodgeAt = Duration.zero;
+        }
       }
       if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) != null) {
         _setCameraFollowTarget(_playerPosition);
@@ -3369,6 +3868,15 @@ class _PresentationBoundaryScreenState
           defeated: state.current <= 0 && !previous.isDead,
           occurredAt: _simulationTime,
         );
+        unawaited(
+          widget.audioController.play(
+            combatDamageAudioCue(
+              playerEntityId: _playerEntityId,
+              targetEntityId: state.entityId,
+              defeated: state.current <= 0 && !previous.isDead,
+            ),
+          ),
+        );
       }
       final health = HealthComponent(
         maximumHealth: state.maximum,
@@ -3387,6 +3895,41 @@ class _PresentationBoundaryScreenState
           .tryComponent<GuardianBehaviorStateComponent>(handle);
       if (current == null) continue;
       final phase = _guardianPhaseFromNetwork(state.phase);
+      final encounterPhase = _guardianEncounterPhaseFromNetwork(
+        state.encounterPhase,
+      );
+      final attackPattern = _guardianAttackPatternFromNetwork(
+        state.attackPattern,
+      );
+      if (emitCombatFeedback &&
+          current.phase != GuardianBehaviorPhase.windingUp &&
+          phase == GuardianBehaviorPhase.windingUp) {
+        final cue =
+            widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(handle)
+            ? bossWindUpAudioCue(attackPattern)
+            : GameAudioCue.guardianWindUp;
+        unawaited(widget.audioController.play(cue));
+      }
+      if (emitCombatFeedback &&
+          current.phase == GuardianBehaviorPhase.windingUp &&
+          phase != GuardianBehaviorPhase.windingUp &&
+          current.encounterPhase == encounterPhase &&
+          widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(handle)) {
+        _combatPresentationTimeline.recordAttackStarted(
+          attackerEntityId: state.entityId,
+          targetEntityId: current.targetEntityId ?? _playerEntityId,
+          occurredAt: _simulationTime,
+        );
+      }
+      if (emitCombatFeedback) {
+        _recordBossTransition(
+          bossEntityId: state.entityId,
+          previousPhase: current.phase,
+          phase: phase,
+          previousEncounterPhase: current.encounterPhase,
+          encounterPhase: encounterPhase,
+        );
+      }
       widget.runtimeWorld.ecs.replaceComponent(
         handle,
         current.transition(
@@ -3394,13 +3937,17 @@ class _PresentationBoundaryScreenState
           targetEntityId: state.targetEntityId,
           windUpCompletesAt: phase == GuardianBehaviorPhase.windingUp
               ? _simulationTime +
-                    Duration(
-                      microseconds: state.windUpRemainingMicroseconds,
-                    )
+                    Duration(microseconds: state.windUpRemainingMicroseconds)
+              : null,
+          encounterPhase: encounterPhase,
+          attackPattern: attackPattern,
+          telegraphTargetPosition: phase == GuardianBehaviorPhase.windingUp
+              ? Vector3(state.telegraphTargetX!, 0, state.telegraphTargetZ!)
               : null,
         ),
       );
     }
+    _syncBossAudioIntensity();
     for (final state in client.persistentFlagStates.values) {
       final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
       if (handle == null ||
@@ -3478,6 +4025,7 @@ class _PresentationBoundaryScreenState
         scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
       ),
     );
+    widget.runtimeWorld.ecs.addComponent(handle, const DodgeStateComponent());
     widget.runtimeWorld.ecs.addComponent(
       handle,
       RenderableReferenceComponent(assetId: renderable.assetId),
@@ -3755,6 +4303,10 @@ class _PresentationBoundaryScreenState
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
+    _dodgeSystem = DodgeSystem(
+      ecs: widget.runtimeWorld.ecs,
+      collisionWorld: _collisionWorld,
+    );
     _interactionSystem = InteractionSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
@@ -3813,6 +4365,24 @@ GuardianBehaviorPhase _guardianPhaseFromNetwork(NetworkGuardianPhase phase) =>
       NetworkGuardianPhase.returning => GuardianBehaviorPhase.returning,
       NetworkGuardianPhase.defeated => GuardianBehaviorPhase.defeated,
     };
+
+GuardianEncounterPhase _guardianEncounterPhaseFromNetwork(
+  NetworkGuardianEncounterPhase phase,
+) => switch (phase) {
+  NetworkGuardianEncounterPhase.standard => GuardianEncounterPhase.standard,
+  NetworkGuardianEncounterPhase.phaseOne => GuardianEncounterPhase.phaseOne,
+  NetworkGuardianEncounterPhase.phaseTwo => GuardianEncounterPhase.phaseTwo,
+  NetworkGuardianEncounterPhase.phaseThree => GuardianEncounterPhase.phaseThree,
+};
+
+GuardianAttackPattern _guardianAttackPatternFromNetwork(
+  NetworkGuardianAttackPattern pattern,
+) => switch (pattern) {
+  NetworkGuardianAttackPattern.melee => GuardianAttackPattern.melee,
+  NetworkGuardianAttackPattern.sweep => GuardianAttackPattern.sweep,
+  NetworkGuardianAttackPattern.eruption => GuardianAttackPattern.eruption,
+  NetworkGuardianAttackPattern.fissureRing => GuardianAttackPattern.fissureRing,
+};
 
 TransformComponent _runtimeTransform(TransformDefinition transform) {
   return TransformComponent(

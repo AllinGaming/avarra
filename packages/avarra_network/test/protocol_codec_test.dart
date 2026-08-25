@@ -29,6 +29,12 @@ void main() {
         kind: GameplayCommandKind.attack,
         targetEntityId: _entityId,
       ),
+      GameplayCommandMessage(
+        sequence: 6,
+        kind: GameplayCommandKind.dodge,
+        directionX: 0.6,
+        directionZ: -0.8,
+      ),
       SpawnEntityMessage(
         networkEntityId: NetworkEntityId(9),
         entityId: _entityId,
@@ -67,8 +73,12 @@ void main() {
           NetworkGuardianState(
             entityId: _entityId,
             phase: NetworkGuardianPhase.windingUp,
+            encounterPhase: NetworkGuardianEncounterPhase.phaseThree,
+            attackPattern: NetworkGuardianAttackPattern.fissureRing,
             targetEntityId: _entityId,
             windUpRemainingMicroseconds: 480000,
+            telegraphTargetX: 2.5,
+            telegraphTargetZ: -1.25,
           ),
         ],
         inventoryItemIds: const {'relay.core'},
@@ -132,6 +142,54 @@ void main() {
         phase: NetworkGuardianPhase.idle,
         targetEntityId: null,
         windUpRemainingMicroseconds: 1,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    );
+  });
+
+  test('rejects target-bearing or unbounded dodge commands', () {
+    expect(
+      () => GameplayCommandMessage(
+        sequence: 1,
+        kind: GameplayCommandKind.dodge,
+        targetEntityId: _entityId,
+        directionX: 1,
+        directionZ: 0,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    );
+    expect(
+      () => GameplayCommandMessage(
+        sequence: 1,
+        kind: GameplayCommandKind.dodge,
+        directionX: 1,
+        directionZ: 1,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    );
+  });
+
+  test('rejects incomplete or impossible boss telegraph state', () {
+    expect(
+      () => NetworkGuardianState(
+        entityId: _entityId,
+        phase: NetworkGuardianPhase.windingUp,
+        encounterPhase: NetworkGuardianEncounterPhase.phaseThree,
+        attackPattern: NetworkGuardianAttackPattern.eruption,
+        targetEntityId: _entityId,
+        windUpRemainingMicroseconds: 500000,
+        telegraphTargetX: 2,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    );
+    expect(
+      () => NetworkGuardianState(
+        entityId: _entityId,
+        phase: NetworkGuardianPhase.idle,
+        encounterPhase: NetworkGuardianEncounterPhase.standard,
+        attackPattern: NetworkGuardianAttackPattern.sweep,
+        targetEntityId: null,
+        windUpRemainingMicroseconds: 0,
       ),
       throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
     );

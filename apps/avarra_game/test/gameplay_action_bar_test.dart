@@ -1,4 +1,5 @@
 import 'package:avarra_game/src/gameplay_action_bar.dart';
+import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,11 +36,16 @@ void main() {
       gameplayHotkeyActionFor(LogicalKeyboardKey.keyE),
       GameplayHotkeyAction.interact,
     );
+    expect(
+      gameplayHotkeyActionFor(LogicalKeyboardKey.shiftLeft),
+      GameplayHotkeyAction.dodge,
+    );
     expect(gameplayHotkeyActionFor(LogicalKeyboardKey.keyQ), isNull);
   });
 
   testWidgets('shows health and dispatches ready action slots', (tester) async {
     var primaryActivations = 0;
+    var dodgeActivations = 0;
     var interactionActivations = 0;
     await tester.pumpWidget(
       MaterialApp(
@@ -53,7 +59,12 @@ void main() {
                 remaining: Duration.zero,
               ),
               primaryEngaged: false,
+              dodgeCooldown: GameplaySkillCooldown(
+                total: playerDodgeCooldown,
+                remaining: Duration.zero,
+              ),
               onPrimary: () => primaryActivations++,
+              onDodge: () => dodgeActivations++,
               onInteract: () => interactionActivations++,
             ),
           ),
@@ -74,8 +85,10 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('basic_attack')));
+    await tester.tap(find.byKey(const Key('dodge')));
     await tester.tap(find.byKey(const Key('interact')));
     expect(primaryActivations, 1);
+    expect(dodgeActivations, 1);
     expect(interactionActivations, 1);
   });
 
@@ -94,7 +107,12 @@ void main() {
                 remaining: const Duration(milliseconds: 360),
               ),
               primaryEngaged: true,
+              dodgeCooldown: GameplaySkillCooldown(
+                total: playerDodgeCooldown,
+                remaining: const Duration(milliseconds: 600),
+              ),
               onPrimary: () {},
+              onDodge: () {},
               onInteract: null,
               compact: true,
             ),
@@ -105,6 +123,11 @@ void main() {
 
     expect(find.text('BASIC STRIKE · 0.4s'), findsOneWidget);
     expect(find.byKey(const Key('primary_skill_cooldown')), findsOneWidget);
+    expect(find.byKey(const Key('dodge_skill_cooldown')), findsOneWidget);
+    expect(
+      tester.widget<InkWell>(find.byKey(const Key('dodge'))).onTap,
+      isNull,
+    );
     expect(
       tester.widget<InkWell>(find.byKey(const Key('interact'))).onTap,
       isNull,

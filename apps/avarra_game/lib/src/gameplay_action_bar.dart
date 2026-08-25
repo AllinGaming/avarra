@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-enum GameplayHotkeyAction { primarySkill, interact }
+enum GameplayHotkeyAction { primarySkill, dodge, interact }
 
 GameplayHotkeyAction? gameplayHotkeyActionFor(LogicalKeyboardKey key) {
   if (key == LogicalKeyboardKey.space) {
@@ -11,6 +11,10 @@ GameplayHotkeyAction? gameplayHotkeyActionFor(LogicalKeyboardKey key) {
   }
   if (key == LogicalKeyboardKey.keyE) {
     return GameplayHotkeyAction.interact;
+  }
+  if (key == LogicalKeyboardKey.shiftLeft ||
+      key == LogicalKeyboardKey.shiftRight) {
+    return GameplayHotkeyAction.dodge;
   }
   return null;
 }
@@ -83,7 +87,9 @@ final class GameplayActionBar extends StatelessWidget {
     required this.maximumHealth,
     required this.primaryCooldown,
     required this.primaryEngaged,
+    required this.dodgeCooldown,
     required this.onPrimary,
+    required this.onDodge,
     required this.onInteract,
     this.compact = false,
     super.key,
@@ -94,7 +100,9 @@ final class GameplayActionBar extends StatelessWidget {
   final double maximumHealth;
   final GameplaySkillCooldown primaryCooldown;
   final bool primaryEngaged;
+  final GameplaySkillCooldown dodgeCooldown;
   final VoidCallback? onPrimary;
+  final VoidCallback? onDodge;
   final VoidCallback? onInteract;
   final bool compact;
 
@@ -179,7 +187,25 @@ final class GameplayActionBar extends StatelessWidget {
                     size: primarySize,
                     accent: const Color(0xFFE8A946),
                     cooldownFraction: primaryCooldown.remainingFraction,
+                    cooldownKey: const Key('primary_skill_cooldown'),
                     onTap: onPrimary,
+                    showLabel: !compact,
+                  ),
+                  SizedBox(width: compact ? 8 : 11),
+                  _SkillSlot(
+                    key: const Key('dodge_skill_slot'),
+                    actionKey: const Key('dodge'),
+                    label: 'DODGE',
+                    semanticStatus: dodgeCooldown.isReady
+                        ? 'ready'
+                        : '${dodgeCooldown.remainingLabel} remaining',
+                    hotkey: 'SHIFT',
+                    icon: Icons.double_arrow_rounded,
+                    size: compact ? 52 : 58,
+                    accent: const Color(0xFF7CE3C1),
+                    cooldownFraction: dodgeCooldown.remainingFraction,
+                    cooldownKey: const Key('dodge_skill_cooldown'),
+                    onTap: dodgeCooldown.isReady ? onDodge : null,
                     showLabel: !compact,
                   ),
                   SizedBox(width: compact ? 8 : 11),
@@ -192,6 +218,7 @@ final class GameplayActionBar extends StatelessWidget {
                     icon: Icons.touch_app_rounded,
                     size: compact ? 52 : 58,
                     accent: const Color(0xFF65C9D4),
+                    cooldownKey: const Key('interaction_skill_cooldown'),
                     onTap: onInteract,
                     showLabel: !compact,
                   ),
@@ -291,6 +318,7 @@ final class _SkillSlot extends StatelessWidget {
     required this.accent,
     required this.onTap,
     required this.showLabel,
+    required this.cooldownKey,
     this.cooldownFraction = 0,
     super.key,
   });
@@ -304,6 +332,7 @@ final class _SkillSlot extends StatelessWidget {
   final Color accent;
   final VoidCallback? onTap;
   final bool showLabel;
+  final Key cooldownKey;
   final double cooldownFraction;
 
   @override
@@ -367,7 +396,7 @@ final class _SkillSlot extends StatelessWidget {
                       if (cooldownFraction > 0)
                         IgnorePointer(
                           child: CustomPaint(
-                            key: const Key('primary_skill_cooldown'),
+                            key: cooldownKey,
                             painter: _CooldownVeilPainter(
                               fraction: cooldownFraction,
                               accent: accent,

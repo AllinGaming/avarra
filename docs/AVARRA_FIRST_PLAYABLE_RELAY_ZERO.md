@@ -115,6 +115,48 @@ save, and restored mission completion after a cold launch. A packaged Windows
 Game client also joined the native headless host and passed held-key movement.
 The soak exposed and closed idle zero-vector autosave amplification.
 
+Stage 12.26 gives that combat loop its first real enemy commitment/readability
+contract. Hollow Wardens enter a 650 ms authority-owned wind-up before the
+existing combat system revalidates their strike. Protocol v4 mirrors phase,
+target, and bounded remaining time, while Game projects the attack radius and
+dodge countdown. A player who exits the radius during the warning avoids the
+damage in both offline and hosted simulation.
+
+Stage 12.27 makes that loop audible through a replaceable Game-only boundary.
+Original ambience and distinct Guardian warning, combat, defeat, loot,
+objective, completion, and UI cues follow accepted local actions or
+authoritative state transitions. Persistent mix settings, pause/prologue
+ducking, lifecycle suspension, and graceful silence keep device playback out
+of the gameplay contract.
+
+Stage 12.28 gives the chamber a real climax. Vharos, Ashen Castellan, escalates
+from committed melee to a locked cone sweep and then a locked ground eruption
+across three authoritative phases. Named encounter beats and adaptive combat
+audio expose that escalation. Defeat reveals the required Relay Core and an
+optional persisted Ashen Heart that raises maximum health to 125. This is a
+typed AVARRA product slice, not a generic ability framework.
+
+Stage 12.29 makes that escalation legible at a glance: Vharos changes posture
+and ritual aura by phase, phase three cracks the projected arena floor, each
+attack family has its own anticipation sound, and resolved attacks deliver a
+bounded camera impulse. Stage 12.30 lets Forge creators reproduce the same
+boss/guarded-power-reward/turn-in structure through one typed, undoable
+Ascendant mission stamp.
+
+Stage 12.31 adds a final-phase fissure ring with a 0.9-unit safe core and
+3.2-unit danger edge. Authority locks the ring to Vharos while Game shows the
+real annulus and asks the player to enter the core. Forge Ascendant missions
+author the same radii. Stage 12.32 gives the player a real collision-swept
+dodge: Shift or the action bar moves 1.8 units on a 1.5-second authority-owned
+cooldown, with short correction-aware smoothing and a dedicated cue.
+Stage 12.33 gives that burst readable velocity: the authored character motion
+accelerates immediately while projected air strands, ember motes, and a
+landing crescent track the latest authority endpoint. Reduced motion removes
+the effect without changing the move.
+Stage 12.34 gives Ashen Vanguard a dedicated generated Dodge pose and puts its
+clip/VFX tuning behind one AVARRA profile. The same deterministic tool updates
+and verifies Game and Forge copies, making further iteration repeatable.
+
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle
 acceptance is still open. The CC0 cube remains only as a renderer fixture and

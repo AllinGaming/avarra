@@ -213,6 +213,23 @@ size, so guidance does not require activating a chunk. Active clients may use
 the corresponding live ECS transform for presentation, but that runtime handle
 is never persisted as identity.
 
+Content schema v10 adds the first narrow authored boss and player-power slice.
+`GuardianBossDefinition` augments an existing Guardian/Health/BasicAttack
+entity with a name, two thresholds, three attack shapes, and bounded encounter
+copy. `PlayerPowerRewardDefinition` augments a collectible with a positive
+maximum-health bonus. Runtime boss tuning materializes into server-safe ECS;
+player power is derived from stable saved inventory item IDs. Existing content
+v1-v9 remains readable and no runtime handle or duplicate reward state is
+persisted.
+
+Content schema v11 adds optional
+`GuardianArenaHazardDefinition(innerSafeRadius, outerRadius)`. It augments a
+Guardian boss rather than replacing its behavior contract. Shared validation
+requires strictly ordered positive radii, the Guardian-boss/behavior/attack
+composition, and Basic Attack range that covers the outer radius. Runtime
+materialization is server safe. Existing content v1-v10 remains readable;
+component-absent bosses keep their previous attack sequence.
+
 ---
 
 # 11. Versioning
@@ -273,7 +290,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–11.2 Implementation
+# 14. Current Stage 4-12.32 Implementation
 
 The initial vertical slice now provides:
 
@@ -281,10 +298,11 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 6, with versions 1 through 5 still readable
+  content schema version 11, with versions 1 through 10 still readable
   typed persistent-flag interaction effect
   typed health and deterministic basic-attack definitions
   typed guardian perception and leash policy
+  typed boss, player-power reward, and Guardian arena-hazard definitions
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 

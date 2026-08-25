@@ -251,6 +251,53 @@ void main() {
     await host.close();
   });
 
+  test('listen host owns dodge displacement and cooldown', () async {
+    final host = await MultiplayerProofHost.start(
+      worldPackageSource: _findProofWorld().readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+    );
+    final hostEvents = host.events.listen((_) {});
+    final client = await _connect(host, _primaryPlayerId);
+    await client.waitForControlledEntity();
+    final before = host.runtimeWorld.ecs
+        .component<TransformComponent>(
+          host.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+        )
+        .position;
+
+    final dodge = await _sendCommand(
+      client,
+      GameplayCommandKind.dodge,
+      directionX: 0,
+      directionZ: -1,
+    );
+    expect(dodge.accepted, isTrue, reason: dodge.detail);
+    await _waitUntil(
+      () =>
+          host.runtimeWorld.ecs
+              .component<TransformComponent>(
+                host.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+              )
+              .position
+              .z <
+          before.z - 1,
+    );
+
+    final repeated = await _sendCommand(
+      client,
+      GameplayCommandKind.dodge,
+      directionX: 0,
+      directionZ: -1,
+    );
+    expect(repeated.accepted, isFalse);
+    expect(repeated.detail, contains('recovering'));
+
+    await client.close();
+    await hostEvents.cancel();
+    await host.close();
+  });
+
   test('host authoritatively completes the Relay Zero mission', () async {
     final host = await MultiplayerProofHost.start(
       worldPackageSource: _findProofWorld().readAsStringSync(),
@@ -285,10 +332,17 @@ void main() {
           client.guardianStates[_guardianId]?.phase ==
           NetworkGuardianPhase.windingUp,
     );
+    expect(client.guardianStates[_guardianId]?.targetEntityId, _playerEntityId);
     expect(
-      client.guardianStates[_guardianId]?.targetEntityId,
-      _playerEntityId,
+      client.guardianStates[_guardianId]?.encounterPhase,
+      NetworkGuardianEncounterPhase.phaseOne,
     );
+    expect(
+      client.guardianStates[_guardianId]?.attackPattern,
+      NetworkGuardianAttackPattern.melee,
+    );
+    expect(client.guardianStates[_guardianId]?.telegraphTargetX, isNotNull);
+    expect(client.guardianStates[_guardianId]?.telegraphTargetZ, isNotNull);
     expect(
       client.guardianStates[_guardianId]?.windUpRemainingMicroseconds,
       greaterThan(0),
@@ -305,7 +359,7 @@ void main() {
     final guardianHandle = host.runtimeWorld.ecs.handleFor(_guardianId)!;
     host.runtimeWorld.ecs.replaceComponent(
       guardianHandle,
-      HealthComponent(maximumHealth: 60, currentHealth: 20),
+      HealthComponent(maximumHealth: 120, currentHealth: 20),
     );
     _moveHostEntity(host, _playerEntityId, Vector3(11, 0.4, 4.5));
     final attack = await _sendCommand(
@@ -315,6 +369,19 @@ void main() {
     );
     expect(attack.accepted, isTrue, reason: attack.detail);
     await _waitUntil(() => client.healthStates[_guardianId]?.current == 0);
+
+    _moveHostEntity(host, _playerEntityId, Vector3(12, 0.4, 5));
+    final claimHeart = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _ashenHeartId,
+    );
+    expect(claimHeart.accepted, isTrue, reason: claimHeart.detail);
+    await _waitUntil(
+      () =>
+          client.inventoryItemIds.contains('relic.ashen_heart') &&
+          client.healthStates[_playerEntityId]?.maximum == 125,
+    );
 
     _moveHostEntity(host, _playerEntityId, Vector3(12, 0.4, 4));
     final collect = await _sendCommand(
@@ -340,7 +407,7 @@ void main() {
           ) ==
           true,
     );
-    expect(client.inventoryItemIds, isEmpty);
+    expect(client.inventoryItemIds, {'relic.ashen_heart'});
 
     await client.close();
     await hostEvents.cancel();
@@ -451,10 +518,14 @@ Future<GameplayCommandResultMessage> _sendCommand(
   ReplicationClient client,
   GameplayCommandKind kind, {
   EntityId? targetEntityId,
+  double? directionX,
+  double? directionZ,
 }) async {
   final submission = client.submitGameplayCommand(
     kind: kind,
     targetEntityId: targetEntityId,
+    directionX: directionX,
+    directionZ: directionZ,
   );
   final result = client.events
       .where((event) => event is ReplicationGameplayCommandResult)
@@ -531,6 +602,7 @@ final _relayBetaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000010');
 final _relayGammaId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000005');
 final _guardianId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000009');
 final _relayCoreId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000015');
+final _ashenHeartId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000023');
 final _controlConsoleId = EntityId.parse(
   '01890f47-e8b8-7a68-8000-000000000014',
 );

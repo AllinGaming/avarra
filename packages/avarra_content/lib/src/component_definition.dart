@@ -297,6 +297,84 @@ final class GuardianBehaviorDefinition extends ContentComponentDefinition {
   };
 }
 
+/// Typed authoring for AVARRA's first named, multi-phase Guardian boss.
+final class GuardianBossDefinition extends ContentComponentDefinition {
+  const GuardianBossDefinition({
+    required this.displayName,
+    required this.phaseTwoHealthFraction,
+    required this.phaseThreeHealthFraction,
+    required this.meleeRange,
+    required this.sweepRange,
+    required this.sweepHalfAngleDegrees,
+    required this.eruptionRadius,
+    required this.engageText,
+    required this.phaseTwoText,
+    required this.phaseThreeText,
+    required this.defeatText,
+  });
+
+  final String displayName;
+  final double phaseTwoHealthFraction;
+  final double phaseThreeHealthFraction;
+  final double meleeRange;
+  final double sweepRange;
+  final double sweepHalfAngleDegrees;
+  final double eruptionRadius;
+  final String engageText;
+  final String phaseTwoText;
+  final String phaseThreeText;
+  final String defeatText;
+
+  @override
+  String get type => AvarraComponentType.guardianBoss;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'displayName': displayName,
+    'phaseTwoHealthFraction': phaseTwoHealthFraction,
+    'phaseThreeHealthFraction': phaseThreeHealthFraction,
+    'meleeRange': meleeRange,
+    'sweepRange': sweepRange,
+    'sweepHalfAngleDegrees': sweepHalfAngleDegrees,
+    'eruptionRadius': eruptionRadius,
+    'engageText': engageText,
+    'phaseTwoText': phaseTwoText,
+    'phaseThreeText': phaseThreeText,
+    'defeatText': defeatText,
+  };
+}
+
+/// Optional phase-three ring hazard for an authored Guardian boss.
+///
+/// The inner radius is safe, the annulus through [outerRadius] deals the
+/// boss's authored attack damage, and space beyond the outer edge is safe.
+final class GuardianArenaHazardDefinition extends ContentComponentDefinition {
+  const GuardianArenaHazardDefinition({
+    required this.innerSafeRadius,
+    required this.outerRadius,
+  });
+
+  final double innerSafeRadius;
+  final double outerRadius;
+
+  @override
+  String get type => AvarraComponentType.guardianArenaHazard;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'innerSafeRadius': innerSafeRadius,
+    'outerRadius': outerRadius,
+  };
+}
+
 final class InteractableDefinition extends ContentComponentDefinition {
   const InteractableDefinition({required this.label, required this.range});
 
@@ -415,6 +493,25 @@ final class CollectibleItemDefinition extends ContentComponentDefinition {
     'itemLabel': itemLabel,
     'collectedFlagKey': collectedFlagKey,
     'guardedByEntityId': guardedByEntityId.value,
+  };
+}
+
+/// Passive maximum-health reward derived from ownership of this collectible.
+final class PlayerPowerRewardDefinition extends ContentComponentDefinition {
+  const PlayerPowerRewardDefinition({required this.maximumHealthBonus});
+
+  final double maximumHealthBonus;
+
+  @override
+  String get type => AvarraComponentType.playerPowerReward;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'maximumHealthBonus': maximumHealthBonus,
   };
 }
 

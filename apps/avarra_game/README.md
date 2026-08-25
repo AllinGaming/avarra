@@ -155,6 +155,80 @@ bars, and damage numbers are wired at the presentation boundary. Forge Test
 Play still enters directly. See
 `docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`.
 
+Stage 12.26 replaces immediate Guardian damage with a real authority-owned
+650 ms commitment window. Protocol-v4 gameplay snapshots expose the Guardian
+phase, locked target, and bounded remaining time; Game uses that state to
+project an attack radius, urgency arc, target reticle, and live `DODGE` warning.
+The strike still resolves through the existing combat system, so escaping the
+radius prevents damage. See
+`docs/AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md` and
+ADR-034.
+
+Stage 12.27 adds a replaceable Game-only audio controller and provisional
+`audioplayers` adapter. Original generated ambience plus UI, Guardian wind-up,
+hit, hurt, defeat, pickup, objective, and completion cues respond to accepted
+local actions or authoritative state transitions. Version-2 presentation
+settings add audio enable and master/ambience/effects levels; pause/prologue
+ducking and app lifecycle suspension are applied without entering simulation,
+saves, world packages, or networking. Windows release and Android debug
+packages contain all nine audio assets. See
+`docs/AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md` and ADR-035.
+
+Stage 12.28 replaces the generic core-chamber Warden with **Vharos, Ashen
+Castellan**. Content-schema-v10 data authors his name, three health phases,
+melee/cone/ground attack shapes, and encounter copy. Protocol v5 mirrors the
+phase, selected pattern, and locked target. Game projects the real counterplay,
+shows accessible phase/defeat banners, and cross-mixes an original phase-scaled
+combat layer. Defeat reveals an optional Ashen Heart whose persisted inventory
+ownership derives +25 maximum health in offline and hosted play. See
+`docs/AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md` and ADR-036.
+
+Stage 12.29 adds boss-specific presentation without changing authority. Active
+bosses receive phase-scaled anticipation posture, projected ritual aura/sigils,
+phase-three cracks, and a bounded resolved-attack camera impulse. Melee, sweep,
+and eruption use three distinct original anticipation cues. Reduced motion
+disables the cosmetic motion and camera shake; all state still comes from
+offline authority or protocol-v5 mirrors. Windows and Android packages contain
+all 15 WAV assets. See
+`docs/AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md`.
+
+Stage 12.31 consumes the optional content-v11 Guardian arena hazard and
+protocol-v6 fissure-ring state. Game paints the actual annulus with a safe-core
+outline and `ENTER SAFE CORE` guidance, then plays its own distinct warning
+cue; only authority resolves damage.
+
+Stage 12.32 adds the visible **DODGE** action on Shift and touch/click. The
+server-safe system owns its collision-swept 1.8-unit displacement and
+1.5-second cooldown offline and on the host. Connected play predicts the same
+sweep, then a 170 ms Game-only ease follows the latest authoritative endpoint;
+reduced motion snaps directly to truth. The package now contains all 17
+generated WAV assets. See
+`docs/AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md`,
+ADR-037, and ADR-038.
+
+Stage 12.33 makes that move feel immediate without changing its authority. The
+player's existing authored Run clip plays once at 2.8x speed with a 25 ms
+crossfade while a projected three-strand air trail, ember motes, and landing
+crescent follow the correction-aware endpoint. Reduced motion removes the
+trail and keeps the immediate authoritative position. Custom player assets
+without the optional Run clip continue through the adapter's safe fallback.
+See `docs/AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`.
+
+Stage 12.34 replaces the provisional sped-up Run mapping with the dedicated
+generated 180 ms **Dodge** clip. Runtime playback, duration, trail strands,
+ember count, and colors live in one `GameplayDodgeFeelProfile`. The bounded
+Gothic animation tool regenerates matching Game/Forge buffers and glTF metadata
+or checks them read-only with `--check`. See
+`docs/AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md` and
+`docs/AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md`.
+
+Stage 12.35 replaces the pinned Thermion plugin's obsolete Android Gradle
+instructions with a repository-owned compatibility overlay. Thermion source
+remains immutable, clean Android builds no longer report the legacy Kotlin
+Gradle Plugin warning, and the Android CI command rejects its return. See
+`docs/AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`.
+
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
 GitHub Actions now gives Android native compilation a dedicated Windows job

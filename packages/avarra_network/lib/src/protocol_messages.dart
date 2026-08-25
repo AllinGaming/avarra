@@ -7,7 +7,7 @@ import 'network_values.dart';
 
 const String avarraNetworkWireFormat = 'avarra.net';
 const int currentNetworkWireVersion = 1;
-const int currentNetworkProtocolVersion = 4;
+const int currentNetworkProtocolVersion = 6;
 
 abstract final class NetworkMessageType {
   static const clientHello = 1;
@@ -116,28 +116,54 @@ final class MovementIntentMessage extends NetworkMessage {
 }
 
 /// Discrete player actions whose outcome is decided by the host.
-enum GameplayCommandKind { attack, interact, restart }
+enum GameplayCommandKind { attack, interact, dodge, restart }
 
 final class GameplayCommandMessage extends NetworkMessage {
   GameplayCommandMessage({
     required this.sequence,
     required this.kind,
     this.targetEntityId,
+    this.directionX,
+    this.directionZ,
   }) {
     if (sequence < 0) {
       _invalid('Gameplay command sequence cannot be negative.');
     }
-    if (kind == GameplayCommandKind.restart && targetEntityId != null) {
-      _invalid('Restart commands cannot include a target entity.');
+    final hasDirection = directionX != null && directionZ != null;
+    if ((directionX == null) != (directionZ == null)) {
+      _invalid('Gameplay command direction must contain a complete pair.');
     }
-    if (kind != GameplayCommandKind.restart && targetEntityId == null) {
-      _invalid('Attack and interact commands require a target entity.');
+    switch (kind) {
+      case GameplayCommandKind.attack || GameplayCommandKind.interact:
+        if (targetEntityId == null || hasDirection) {
+          _invalid('Attack and interact commands require only a target.');
+        }
+      case GameplayCommandKind.dodge:
+        final lengthSquared = hasDirection
+            ? directionX! * directionX! + directionZ! * directionZ!
+            : 0.0;
+        if (targetEntityId != null ||
+            !hasDirection ||
+            !directionX!.isFinite ||
+            !directionZ!.isFinite ||
+            directionX!.abs() > 1 ||
+            directionZ!.abs() > 1 ||
+            lengthSquared <= 1e-12 ||
+            lengthSquared > 1.000001) {
+          _invalid('Dodge commands require one bounded planar direction.');
+        }
+      case GameplayCommandKind.restart:
+        if (targetEntityId != null || hasDirection) {
+          _invalid('Restart commands cannot include a target or direction.');
+        }
     }
   }
 
   final int sequence;
   final GameplayCommandKind kind;
   final EntityId? targetEntityId;
+  final double? directionX;
+  final double? directionZ;
 
   @override
   int get messageType => NetworkMessageType.gameplayCommand;
@@ -303,6 +329,10 @@ enum NetworkGuardianPhase {
   defeated,
 }
 
+enum NetworkGuardianEncounterPhase { standard, phaseOne, phaseTwo, phaseThree }
+
+enum NetworkGuardianAttackPattern { melee, sweep, eruption, fissureRing }
+
 /// Bounded server-visible AI action state for presentation and prediction-free
 /// encounter readability.
 final class NetworkGuardianState {
@@ -311,12 +341,28 @@ final class NetworkGuardianState {
     required this.phase,
     required this.targetEntityId,
     required this.windUpRemainingMicroseconds,
+    this.encounterPhase = NetworkGuardianEncounterPhase.standard,
+    this.attackPattern = NetworkGuardianAttackPattern.melee,
+    this.telegraphTargetX,
+    this.telegraphTargetZ,
   }) {
     final windingUp = phase == NetworkGuardianPhase.windingUp;
+    final hasTelegraphTarget =
+        telegraphTargetX != null && telegraphTargetZ != null;
     if (windUpRemainingMicroseconds < 0 ||
         windUpRemainingMicroseconds > 10000000 ||
         windingUp != (windUpRemainingMicroseconds > 0) ||
-        (windingUp && targetEntityId == null)) {
+        (windingUp && targetEntityId == null) ||
+        (telegraphTargetX == null) != (telegraphTargetZ == null) ||
+        windingUp != hasTelegraphTarget ||
+        (telegraphTargetX != null &&
+            (!telegraphTargetX!.isFinite ||
+                telegraphTargetX!.abs() > 1000000)) ||
+        (telegraphTargetZ != null &&
+            (!telegraphTargetZ!.isFinite ||
+                telegraphTargetZ!.abs() > 1000000)) ||
+        (encounterPhase == NetworkGuardianEncounterPhase.standard &&
+            attackPattern != NetworkGuardianAttackPattern.melee)) {
       _invalid('Network guardian state values are invalid.');
     }
   }
@@ -325,6 +371,10 @@ final class NetworkGuardianState {
   final NetworkGuardianPhase phase;
   final EntityId? targetEntityId;
   final int windUpRemainingMicroseconds;
+  final NetworkGuardianEncounterPhase encounterPhase;
+  final NetworkGuardianAttackPattern attackPattern;
+  final double? telegraphTargetX;
+  final double? telegraphTargetZ;
 }
 
 /// Authoritative adventure and combat state for one connected player.

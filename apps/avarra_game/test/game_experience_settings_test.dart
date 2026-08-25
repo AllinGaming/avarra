@@ -12,10 +12,30 @@ void main() {
       showQuestGuidance: false,
       showEnemyHealthBars: false,
       showCombatText: false,
+      audioEnabled: false,
+      masterVolume: 0.7,
+      musicVolume: 0.45,
+      effectsVolume: 0.9,
     );
 
     expect(GameExperienceSettings.decode(settings.encode()), settings);
     expect(settings.effectiveCameraShakeStrength, 0);
+  });
+
+  test('settings codec migrates version 1 preferences with audio defaults', () {
+    const legacy =
+        '{"format":"avarra.game_experience_settings","version":1,'
+        '"reducedMotion":true,"cameraShakeStrength":0.25,'
+        '"showQuestGuidance":false,"showEnemyHealthBars":true,'
+        '"showCombatText":false}';
+
+    final migrated = GameExperienceSettings.decode(legacy);
+
+    expect(migrated.reducedMotion, isTrue);
+    expect(migrated.audioEnabled, isTrue);
+    expect(migrated.masterVolume, 0.8);
+    expect(migrated.musicVolume, 0.55);
+    expect(migrated.effectsVolume, 0.85);
   });
 
   test('settings codec rejects malformed and out-of-range values', () {
@@ -144,10 +164,27 @@ void main() {
       find.byKey(const Key('game_experience_settings_dialog')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('setting_audio_enabled')), findsOneWidget);
+    expect(find.byKey(const Key('setting_master_volume')), findsOneWidget);
+    expect(find.byKey(const Key('setting_music_volume')), findsOneWidget);
+    expect(find.byKey(const Key('setting_effects_volume')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('setting_audio_enabled')));
+    await tester.pump();
+    expect(settings.audioEnabled, isFalse);
+    expect(
+      tester
+          .widget<Slider>(find.byKey(const Key('setting_master_volume')))
+          .onChanged,
+      isNull,
+    );
+    await tester.ensureVisible(find.byKey(const Key('setting_reduced_motion')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('setting_reduced_motion')));
     await tester.pump();
     expect(settings.reducedMotion, isTrue);
     expect(settings.effectiveCameraShakeStrength, 0);
+    await tester.ensureVisible(find.byKey(const Key('setting_enemy_health')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('setting_enemy_health')));
     await tester.pump();
     expect(settings.showEnemyHealthBars, isFalse);

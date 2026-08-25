@@ -123,7 +123,9 @@ final class RuntimeEntityLoader {
             ),
           );
         case PlayerControlledDefinition():
-          ecs.addComponent(handle, const PlayerControlledComponent());
+          ecs
+            ..addComponent(handle, const PlayerControlledComponent())
+            ..addComponent(handle, const DodgeStateComponent());
         case HealthDefinition():
           ecs.addComponent(
             handle,
@@ -151,6 +153,26 @@ final class RuntimeEntityLoader {
             ),
           );
           hasGuardianBehavior = true;
+        case GuardianBossDefinition():
+          ecs.addComponent(
+            handle,
+            GuardianBossComponent(
+              phaseTwoHealthFraction: component.phaseTwoHealthFraction,
+              phaseThreeHealthFraction: component.phaseThreeHealthFraction,
+              meleeRange: component.meleeRange,
+              sweepRange: component.sweepRange,
+              sweepHalfAngleDegrees: component.sweepHalfAngleDegrees,
+              eruptionRadius: component.eruptionRadius,
+            ),
+          );
+        case GuardianArenaHazardDefinition():
+          ecs.addComponent(
+            handle,
+            GuardianArenaHazardComponent(
+              innerSafeRadius: component.innerSafeRadius,
+              outerRadius: component.outerRadius,
+            ),
+          );
         case InteractableDefinition():
           ecs.addComponent(
             handle,
@@ -188,9 +210,10 @@ final class RuntimeEntityLoader {
           );
         case ObjectiveDefinition() ||
             ObjectiveGateDefinition() ||
-            MissionNarrativeDefinition():
+            MissionNarrativeDefinition() ||
+            PlayerPowerRewardDefinition():
           // Objective grouping and gates remain authored definition state.
-          // Narrative also derives from persisted/replicated adventure progress.
+          // Narrative and rewards derive from authoritative adventure progress.
           break;
         case PersistentFlagsDefinition():
           ecs.addComponent(handle, PersistentFlagsComponent(component.flags));

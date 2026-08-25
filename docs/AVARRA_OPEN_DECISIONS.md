@@ -79,7 +79,13 @@ localization representation, branching story/dialogue/cinematic schema,
 authoritative global-pause protocol, or physical Android performance policy.
 The preference representation is provisional app storage, not a world/save
 format, and closes none of those decisions.
-See ADR-015 through ADR-017.
+Stage 12.26 adds a replaceable projected circular melee warning driven by a
+real server-safe wind-up phase. It closes the previous requirement for an
+explicit Guardian attack-warning contract, recorded in ADR-034, but does not
+select a renderer decal/particle system, permanent telegraph vocabulary,
+authored ability/timing schema, animation-event contract, audio/haptics
+backend, or physical Android performance policy.
+See ADR-015 through ADR-017 and ADR-034.
 
 Decision criteria:
 
@@ -165,6 +171,18 @@ used ADB forwarding, so it does not close direct-LAN, degraded-network,
 unreliable-sequenced, encryption/authentication, or NAT/relay criteria. See
 ADR-022.
 
+Stage 12.26 protocol-v4 evidence carries Guardian phase and remaining wind-up
+time over that same reliable ordered adapter. The host remains authoritative,
+but the client countdown is receipt-relative, so latency shortens the visible
+warning. Clock synchronization, compensation, jitter/loss testing, transport
+priority, and direct physical LAN remain open.
+
+Protocol v6 evidence adds one bounded Guardian fissure-ring pattern and one
+target-free planar dodge command. A loopback TCP test proves the host owns
+dodge displacement and cooldown rejection, while Game prediction is corrected
+by replicated transforms. This does not close clock synchronization,
+prediction/rollback, jitter/loss, transport priority, or physical-LAN criteria.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -192,6 +210,18 @@ Stage 9 advances the strict network schema to protocol v2 for controlled-entity
 ownership and entity-kind metadata. Its measured full-snapshot traffic is
 additional evidence for evaluating compact encoding/deltas, not a decision to
 adopt JSON permanently. See ADR-022.
+
+Stage 11.5 advances to protocol v3 for gameplay commands and revisioned
+health/flag/inventory snapshots. Stage 12.26 advances to protocol v4 with
+bounded Guardian phase/target/timing values. Both remain strict prototype JSON
+contracts behind the same codec/frame boundary; their full-state cost
+strengthens the case for future compact encoding and deltas without choosing a
+permanent format.
+
+Stage 12.28 advances to protocol v5 for boss phase/pattern/locked-target truth.
+Stages 12.31-12.32 advance to protocol v6 for the fissure-ring pattern and
+bounded dodge direction. These remain strict prototype JSON messages behind
+the replaceable codec/frame boundary.
 
 ---
 
@@ -285,6 +315,32 @@ Choose based on current Dart tooling and maintenance.
 Use mature backend/library.
 
 Avarra owns the event/presentation boundary, not codec/device implementation.
+
+Stage 12.27 evidence defines that replaceable Game-only event boundary and uses
+`audioplayers` 6.8.1 provisionally for looping ambience plus bounded overlapping
+one-shots on Windows and Android. Original generated PCM assets, lifecycle
+suspension, mix settings, ducking, and failure-to-silence behavior validate the
+first integration. This does not permanently select the backend, codec,
+compression/streaming, spatial model, voice priority, adaptive-music,
+community-world asset/licensing, Forge authoring, haptic, or accessibility
+policy. Live Windows and physical-Android listening/latency evidence is still
+required. See ADR-035.
+
+Stage 12.28 exercises that same boundary with one phase-scaled combat layer and
+two boss stingers. This proves authoritative encounter state can drive adaptive
+mixing without entering simulation or portable content. It still does not
+finalize crossfade policy, dynamic range, compression/streaming, spatial audio,
+device latency, community licensing/authoring, or backend permanence. See
+ADR-036.
+
+Stage 12.29 adds three pattern-specific anticipation cues and packages 15
+generated WAVs total. The cue selection remains downstream of authoritative
+boss state and does not close backend, codec, spatial, compression, priority,
+community-authoring, haptic, or live-device tuning decisions.
+
+Stages 12.31-12.32 add distinct fissure-ring anticipation and player-dodge cues,
+bringing the reproducible package to 17 WAVs. They continue to exercise the
+same provisional Game-only boundary and do not resolve the open audio choices.
 
 ---
 

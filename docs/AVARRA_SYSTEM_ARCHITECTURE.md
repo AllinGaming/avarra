@@ -81,6 +81,20 @@ explicit kind while authored world entities remain under streaming ownership.
 Server tick/network metrics stay in the host runtime. Flutter frame/chunk and
 Android memory/thermal measurements remain application/platform concerns.
 
+Stage 11.5 advances that boundary to protocol v3 for host-authoritative
+adventure commands and revisioned health/flag/inventory state. Stage 12.26
+advances it to protocol v4 for bounded Guardian phase, locked-target, and
+wind-up timing state. `avarra_gameplay` still owns the deterministic phase and
+final combat validation; `avarra_replication` mirrors it; only Avarra Game
+projects the warning.
+
+Stage 12.27 keeps device audio at the same outer application boundary. Avarra
+Game maps accepted UI and authoritative/replicated gameplay transitions to an
+injectable controller backed provisionally by `audioplayers`. The host owns
+ambience, mixing, ducking, lifecycle suspension, and graceful silence.
+Server-safe packages, Forge, world definitions, saves, and the protocol do not
+import or persist audio presentation state.
+
 Server-safe packages must not import:
 
 ```text

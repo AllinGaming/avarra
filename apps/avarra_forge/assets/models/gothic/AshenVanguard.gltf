@@ -9,7 +9,7 @@
       "uri": "../cube/Cube.bin"
     },
     {
-      "byteLength": 576,
+      "byteLength": 768,
       "uri": "AshenVanguardAnimation.bin"
     }
   ],
@@ -103,6 +103,26 @@
       "buffer": 1,
       "byteLength": 64,
       "byteOffset": 512
+    },
+    {
+      "buffer": 1,
+      "byteLength": 16,
+      "byteOffset": 576
+    },
+    {
+      "buffer": 1,
+      "byteLength": 48,
+      "byteOffset": 592
+    },
+    {
+      "buffer": 1,
+      "byteLength": 64,
+      "byteOffset": 640
+    },
+    {
+      "buffer": 1,
+      "byteLength": 64,
+      "byteOffset": 704
     }
   ],
   "accessors": [
@@ -268,6 +288,36 @@
     },
     {
       "bufferView": 16,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 17,
+      "componentType": 5126,
+      "count": 4,
+      "max": [
+        0.18
+      ],
+      "min": [
+        0
+      ],
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 18,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 19,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 20,
       "componentType": 5126,
       "count": 4,
       "type": "VEC4"
@@ -559,6 +609,49 @@
           "input": 13,
           "interpolation": "LINEAR",
           "output": 16
+        }
+      ],
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 5,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 1,
+          "target": {
+            "node": 5,
+            "path": "rotation"
+          }
+        },
+        {
+          "sampler": 2,
+          "target": {
+            "node": 4,
+            "path": "rotation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dodge",
+      "samplers": [
+        {
+          "input": 17,
+          "interpolation": "LINEAR",
+          "output": 18
+        },
+        {
+          "input": 17,
+          "interpolation": "LINEAR",
+          "output": 19
+        },
+        {
+          "input": 17,
+          "interpolation": "LINEAR",
+          "output": 20
         }
       ],
       "channels": [

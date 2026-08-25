@@ -570,7 +570,100 @@ void main() {
       _throwsCode(WorldErrorCodes.invalidDefinition),
     );
   });
+
+  test('validates boss attack ranges and power-reward composition', () {
+    final bossJson = _validWorldJson();
+    final bossEntities = bossJson['entities']! as List<dynamic>;
+    final bossEntity = bossEntities.first as Map<String, dynamic>;
+    final bossComponents = bossEntity['components']! as Map<String, dynamic>;
+    bossComponents
+      ..[AvarraComponentType.physicsCollider] = {
+        'schemaVersion': 1,
+        'halfExtents': [0.4, 0.4, 0.4],
+        'bodyKind': 'character',
+        'isSensor': false,
+      }
+      ..[AvarraComponentType.characterController] = {
+        'schemaVersion': 1,
+        'moveSpeed': 1,
+        'skinWidth': 0.03,
+        'arrivalTolerance': 0.08,
+      }
+      ..[AvarraComponentType.health] = {
+        'schemaVersion': 1,
+        'maximumHealth': 120,
+      }
+      ..[AvarraComponentType.basicAttack] = {
+        'schemaVersion': 1,
+        'damage': 12,
+        'range': 2.6,
+        'cooldownSeconds': 1.2,
+      }
+      ..[AvarraComponentType.guardianBehavior] = {
+        'schemaVersion': 1,
+        'perceptionRange': 4,
+        'leashRange': 6,
+      }
+      ..[AvarraComponentType.guardianBoss] = _bossComponentJson()
+      ..[AvarraComponentType.guardianArenaHazard] = {
+        'schemaVersion': 1,
+        'innerSafeRadius': 0.9,
+        'outerRadius': 2.6,
+      };
+    expect(
+      () => WorldPackageCodec().decode(jsonEncode(bossJson)),
+      returnsNormally,
+    );
+
+    (bossComponents[AvarraComponentType.guardianArenaHazard]
+            as Map<String, dynamic>)['outerRadius'] =
+        3;
+    expect(
+      () => WorldPackageCodec().decode(jsonEncode(bossJson)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+    (bossComponents[AvarraComponentType.guardianArenaHazard]
+            as Map<String, dynamic>)['outerRadius'] =
+        2.6;
+
+    (bossComponents[AvarraComponentType.guardianBoss]
+            as Map<String, dynamic>)['sweepRange'] =
+        3;
+    expect(
+      () => WorldPackageCodec().decode(jsonEncode(bossJson)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+
+    final rewardJson = _validWorldJson();
+    final rewardEntities = rewardJson['entities']! as List<dynamic>;
+    final rewardEntity = rewardEntities.first as Map<String, dynamic>;
+    final rewardComponents =
+        rewardEntity['components']! as Map<String, dynamic>;
+    rewardComponents[AvarraComponentType.playerPowerReward] = {
+      'schemaVersion': 1,
+      'maximumHealthBonus': 25,
+    };
+    expect(
+      () => WorldPackageCodec().decode(jsonEncode(rewardJson)),
+      _throwsCode(WorldErrorCodes.invalidDefinition),
+    );
+  });
 }
+
+Map<String, dynamic> _bossComponentJson() => {
+  'schemaVersion': 1,
+  'displayName': 'Vharos, Ashen Castellan',
+  'phaseTwoHealthFraction': 0.67,
+  'phaseThreeHealthFraction': 0.34,
+  'meleeRange': 1.15,
+  'sweepRange': 2.6,
+  'sweepHalfAngleDegrees': 55,
+  'eruptionRadius': 0.9,
+  'engageText': 'Wake.',
+  'phaseTwoText': 'Sweep.',
+  'phaseThreeText': 'Burn.',
+  'defeatText': 'Fall.',
+};
 
 const _worldId = '01890f47-e8b8-7a68-8000-000000000010';
 const _assetId = '01890f47-e8b8-7a68-9000-000000000001';

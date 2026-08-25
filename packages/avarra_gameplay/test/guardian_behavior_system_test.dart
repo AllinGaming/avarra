@@ -114,6 +114,103 @@ void main() {
     expect(result.attack, isNull);
     expect(fixture.playerHealth.currentHealth, 100);
   });
+
+  test(
+    'boss phases select deterministic patterns and locked shapes can miss',
+    () {
+      final fixture = _GuardianFixture(
+        targetPosition: Vector3(2, 0, 0),
+        boss: true,
+      );
+      fixture.setGuardianHealth(60);
+
+      final sweepWarning = fixture.tick(Duration.zero);
+      expect(sweepWarning.encounterPhase, GuardianEncounterPhase.phaseTwo);
+      expect(sweepWarning.attackPattern, GuardianAttackPattern.sweep);
+      expect(sweepWarning.phase, GuardianBehaviorPhase.windingUp);
+      expect(
+        fixture.guardianState.windUpCompletesAt,
+        guardianSweepWindUpDuration,
+      );
+      expect(fixture.guardianState.telegraphTargetPosition, Vector3(2, 0, 0));
+
+      fixture.movePlayer(Vector3(0, 0, 2));
+      final dodgedSweep = fixture.tick(const Duration(milliseconds: 1000));
+      expect(dodgedSweep.attack?.rejection, CombatAttackRejection.outOfRange);
+      expect(fixture.playerHealth.currentHealth, 100);
+      expect(fixture.guardianState.completedAttackCount, 1);
+      expect(
+        fixture.guardianAttackState.nextReadyAt,
+        const Duration(milliseconds: 1500),
+      );
+
+      fixture
+        ..setGuardianHealth(30)
+        ..movePlayer(Vector3(1.8, 0, 0));
+      final eruptionWarning = fixture.tick(const Duration(seconds: 2));
+      expect(eruptionWarning.encounterPhase, GuardianEncounterPhase.phaseThree);
+      expect(eruptionWarning.attackPattern, GuardianAttackPattern.eruption);
+      expect(
+        fixture.guardianState.windUpCompletesAt,
+        const Duration(milliseconds: 3100),
+      );
+
+      fixture.movePlayer(Vector3(0.5, 0, 0));
+      final dodgedEruption = fixture.tick(const Duration(milliseconds: 3200));
+      expect(
+        dodgedEruption.attack?.rejection,
+        CombatAttackRejection.outOfRange,
+      );
+      expect(fixture.playerHealth.currentHealth, 100);
+    },
+  );
+
+  test('phase-three fissure ring locks its center and damages its annulus', () {
+    final fixture =
+        _GuardianFixture(
+            targetPosition: Vector3(1.8, 0, 0),
+            boss: true,
+            arenaHazard: true,
+          )
+          ..setGuardianHealth(30)
+          ..seedPhaseThreeAttackCount(2);
+
+    final warning = fixture.tick(Duration.zero);
+    expect(warning.attackPattern, GuardianAttackPattern.fissureRing);
+    expect(warning.phase, GuardianBehaviorPhase.windingUp);
+    expect(
+      fixture.guardianState.windUpCompletesAt,
+      guardianFissureRingWindUpDuration,
+    );
+    expect(fixture.guardianState.telegraphTargetPosition, Vector3.zero());
+
+    final impact = fixture.tick(const Duration(milliseconds: 1400));
+    expect(impact.attack?.accepted, isTrue);
+    expect(fixture.playerHealth.currentHealth, 90);
+  });
+
+  test(
+    'fissure ring can be dodged through its core or beyond its outer edge',
+    () {
+      for (final safePosition in [Vector3(0.5, 0, 0), Vector3(3.5, 0, 0)]) {
+        final fixture =
+            _GuardianFixture(
+                targetPosition: Vector3(1.8, 0, 0),
+                boss: true,
+                arenaHazard: true,
+              )
+              ..setGuardianHealth(30)
+              ..seedPhaseThreeAttackCount(2);
+
+        fixture.tick(Duration.zero);
+        fixture.movePlayer(safePosition);
+        final dodged = fixture.tick(const Duration(milliseconds: 1400));
+
+        expect(dodged.attack?.rejection, CombatAttackRejection.outOfRange);
+        expect(fixture.playerHealth.currentHealth, 100);
+      }
+    },
+  );
 }
 
 final class _GuardianFixture {
@@ -123,6 +220,8 @@ final class _GuardianFixture {
     Vector3? homePosition,
     GuardianBehaviorPhase initialPhase = GuardianBehaviorPhase.idle,
     bool blocked = false,
+    bool boss = false,
+    bool arenaHazard = false,
   }) {
     final player = ecs.createEntity(entityId: playerId);
     ecs
@@ -141,12 +240,16 @@ final class _GuardianFixture {
         ),
       )
       ..addComponent(guardian, CharacterControllerComponent(moveSpeed: 2))
-      ..addComponent(guardian, HealthComponent(maximumHealth: 50))
+      ..addComponent(guardian, HealthComponent(maximumHealth: boss ? 100 : 50))
       ..addComponent(
         guardian,
         BasicAttackComponent(
           damage: 10,
-          range: 1,
+          range: arenaHazard
+              ? 3.2
+              : boss
+              ? 2.6
+              : 1,
           cooldown: const Duration(milliseconds: 500),
         ),
       )
@@ -165,6 +268,26 @@ final class _GuardianFixture {
               : playerId,
         ),
       );
+
+    if (boss) {
+      ecs.addComponent(
+        guardian,
+        GuardianBossComponent(
+          phaseTwoHealthFraction: 0.67,
+          phaseThreeHealthFraction: 0.34,
+          meleeRange: 1.15,
+          sweepRange: 2.6,
+          sweepHalfAngleDegrees: 55,
+          eruptionRadius: 0.9,
+        ),
+      );
+    }
+    if (arenaHazard) {
+      ecs.addComponent(
+        guardian,
+        GuardianArenaHazardComponent(innerSafeRadius: 0.9, outerRadius: 3.2),
+      );
+    }
 
     if (blocked) {
       final blocker = ecs.createEntity();
@@ -233,9 +356,35 @@ final class _GuardianFixture {
 
   void killGuardian() {
     final handle = ecs.handleFor(guardianId)!;
+    final health = ecs.component<HealthComponent>(handle);
     ecs.replaceComponent<HealthComponent>(
       handle,
-      HealthComponent(maximumHealth: 50, currentHealth: 0),
+      HealthComponent(maximumHealth: health.maximumHealth, currentHealth: 0),
+    );
+  }
+
+  void setGuardianHealth(double currentHealth) {
+    final handle = ecs.handleFor(guardianId)!;
+    final health = ecs.component<HealthComponent>(handle);
+    ecs.replaceComponent<HealthComponent>(
+      handle,
+      HealthComponent(
+        maximumHealth: health.maximumHealth,
+        currentHealth: currentHealth,
+      ),
+    );
+  }
+
+  void seedPhaseThreeAttackCount(int completedAttackCount) {
+    final handle = ecs.handleFor(guardianId)!;
+    final state = ecs.component<GuardianBehaviorStateComponent>(handle);
+    ecs.replaceComponent<GuardianBehaviorStateComponent>(
+      handle,
+      state.transition(
+        phase: GuardianBehaviorPhase.idle,
+        encounterPhase: GuardianEncounterPhase.phaseThree,
+        completedAttackCount: completedAttackCount,
+      ),
     );
   }
 }

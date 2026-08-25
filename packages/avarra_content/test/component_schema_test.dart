@@ -12,7 +12,9 @@ void main() {
       expect(
         registry.schemas.map((schema) => schema.type),
         orderedEquals([
+          AvarraComponentType.guardianArenaHazard,
           AvarraComponentType.guardianBehavior,
+          AvarraComponentType.guardianBoss,
           AvarraComponentType.characterController,
           AvarraComponentType.basicAttack,
           AvarraComponentType.health,
@@ -21,6 +23,7 @@ void main() {
           AvarraComponentType.isometricOccluder,
           AvarraComponentType.isometricOcclusionTarget,
           AvarraComponentType.collectibleItem,
+          AvarraComponentType.playerPowerReward,
           AvarraComponentType.objective,
           AvarraComponentType.objectiveGate,
           AvarraComponentType.itemTurnIn,
@@ -332,6 +335,86 @@ void main() {
         'perceptionRange': 4,
         'leashRange': 6,
       }, contentSchemaVersion: 5),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+  });
+
+  test(
+    'decodes authored boss and passive power reward only in content v10',
+    () {
+      final boss = registry.decode(AvarraComponentType.guardianBoss, {
+        'schemaVersion': 1,
+        'displayName': 'Vharos, Ashen Castellan',
+        'phaseTwoHealthFraction': 0.67,
+        'phaseThreeHealthFraction': 0.34,
+        'meleeRange': 1.15,
+        'sweepRange': 2.6,
+        'sweepHalfAngleDegrees': 55,
+        'eruptionRadius': 0.9,
+        'engageText': 'The Castellan wakes.',
+        'phaseTwoText': 'The ash begins to turn.',
+        'phaseThreeText': 'The chamber starts to burn.',
+        'defeatText': 'The Castellan falls.',
+      });
+      final reward = registry.decode(AvarraComponentType.playerPowerReward, {
+        'schemaVersion': 1,
+        'maximumHealthBonus': 25,
+      });
+
+      expect((boss as GuardianBossDefinition).displayName, contains('Vharos'));
+      expect(boss.phaseThreeHealthFraction, 0.34);
+      expect((reward as PlayerPowerRewardDefinition).maximumHealthBonus, 25);
+      expect(
+        () => registry.decode(AvarraComponentType.guardianBoss, {
+          'schemaVersion': 1,
+          'displayName': 'Vharos',
+          'phaseTwoHealthFraction': 0.4,
+          'phaseThreeHealthFraction': 0.7,
+          'meleeRange': 1,
+          'sweepRange': 2,
+          'sweepHalfAngleDegrees': 55,
+          'eruptionRadius': 1,
+          'engageText': 'Wake.',
+          'phaseTwoText': 'Turn.',
+          'phaseThreeText': 'Burn.',
+          'defeatText': 'Fall.',
+        }),
+        _throwsCode(ContentErrorCodes.invalidComponentData),
+      );
+      expect(
+        () => registry.decode(AvarraComponentType.playerPowerReward, {
+          'schemaVersion': 1,
+          'maximumHealthBonus': 25,
+        }, contentSchemaVersion: 9),
+        _throwsCode(ContentErrorCodes.unknownComponentType),
+      );
+    },
+  );
+
+  test('decodes ordered Guardian arena hazards only in content v11', () {
+    final hazard = registry.decode(AvarraComponentType.guardianArenaHazard, {
+      'schemaVersion': 1,
+      'innerSafeRadius': 0.9,
+      'outerRadius': 3.2,
+    });
+
+    expect(hazard, isA<GuardianArenaHazardDefinition>());
+    expect((hazard as GuardianArenaHazardDefinition).innerSafeRadius, 0.9);
+    expect(hazard.outerRadius, 3.2);
+    expect(
+      () => registry.decode(AvarraComponentType.guardianArenaHazard, {
+        'schemaVersion': 1,
+        'innerSafeRadius': 2,
+        'outerRadius': 1,
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.guardianArenaHazard, {
+        'schemaVersion': 1,
+        'innerSafeRadius': 0.9,
+        'outerRadius': 3.2,
+      }, contentSchemaVersion: 10),
       _throwsCode(ContentErrorCodes.unknownComponentType),
     );
   });

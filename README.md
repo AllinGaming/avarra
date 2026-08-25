@@ -74,22 +74,24 @@ Low-level capabilities such as 3D rendering, physics, audio, codecs, and platfor
 49. `docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`
 50. `docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`
 51. `docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`
-51. `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`
-52. `docs/AVARRA_ANDROID_CI_CD.md`
-53. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
-54. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
-55. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
-56. `docs/AVARRA_MULTIPLAYER_SERVER.md`
-57. `docs/AVARRA_FORGE_ARCHITECTURE.md`
-58. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
-59. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
-60. `docs/AVARRA_OPEN_DECISIONS.md`
-61. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
-62. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
-63. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
-64. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
-65. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
-66. ADRs under `docs/adr/`
+52. `docs/AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`
+53. `docs/AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md`
+54. `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`
+55. `docs/AVARRA_ANDROID_CI_CD.md`
+56. `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`
+57. `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`
+58. `docs/AVARRA_WORLD_CONTENT_MODEL.md`
+59. `docs/AVARRA_MULTIPLAYER_SERVER.md`
+60. `docs/AVARRA_FORGE_ARCHITECTURE.md`
+61. `docs/AVARRA_DART_FLUTTER_LEVERAGE.md`
+62. `docs/AVARRA_IMPLEMENTATION_ROADMAP.md`
+63. `docs/AVARRA_OPEN_DECISIONS.md`
+64. `docs/AVARRA_AI_CREATOR_ARCHITECTURE.md`
+65. `docs/AVARRA_AI_CREATOR_TOOL_API.md`
+66. `docs/AVARRA_AI_AGENT_QUICKSTART.md`
+67. `docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md`
+68. `docs/AVARRA_GIT_UPLOAD_CHECKLIST.md`
+69. ADRs under `docs/adr/`
 
 ## Implementation status
 
@@ -246,6 +248,56 @@ Test Play keeps its direct iteration path. Corrupt preferences repair to
 defaults without touching world/save authority. Formatting, workspace analysis,
 the Game Windows release, and all 18 suites pass 301 tests. Live packaged visual
 acceptance and physical Android remain open.
+Stage 12.26 makes the Hollow Warden's strike readable and dodgeable without
+weakening authority. Entering melee range begins a deterministic 650 ms
+wind-up; damage is revalidated only at completion, so moving clear makes the
+strike miss. Protocol v4 carries bounded Guardian phase/target/timing state and
+Game projects a danger radius, urgency arc, target lock, and semantic dodge
+countdown. Workspace analysis, the Game release, the Server compile, and all 18
+suites pass 306 tests. Live packaged visual acceptance and physical Android
+remain open.
+Stage 12.27 adds the first complete Game-owned audio response layer. Original
+deterministically generated ambience and eight one-shot cues reinforce
+accepted UI navigation, authoritative Guardian commitment, confirmed combat,
+loot, objectives, and mission completion. Version-2 recoverable settings add
+audio enable and master/ambience/effects mix controls; pause/prologue ducking,
+app suspension, bounded overlap, silent failure fallback, and injection keep
+playback out of simulation and tests. Workspace analysis and all 18 suites pass
+311 tests; Windows release and Android debug packages both build and contain
+all nine assets. Human listening, loudness/latency tuning, and physical Android
+acceptance remain open.
+Stage 12.28 authors **Vharos, the Ashen Castellan** as Relay Zero's three-phase
+boss. Content schema v10 supplies typed phase/shape/story data and an additive
+collectible power reward; protocol v5 mirrors phase, pattern, and locked target
+coordinates. Game renders true melee/cone/ground counterplay, named encounter
+banners, and phase-scaled combat music. The persisted Ashen Heart derives 125
+maximum health. All 319 tests and Windows/Server/Android build gates pass;
+human and physical-device encounter tuning remains open. See
+`docs/AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md` and ADR-036.
+Stage 12.29 adds bounded phase posture, ritual aura/sigils, phase-three cracks,
+resolved-attack camera impulse, and three distinct original boss-pattern
+anticipation cues. Stage 12.30 adds Forge's **Ascendant** profile: creators can
+author boss identity, thresholds, attack geometry, encounter copy, and a
+persistent maximum-health reward before one atomic mission stamp.
+Stage 12.31 adds the authored Vharos fissure ring: content schema v11 and
+protocol v6 carry a server-owned annular danger zone with a safe core, a
+truthful Game warning, dedicated cue, and Forge radius controls. Stage 12.32
+adds a real 1.8-unit, 1.5-second player dodge on Shift and the action bar.
+Offline and host authority share collision sweep, wall slide, cooldown, defeat,
+and blocked-path rules; connected Game prediction receives a short adaptive
+visual ease without owning the result. Stage 12.33 makes that burst legible
+with immediate high-speed character motion, projected air trails, ember motes,
+and a landing crescent. The effect tracks the latest authority endpoint and is
+removed by reduced motion. Stage 12.34 replaces the provisional Run mapping
+with a dedicated generated `Dodge` clip and adds one centralized feel profile,
+a two-command Game/Forge animation generator/check workflow, and a CI drift
+gate. The final matrix passes 340 tests across
+18 suites; Game and Forge Windows releases, Server, and Android debug all build
+with all 17 audio assets packaged. Stage 12.35 adds a repository-owned Thermion
+Android build overlay: clean APK builds no longer emit Flutter's legacy-KGP
+warning, and CI rejects its return without changing the immutable renderer
+source pin. See the Stage 12.29-12.35 validation reports, the combat-feel
+authoring guide, and ADR-037/ADR-038.
 Physical
 Android direct-LAN, touch, performance, battery/thermal, and human playability
 remain the named release boundary.
@@ -369,7 +421,40 @@ gate to the streamed guardian chamber. A guarded Relay Core now enters a
 player-owned persisted inventory and completes the solo mission when returned
 to the authored control console. Protocol v3 and Stage 11.5 now route combat,
 guardian AI, objectives, pickup, per-player inventory, turn-in, and restart
-through the authoritative host. Stage 11.6 turns the prototype into `Relay
+through the authoritative host. Protocol v4 and Stage 12.26 add replicated
+Guardian phase/target/timing and a real 650 ms authority-owned dodge window.
+Stage 12.27 maps accepted UI and authoritative gameplay transitions through a
+replaceable Game-only audio controller with original bundled cues and
+persistent mix settings; no audio state enters simulation or networking.
+Stage 12.28 makes that climax a named three-phase boss encounter. Vharos uses
+authoritative melee, locked cone sweep, and locked ground eruption patterns
+replicated by protocol v5. True-shape warnings, authored phase beats, adaptive
+combat audio, and the persisted +25-health Ashen Heart reward complete the
+slice without creating a generic ability engine or changing save format.
+Stage 12.29 makes those phases visually and audibly distinct through
+authoritative-derived Game presentation, while Stage 12.30 exposes the same
+typed boss and reward contract through Forge's existing command, validation,
+Undo/Redo, export, and Test Play path.
+Stage 12.31 adds an optional content-v11 Guardian arena hazard and a
+protocol-v6 fissure-ring pattern. Vharos locks a 0.9-to-3.2-unit annulus in
+phase three; the core and exterior are safe, Game presents the true geometry,
+and Forge authors both radii. Stage 12.32 uses the same protocol version for a
+bounded dodge direction. A shared server-safe system owns its 1.8-unit
+collision-swept displacement and 1.5-second cooldown; Game supplies Shift/touch
+action input, prediction, adaptive 170 ms presentation smoothing, and a
+Game-only cue without adding invulnerability or changing save format.
+Stage 12.33 adds a Game-only dodge-feel layer over that truth: a 2.8x
+non-looping authored Run clip, 25 ms crossfade, projected three-strand trail,
+ember motes, and landing crescent. The trail follows replicated corrections and
+reduced motion removes it entirely; no gameplay or wire contract changes.
+Stage 12.34 replaces that provisional clip mapping with a dedicated generated
+180 ms `Dodge` pose. One profile now owns playback and projected-effect tuning,
+while one deterministic tool writes matching Game/Forge buffers and glTF
+metadata or checks them read-only in CI.
+Stage 12.35 redirects only Thermion's obsolete Android build file to a
+Game-owned AGP 9 compatibility overlay. Thermion source remains pinned, and
+clean Android packaging passes without the legacy Kotlin-plugin warning.
+Stage 11.6 turns the prototype into `Relay
 Zero: Ashfall` with click/tap pursuit and repeated attacks, automatic approach
 for interactions, three Hollow Wardens with authored drops, basalt floors, and
 an original six-model/three-material dark-gothic asset kit. Stage 12.1 now
@@ -457,6 +542,8 @@ See
 `docs/AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`,
 `docs/AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
 `docs/AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
+`docs/AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`,
 `docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
 `docs/AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, and
 `docs/AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.

@@ -23,6 +23,7 @@ dependencies:
   avarra_streaming: ^0.1.0
   avarra_thermion_bridge: ^0.1.0
   avarra_world: ^0.1.0
+  audioplayers: ^6.8.1
   file_selector: ^1.1.0
   vector_math: ^2.2.0
   path_provider: ^2.1.6
@@ -36,6 +37,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/audio/
     - assets/models/cube/
     - assets/models/gothic/
     - assets/models/gothic/materials/

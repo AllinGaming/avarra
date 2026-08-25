@@ -450,6 +450,135 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.guardianBoss,
+          version: 1,
+          introducedInContentSchemaVersion: 10,
+          editorLabel: 'Guardian Boss',
+          editorOrder: 48,
+          help:
+              'Named three-phase Guardian with melee, sweep, and eruption attacks.',
+          requiredComponentTypes: const {
+            AvarraComponentType.guardianBehavior,
+            AvarraComponentType.basicAttack,
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'displayName',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Boss name',
+              defaultValue: 'Ash Warden',
+              maximumLength: 80,
+            ),
+            ComponentFieldSchema(
+              name: 'phaseTwoHealthFraction',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Phase II health fraction',
+              defaultValue: 0.67,
+              minimum: 0.01,
+              maximum: 0.99,
+            ),
+            ComponentFieldSchema(
+              name: 'phaseThreeHealthFraction',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Phase III health fraction',
+              defaultValue: 0.34,
+              minimum: 0.01,
+              maximum: 0.98,
+            ),
+            ComponentFieldSchema(
+              name: 'meleeRange',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Melee radius',
+              defaultValue: 1.15,
+              minimum: 0.1,
+              maximum: 10,
+            ),
+            ComponentFieldSchema(
+              name: 'sweepRange',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Sweep range',
+              defaultValue: 2.6,
+              minimum: 0.1,
+              maximum: 10,
+            ),
+            ComponentFieldSchema(
+              name: 'sweepHalfAngleDegrees',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Sweep half angle',
+              defaultValue: 55,
+              minimum: 1,
+              maximum: 179,
+            ),
+            ComponentFieldSchema(
+              name: 'eruptionRadius',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Eruption radius',
+              defaultValue: 0.9,
+              minimum: 0.1,
+              maximum: 10,
+            ),
+            ComponentFieldSchema(
+              name: 'engageText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Entrance beat',
+              defaultValue: 'The Warden wakes beneath the ash.',
+              maximumLength: 280,
+            ),
+            ComponentFieldSchema(
+              name: 'phaseTwoText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Phase II beat',
+              defaultValue: 'Its chains break. The chamber becomes its weapon.',
+              maximumLength: 280,
+            ),
+            ComponentFieldSchema(
+              name: 'phaseThreeText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Phase III beat',
+              defaultValue: 'The buried fire answers its final command.',
+              maximumLength: 280,
+            ),
+            ComponentFieldSchema(
+              name: 'defeatText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Defeat beat',
+              defaultValue: 'The Warden falls. Its heart still burns.',
+              maximumLength: 280,
+            ),
+          ],
+        ),
+        ComponentSchema(
+          type: AvarraComponentType.guardianArenaHazard,
+          version: 1,
+          introducedInContentSchemaVersion: 11,
+          editorLabel: 'Guardian Arena Hazard',
+          editorOrder: 49,
+          help:
+              'Phase-three fissure ring with a safe core and safe outer space.',
+          requiredComponentTypes: const {
+            AvarraComponentType.guardianBoss,
+            AvarraComponentType.basicAttack,
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'innerSafeRadius',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Inner safe radius',
+              defaultValue: 0.9,
+              minimum: 0.1,
+              maximum: 10,
+            ),
+            ComponentFieldSchema(
+              name: 'outerRadius',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Outer hazard radius',
+              defaultValue: 3.2,
+              minimum: 0.2,
+              maximum: 10,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.interactable,
           version: 1,
           introducedInContentSchemaVersion: 2,
@@ -619,6 +748,27 @@ final class ComponentSchemaRegistry {
               kind: ComponentFieldKind.stableId,
               editorLabel: 'Guardian entity',
               stableIdDomain: StableIdDomain.entity,
+            ),
+          ],
+        ),
+        ComponentSchema(
+          type: AvarraComponentType.playerPowerReward,
+          version: 1,
+          introducedInContentSchemaVersion: 10,
+          editorLabel: 'Player Power Reward',
+          editorOrder: 68,
+          help:
+              'Grants a passive maximum-health bonus while its collectible is owned.',
+          requiredComponentTypes: const {AvarraComponentType.collectibleItem},
+          creatableWithoutContext: false,
+          fields: const [
+            ComponentFieldSchema(
+              name: 'maximumHealthBonus',
+              kind: ComponentFieldKind.number,
+              editorLabel: 'Maximum health bonus',
+              defaultValue: 25,
+              minimum: 1,
+              maximum: 1000,
             ),
           ],
         ),
@@ -815,12 +965,17 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.health => _decodeHealth(data),
       AvarraComponentType.basicAttack => _decodeBasicAttack(data),
       AvarraComponentType.guardianBehavior => _decodeGuardianBehavior(data),
+      AvarraComponentType.guardianBoss => _decodeGuardianBoss(data),
+      AvarraComponentType.guardianArenaHazard => _decodeGuardianArenaHazard(
+        data,
+      ),
       AvarraComponentType.interactable => _decodeInteractable(data),
       AvarraComponentType.setPersistentFlagOnInteract =>
         _decodeSetPersistentFlagOnInteract(data),
       AvarraComponentType.objective => _decodeObjective(data),
       AvarraComponentType.objectiveGate => _decodeObjectiveGate(data),
       AvarraComponentType.collectibleItem => _decodeCollectibleItem(data),
+      AvarraComponentType.playerPowerReward => _decodePlayerPowerReward(data),
       AvarraComponentType.itemTurnIn => _decodeItemTurnIn(data),
       AvarraComponentType.missionNarrative => _decodeMissionNarrative(data),
       AvarraComponentType.persistentFlags => _decodePersistentFlags(data),
@@ -907,6 +1062,74 @@ final class ComponentSchemaRegistry {
     );
   }
 
+  GuardianBossDefinition _decodeGuardianBoss(Map<String, Object?> data) {
+    final displayName = data['displayName']! as String;
+    final phaseTwo = (data['phaseTwoHealthFraction']! as num).toDouble();
+    final phaseThree = (data['phaseThreeHealthFraction']! as num).toDouble();
+    final meleeRange = (data['meleeRange']! as num).toDouble();
+    final sweepRange = (data['sweepRange']! as num).toDouble();
+    final sweepHalfAngle = (data['sweepHalfAngleDegrees']! as num).toDouble();
+    final eruptionRadius = (data['eruptionRadius']! as num).toDouble();
+    final engageText = data['engageText']! as String;
+    final phaseTwoText = data['phaseTwoText']! as String;
+    final phaseThreeText = data['phaseThreeText']! as String;
+    final defeatText = data['defeatText']! as String;
+    final storyValues = [
+      displayName,
+      engageText,
+      phaseTwoText,
+      phaseThreeText,
+      defeatText,
+    ];
+    if (displayName.length > 80 ||
+        storyValues.any((value) => value.trim().isEmpty) ||
+        storyValues.skip(1).any((value) => value.length > 280) ||
+        phaseTwo <= 0 ||
+        phaseTwo >= 1 ||
+        phaseThree <= 0 ||
+        phaseThree >= phaseTwo ||
+        meleeRange <= 0 ||
+        sweepRange < meleeRange ||
+        sweepHalfAngle <= 0 ||
+        sweepHalfAngle >= 180 ||
+        eruptionRadius <= 0) {
+      _invalidComponent(
+        AvarraComponentType.guardianBoss,
+        'Guardian boss name, phase, attack shape, or story text is invalid.',
+      );
+    }
+    return GuardianBossDefinition(
+      displayName: displayName,
+      phaseTwoHealthFraction: phaseTwo,
+      phaseThreeHealthFraction: phaseThree,
+      meleeRange: meleeRange,
+      sweepRange: sweepRange,
+      sweepHalfAngleDegrees: sweepHalfAngle,
+      eruptionRadius: eruptionRadius,
+      engageText: engageText,
+      phaseTwoText: phaseTwoText,
+      phaseThreeText: phaseThreeText,
+      defeatText: defeatText,
+    );
+  }
+
+  GuardianArenaHazardDefinition _decodeGuardianArenaHazard(
+    Map<String, Object?> data,
+  ) {
+    final innerSafeRadius = (data['innerSafeRadius']! as num).toDouble();
+    final outerRadius = (data['outerRadius']! as num).toDouble();
+    if (innerSafeRadius <= 0 || outerRadius <= innerSafeRadius) {
+      _invalidComponent(
+        AvarraComponentType.guardianArenaHazard,
+        'Guardian arena hazard radii must be positive and ordered.',
+      );
+    }
+    return GuardianArenaHazardDefinition(
+      innerSafeRadius: innerSafeRadius,
+      outerRadius: outerRadius,
+    );
+  }
+
   InteractableDefinition _decodeInteractable(Map<String, Object?> data) {
     final label = data['label']! as String;
     final range = (data['range']! as num).toDouble();
@@ -990,6 +1213,19 @@ final class ComponentSchemaRegistry {
       collectedFlagKey: collectedFlagKey,
       guardedByEntityId: EntityId.parse(data['guardedByEntityId']! as String),
     );
+  }
+
+  PlayerPowerRewardDefinition _decodePlayerPowerReward(
+    Map<String, Object?> data,
+  ) {
+    final maximumHealthBonus = (data['maximumHealthBonus']! as num).toDouble();
+    if (maximumHealthBonus <= 0 || maximumHealthBonus > 1000) {
+      _invalidComponent(
+        AvarraComponentType.playerPowerReward,
+        'Player power reward maximum-health bonus is invalid.',
+      );
+    }
+    return PlayerPowerRewardDefinition(maximumHealthBonus: maximumHealthBonus);
   }
 
   ItemTurnInDefinition _decodeItemTurnIn(Map<String, Object?> data) {

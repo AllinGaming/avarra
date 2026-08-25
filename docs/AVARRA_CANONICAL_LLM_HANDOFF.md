@@ -187,8 +187,11 @@ Thermion / Filament
 Thermion is pinned to official `v0.5.0-pre.5` commit `caad378…` after published
 0.4.1 passed compile gates but failed the live Windows Vulkan gate. The pinned
 commit passes Windows runtime stability/close and Android package gates on
-Flutter 3.44.4 stable, with a scoped Android compile-SDK workaround. The
-Windows visual/lifecycle gate and Pixel 10 Pro Android emulator
+Flutter 3.44.4 stable. A Game-owned Gradle overlay now replaces only the pinned
+plugin's obsolete AGP 7.3/Kotlin build instructions with AVARRA's API 36,
+Java 17, and AGP 9 compiler-options contract; a clean APK builds without the
+legacy-KGP warning and CI rejects its return. The Windows visual/lifecycle gate
+and Pixel 10 Pro Android emulator
 cold-start/lifecycle checks also pass. The renderer choice is not irreversible
 and remains subject to physical Android and later interaction validation. See
 ADR-015 through ADR-017.
@@ -515,6 +518,11 @@ return-console turn-in, derived mission feedback, and restored completion.
 Protocol v3 and Stage 11.5 add bounded attack/interaction/restart commands,
 host-owned guardian/combat/adventure simulation, revisioned health/flag/player
 inventory mirrors, and a connected end-to-end Relay Zero completion proof.
+Protocol v4 and Stage 12.26 add bounded Guardian phase, locked-target, and
+remaining-wind-up state to those gameplay snapshots. The host-owned state
+machine now commits for 650 ms before `CombatSystem` revalidates the strike.
+Game consumes this state only to project a truthful danger radius and dodge
+countdown.
 Stage 11.6 turns that proof into `Relay Zero: Ashfall`: selected hostiles are
 pursued and repeatedly attacked, selected interactions are approached and used,
 three authored Hollow Wardens reveal enemy-bound loot on defeat, and an
@@ -741,6 +749,65 @@ entering world/save/network authority. Forge Test Play bypasses this shell.
 Formatting, workspace analysis, the Game Windows release, and the 18-suite
 matrix pass 301 tests; live packaged visual acceptance and physical Android
 remain open.
+Stage 12.26 replaces the Hollow Warden's immediate melee hit with an explicit
+server-safe `windingUp` phase and a fixed 650 ms commitment. Damage still
+resolves through the existing combat system at completion, so a player who
+moves outside the radius takes no damage. Protocol v4 replicates bounded
+Guardian phase, target, and remaining timing; Game mirrors that state only for
+a projected radius, urgency arc, target lock, and semantic dodge warning.
+Formatting, workspace analysis, the Game Windows release, the Server compile,
+and the 18-suite matrix pass 306 tests. No world/content/save schema changed;
+live packaged acceptance, degraded-network timing, and physical Android remain
+open.
+Stage 12.27 adds an injectable Game-only audio response boundary. A provisional
+`audioplayers` adapter loops original generated ambience and uses bounded pools
+for UI, authoritative Guardian wind-up, confirmed combat, pickup, objective,
+and completion cues. The Game host owns live mix updates, pause/prologue
+ducking, app suspension, failure-to-silence fallback, and disposal. Recoverable
+preferences advance to version 2 with audio enable and validated
+master/ambience/effects levels; version-1 data migrates to defaults. No audio
+state enters simulation, ECS, `.avarra` content, saves, commands, replication,
+Forge, or Server. Workspace analysis and the 18-suite matrix pass 311 tests;
+Game Windows release and Android debug packages build and contain all nine
+assets. Human listening, loudness/latency tuning, community-world audio
+authoring, and physical Android acceptance remain open.
+Stage 12.28 turns Relay Zero's core Warden into Vharos, Ashen Castellan.
+Content schema v10 authors a named three-phase Guardian boss and a collectible
+player-power reward. Protocol v5 mirrors phase, attack pattern, and locked
+telegraph target; authoritative melee, sweep, and eruption geometry remains
+server-safe. The persisted Ashen Heart derives +25 maximum health.
+Stage 12.29 adds bounded Game-only boss posture, projected ritual VFX,
+resolved-attack shake, and three pattern-specific original cues over that
+authority. Stage 12.30 exposes the same existing schema through Forge's atomic
+Combat mission template and new Ascendant profile. Creators tune boss identity,
+phase thresholds, attack shapes, story beats, and reward power through typed
+creator actions with validation and Undo/Redo. No generic encounter engine,
+new schema version, renderer authority, or direct JSON mutation path was added.
+Stage 12.31 adds optional content-schema-v11 Guardian arena hazard authoring.
+Vharos's authority-owned phase-three fissure ring damages only the authored
+annulus; Game exposes the safe core and Forge tunes both radii. Protocol v6
+mirrors the new pattern. Stage 12.32 uses the same protocol version for a
+bounded player dodge command. Offline and host simulation share one
+collision-swept 1.8-unit move and 1.5-second cooldown, while Game supplies
+Shift/action-bar input, correction-aware visual easing, and one cue without
+invulnerability or save changes. Stage 12.33 adds Game-only dodge combat feel:
+the existing authored Run clip plays once at 2.8x speed, and a projected
+three-strand trail, ember motes, and landing crescent follow the latest
+authority endpoint. Reduced motion removes this layer. Stage 12.34 replaces the
+provisional Run mapping with a dedicated generated 180 ms Dodge clip. One Game
+profile centralizes playback and projected-effect tuning; one deterministic
+tool writes matching Game/Forge buffers and glTF metadata, verifies them
+read-only with `--check`, and is enforced by CI. Workspace analysis and
+340 tests across 18
+suites pass. Game and Forge Windows releases, Server, and Android debug build;
+all 17 audio assets are packaged.
+Stage 12.35 keeps the immutable Thermion source pin but redirects its Android
+subproject to a repository-owned Gradle compatibility overlay. The obsolete
+embedded AGP 7.3/Kotlin 1.7 buildscript, compile SDK 33, and KGP application no
+longer run. Clean Android packaging passes without Flutter's legacy-KGP warning,
+and the Android CI script now fails if it returns.
+Human packaged play/listening, bespoke skeletal boss/dodge animation,
+renderer-native VFX, and physical Android acceptance remain open.
 Android CI hardening separates native Game packaging from the combined
 quality/Windows job. A parallel Windows job pins Java 17, Android API 36,
 Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1. CI calls the shared
@@ -791,8 +858,10 @@ See
 `AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
 `AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
 `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
+`AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`,
+`AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-033.
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-035.
 
 ---
 

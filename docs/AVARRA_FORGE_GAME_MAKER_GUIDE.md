@@ -49,7 +49,11 @@ launches the real Game application with a disposable export.
   labels before stamping;
 - write the mission title, opening briefing, return beat, and completion
   epilogue that Game presents from authoritative progress;
-- start from an Initiate, Sentinel, or Champion encounter profile and select
+- start from an Initiate, Sentinel, Champion, or Ascendant encounter profile;
+- author a named three-phase boss, attack shapes, phase story beats, and a
+  persistent maximum-health reward before one atomic mission stamp;
+- tune the Ascendant fissure-ring inner safe radius and outer danger radius;
+- select
   separate declared assets for the Guardian, loot, and completion console;
 - undo and redo typed creator commands;
 - aggregate validation issues before export;
@@ -207,6 +211,11 @@ performance acceptance are still open.
 - A guarded collectible references an authored Guardian by stable entity ID.
 - An item turn-in references an authored collectible by stable item ID.
 - A mission narrative attaches to an item turn-in and bounds each prose field.
+- A boss requires Guardian behavior and a compatible basic attack. Phase
+  thresholds descend from Phase II to Phase III, and attack shapes are bounded.
+- A Guardian arena hazard requires a boss and strictly ordered positive inner
+  safe and outer danger radii. Basic Attack range must cover the outer edge.
+- A player-power reward attaches to a collectible and must be positive.
 - Renderable references must use assets declared by the world.
 - World definitions and runtime save state stay separate.
 
@@ -230,8 +239,8 @@ bundled Relay Zero adventure.
   permanent scripting model is still an open technical decision.
 - Quest graphs, dialogue, weighted loot tables, encounter waves, spawn
   configuration, lobby rules, and server presets still need creator-facing
-  tools. The current combat mission chain is one Guardian, one guaranteed
-  collectible, and one item turn-in.
+  tools. The current combat mission chain is one Guardian or three-phase boss,
+  one guaranteed collectible/power reward, and one item turn-in.
 - The Combat mission template supports separate role assets, but only from the
   world's existing declarations. Settings persist for the Forge session, but
   user-authored reusable prefabs and saved template libraries remain future

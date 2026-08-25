@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_physics/avarra_physics.dart';
@@ -15,6 +17,9 @@ final class GuardianBehaviorTickResult {
     required this.guardianId,
     required this.previousPhase,
     required this.phase,
+    required this.previousEncounterPhase,
+    required this.encounterPhase,
+    required this.attackPattern,
     required this.positionChanged,
     this.movement,
     this.attack,
@@ -23,12 +28,18 @@ final class GuardianBehaviorTickResult {
   final EntityId guardianId;
   final GuardianBehaviorPhase previousPhase;
   final GuardianBehaviorPhase phase;
+  final GuardianEncounterPhase previousEncounterPhase;
+  final GuardianEncounterPhase encounterPhase;
+  final GuardianAttackPattern attackPattern;
   final bool positionChanged;
   final CharacterMovementResult? movement;
   final CombatAttackResult? attack;
 
   bool get changed =>
-      previousPhase != phase || positionChanged || (attack?.accepted ?? false);
+      previousPhase != phase ||
+      previousEncounterPhase != encounterPhase ||
+      positionChanged ||
+      (attack?.accepted ?? false);
 }
 
 /// Deterministic, server-safe guardian perception and action state machine.
@@ -84,7 +95,10 @@ final class GuardianBehaviorSystem {
         )
         ..replaceComponent<GuardianBehaviorStateComponent>(
           entry.handle,
-          entry.component.transition(phase: GuardianBehaviorPhase.idle),
+          entry.component.transition(
+            phase: GuardianBehaviorPhase.idle,
+            completedAttackCount: 0,
+          ),
         );
       if (ecs.hasComponent<BasicAttackStateComponent>(entry.handle)) {
         ecs.replaceComponent<BasicAttackStateComponent>(
@@ -102,12 +116,28 @@ final class GuardianBehaviorSystem {
     required double deltaSeconds,
   }) {
     final handle = _requireGuardian(guardianId);
-    final state = ecs.component<GuardianBehaviorStateComponent>(handle);
+    final initialState = ecs.component<GuardianBehaviorStateComponent>(handle);
     final health = ecs.component<HealthComponent>(handle);
+    final boss = ecs.tryComponent<GuardianBossComponent>(handle);
+    final arenaHazard = ecs.tryComponent<GuardianArenaHazardComponent>(handle);
+    var state = initialState;
+    final encounterPhase = _encounterPhaseFor(boss, health);
+    if (encounterPhase != state.encounterPhase) {
+      final next = state.transition(
+        phase: state.phase == GuardianBehaviorPhase.windingUp
+            ? GuardianBehaviorPhase.pursuing
+            : state.phase,
+        encounterPhase: encounterPhase,
+        completedAttackCount: 0,
+      );
+      _replaceStateIfChanged(handle, state, next);
+      state = next;
+    }
     if (health.isDead) {
       return _transition(
         guardianId: guardianId,
         handle: handle,
+        initialState: initialState,
         state: state,
         phase: GuardianBehaviorPhase.defeated,
       );
@@ -117,6 +147,7 @@ final class GuardianBehaviorSystem {
       return _returnHome(
         guardianId: guardianId,
         handle: handle,
+        initialState: initialState,
         state: state,
         deltaSeconds: deltaSeconds,
       );
@@ -136,6 +167,7 @@ final class GuardianBehaviorSystem {
       return _returnHome(
         guardianId: guardianId,
         handle: handle,
+        initialState: initialState,
         state: state,
         deltaSeconds: deltaSeconds,
       );
@@ -152,6 +184,7 @@ final class GuardianBehaviorSystem {
       return _returnHome(
         guardianId: guardianId,
         handle: handle,
+        initialState: initialState,
         state: state,
         deltaSeconds: deltaSeconds,
       );
@@ -167,14 +200,18 @@ final class GuardianBehaviorSystem {
       if (state.phase == GuardianBehaviorPhase.idle) {
         return GuardianBehaviorTickResult(
           guardianId: guardianId,
-          previousPhase: state.phase,
+          previousPhase: initialState.phase,
           phase: state.phase,
+          previousEncounterPhase: initialState.encounterPhase,
+          encounterPhase: state.encounterPhase,
+          attackPattern: state.attackPattern,
           positionChanged: false,
         );
       }
       return _returnHome(
         guardianId: guardianId,
         handle: handle,
+        initialState: initialState,
         state: state,
         deltaSeconds: deltaSeconds,
       );
@@ -186,32 +223,76 @@ final class GuardianBehaviorSystem {
       if (simulationTime < state.windUpCompletesAt!) {
         return GuardianBehaviorTickResult(
           guardianId: guardianId,
-          previousPhase: state.phase,
+          previousPhase: initialState.phase,
           phase: state.phase,
+          previousEncounterPhase: initialState.encounterPhase,
+          encounterPhase: state.encounterPhase,
+          attackPattern: state.attackPattern,
           positionChanged: false,
         );
       }
-      final attack = _combat.attack(
-        attackerId: guardianId,
-        targetId: effectiveTargetId,
-        simulationTime: simulationTime,
+      final targetInsidePattern =
+          boss == null ||
+          _targetInsideBossPattern(
+            boss: boss,
+            arenaHazard: arenaHazard,
+            state: state,
+            guardianPosition: transform.position,
+            targetPosition: targetPosition,
+          );
+      final attack = targetInsidePattern
+          ? _combat.attack(
+              attackerId: guardianId,
+              targetId: effectiveTargetId,
+              simulationTime: simulationTime,
+            )
+          : CombatAttackResult.rejected(
+              attackerId: guardianId,
+              targetId: effectiveTargetId,
+              rejection: CombatAttackRejection.outOfRange,
+            );
+      if (boss != null) {
+        _consumeBossAttackCooldown(
+          handle: handle,
+          attack: attackDefinition,
+          simulationTime: simulationTime,
+        );
+      }
+      final engagementRange = _engagementRange(
+        boss,
+        arenaHazard,
+        state.attackPattern,
+        attackDefinition.range,
       );
       final next = state.transition(
-        phase: attack.accepted || targetDistance <= attackDefinition.range
+        phase: attack.accepted || targetDistance <= engagementRange
             ? GuardianBehaviorPhase.attacking
             : GuardianBehaviorPhase.pursuing,
         targetEntityId: effectiveTargetId,
+        encounterPhase: state.encounterPhase,
+        completedAttackCount:
+            state.completedAttackCount + (boss == null ? 0 : 1),
       );
       _replaceStateIfChanged(handle, state, next);
       return GuardianBehaviorTickResult(
         guardianId: guardianId,
-        previousPhase: state.phase,
+        previousPhase: initialState.phase,
         phase: next.phase,
+        previousEncounterPhase: initialState.encounterPhase,
+        encounterPhase: next.encounterPhase,
+        attackPattern: state.attackPattern,
         positionChanged: false,
         attack: attack,
       );
     }
-    if (targetDistance <= attackDefinition.range) {
+    final nextPattern = _nextAttackPattern(boss, arenaHazard, state);
+    final engagementRange = _engagementRange(
+      boss,
+      arenaHazard,
+      nextPattern,
+      attackDefinition.range,
+    );
+    if (targetDistance <= engagementRange) {
       final attackState = ecs.component<BasicAttackStateComponent>(handle);
       final ready = simulationTime >= attackState.nextReadyAt;
       final next = state.transition(
@@ -220,14 +301,24 @@ final class GuardianBehaviorSystem {
             : GuardianBehaviorPhase.attacking,
         targetEntityId: effectiveTargetId,
         windUpCompletesAt: ready
-            ? simulationTime + guardianAttackWindUpDuration
+            ? simulationTime + guardianWindUpDurationFor(nextPattern)
+            : null,
+        encounterPhase: state.encounterPhase,
+        attackPattern: nextPattern,
+        telegraphTargetPosition: ready
+            ? nextPattern == GuardianAttackPattern.fissureRing
+                  ? transform.position
+                  : targetPosition
             : null,
       );
       _replaceStateIfChanged(handle, state, next);
       return GuardianBehaviorTickResult(
         guardianId: guardianId,
-        previousPhase: state.phase,
+        previousPhase: initialState.phase,
         phase: next.phase,
+        previousEncounterPhase: initialState.encounterPhase,
+        encounterPhase: next.encounterPhase,
+        attackPattern: next.attackPattern,
         positionChanged: false,
       );
     }
@@ -241,12 +332,16 @@ final class GuardianBehaviorSystem {
     final next = state.transition(
       phase: GuardianBehaviorPhase.pursuing,
       targetEntityId: effectiveTargetId,
+      encounterPhase: state.encounterPhase,
     );
     _replaceStateIfChanged(handle, state, next);
     return GuardianBehaviorTickResult(
       guardianId: guardianId,
-      previousPhase: state.phase,
+      previousPhase: initialState.phase,
       phase: next.phase,
+      previousEncounterPhase: initialState.encounterPhase,
+      encounterPhase: next.encounterPhase,
+      attackPattern: next.attackPattern,
       positionChanged: _planarDistance(before, movement.position) > 1e-9,
       movement: movement,
     );
@@ -255,6 +350,7 @@ final class GuardianBehaviorSystem {
   GuardianBehaviorTickResult _returnHome({
     required EntityId guardianId,
     required EntityHandle handle,
+    required GuardianBehaviorStateComponent initialState,
     required GuardianBehaviorStateComponent state,
     required double deltaSeconds,
   }) {
@@ -267,12 +363,18 @@ final class GuardianBehaviorSystem {
     final phase = movement.arrived
         ? GuardianBehaviorPhase.idle
         : GuardianBehaviorPhase.returning;
-    final next = state.transition(phase: phase);
+    final next = state.transition(
+      phase: phase,
+      encounterPhase: state.encounterPhase,
+    );
     _replaceStateIfChanged(handle, state, next);
     return GuardianBehaviorTickResult(
       guardianId: guardianId,
-      previousPhase: state.phase,
+      previousPhase: initialState.phase,
       phase: phase,
+      previousEncounterPhase: initialState.encounterPhase,
+      encounterPhase: next.encounterPhase,
+      attackPattern: next.attackPattern,
       positionChanged: _planarDistance(before, movement.position) > 1e-9,
       movement: movement,
     );
@@ -281,16 +383,157 @@ final class GuardianBehaviorSystem {
   GuardianBehaviorTickResult _transition({
     required EntityId guardianId,
     required EntityHandle handle,
+    required GuardianBehaviorStateComponent initialState,
     required GuardianBehaviorStateComponent state,
     required GuardianBehaviorPhase phase,
   }) {
-    final next = state.transition(phase: phase);
+    final next = state.transition(
+      phase: phase,
+      encounterPhase: state.encounterPhase,
+    );
     _replaceStateIfChanged(handle, state, next);
     return GuardianBehaviorTickResult(
       guardianId: guardianId,
-      previousPhase: state.phase,
+      previousPhase: initialState.phase,
       phase: phase,
+      previousEncounterPhase: initialState.encounterPhase,
+      encounterPhase: next.encounterPhase,
+      attackPattern: next.attackPattern,
       positionChanged: false,
+    );
+  }
+
+  GuardianEncounterPhase _encounterPhaseFor(
+    GuardianBossComponent? boss,
+    HealthComponent health,
+  ) {
+    if (boss == null) return GuardianEncounterPhase.standard;
+    final fraction = health.currentHealth / health.maximumHealth;
+    if (fraction <= boss.phaseThreeHealthFraction) {
+      return GuardianEncounterPhase.phaseThree;
+    }
+    if (fraction <= boss.phaseTwoHealthFraction) {
+      return GuardianEncounterPhase.phaseTwo;
+    }
+    return GuardianEncounterPhase.phaseOne;
+  }
+
+  GuardianAttackPattern _nextAttackPattern(
+    GuardianBossComponent? boss,
+    GuardianArenaHazardComponent? arenaHazard,
+    GuardianBehaviorStateComponent state,
+  ) {
+    if (boss == null ||
+        state.encounterPhase == GuardianEncounterPhase.standard ||
+        state.encounterPhase == GuardianEncounterPhase.phaseOne) {
+      return GuardianAttackPattern.melee;
+    }
+    if (state.encounterPhase == GuardianEncounterPhase.phaseTwo) {
+      return state.completedAttackCount.isEven
+          ? GuardianAttackPattern.sweep
+          : GuardianAttackPattern.melee;
+    }
+    if (arenaHazard == null) {
+      return switch (state.completedAttackCount % 3) {
+        0 => GuardianAttackPattern.eruption,
+        1 => GuardianAttackPattern.sweep,
+        _ => GuardianAttackPattern.melee,
+      };
+    }
+    return switch (state.completedAttackCount % 4) {
+      0 => GuardianAttackPattern.eruption,
+      1 => GuardianAttackPattern.sweep,
+      2 => GuardianAttackPattern.fissureRing,
+      _ => GuardianAttackPattern.melee,
+    };
+  }
+
+  double _engagementRange(
+    GuardianBossComponent? boss,
+    GuardianArenaHazardComponent? arenaHazard,
+    GuardianAttackPattern pattern,
+    double basicAttackRange,
+  ) {
+    if (boss == null) return basicAttackRange;
+    return switch (pattern) {
+      GuardianAttackPattern.melee => boss.meleeRange,
+      GuardianAttackPattern.sweep => boss.sweepRange,
+      GuardianAttackPattern.eruption => basicAttackRange,
+      GuardianAttackPattern.fissureRing =>
+        arenaHazard?.outerRadius ?? basicAttackRange,
+    };
+  }
+
+  bool _targetInsideBossPattern({
+    required GuardianBossComponent boss,
+    required GuardianArenaHazardComponent? arenaHazard,
+    required GuardianBehaviorStateComponent state,
+    required Vector3 guardianPosition,
+    required Vector3 targetPosition,
+  }) {
+    final lockedTarget = state.telegraphTargetPosition!;
+    return switch (state.attackPattern) {
+      GuardianAttackPattern.melee =>
+        _planarDistance(guardianPosition, targetPosition) <= boss.meleeRange,
+      GuardianAttackPattern.eruption =>
+        _planarDistance(lockedTarget, targetPosition) <= boss.eruptionRadius,
+      GuardianAttackPattern.sweep => _insideSweep(
+        origin: guardianPosition,
+        lockedTarget: lockedTarget,
+        target: targetPosition,
+        range: boss.sweepRange,
+        halfAngleDegrees: boss.sweepHalfAngleDegrees,
+      ),
+      GuardianAttackPattern.fissureRing =>
+        arenaHazard != null &&
+            _insideFissureRing(
+              center: lockedTarget,
+              target: targetPosition,
+              innerSafeRadius: arenaHazard.innerSafeRadius,
+              outerRadius: arenaHazard.outerRadius,
+            ),
+    };
+  }
+
+  bool _insideFissureRing({
+    required Vector3 center,
+    required Vector3 target,
+    required double innerSafeRadius,
+    required double outerRadius,
+  }) {
+    final distance = _planarDistance(center, target);
+    return distance > innerSafeRadius && distance <= outerRadius;
+  }
+
+  bool _insideSweep({
+    required Vector3 origin,
+    required Vector3 lockedTarget,
+    required Vector3 target,
+    required double range,
+    required double halfAngleDegrees,
+  }) {
+    final lockedDirection = lockedTarget - origin;
+    lockedDirection.y = 0;
+    final targetDirection = target - origin;
+    targetDirection.y = 0;
+    final targetDistance = targetDirection.length;
+    if (targetDistance > range) return false;
+    if (targetDistance <= 1e-9) return true;
+    if (lockedDirection.length <= 1e-9) return false;
+    lockedDirection.normalize();
+    targetDirection.normalize();
+    final minimumDot = math.cos(halfAngleDegrees * math.pi / 180);
+    return lockedDirection.dot(targetDirection) >= minimumDot;
+  }
+
+  void _consumeBossAttackCooldown({
+    required EntityHandle handle,
+    required BasicAttackComponent attack,
+    required Duration simulationTime,
+  }) {
+    ecs.replaceComponent<BasicAttackStateComponent>(
+      handle,
+      BasicAttackStateComponent(nextReadyAt: simulationTime + attack.cooldown),
     );
   }
 
@@ -346,7 +589,14 @@ final class GuardianBehaviorSystem {
   ) {
     if (current.phase == next.phase &&
         current.targetEntityId == next.targetEntityId &&
-        current.windUpCompletesAt == next.windUpCompletesAt) {
+        current.windUpCompletesAt == next.windUpCompletesAt &&
+        current.encounterPhase == next.encounterPhase &&
+        current.attackPattern == next.attackPattern &&
+        _samePoint(
+          current.telegraphTargetPosition,
+          next.telegraphTargetPosition,
+        ) &&
+        current.completedAttackCount == next.completedAttackCount) {
       return;
     }
     ecs.replaceComponent<GuardianBehaviorStateComponent>(handle, next);
@@ -354,6 +604,11 @@ final class GuardianBehaviorSystem {
 
   double _planarDistance(Vector3 left, Vector3 right) {
     return Vector3(left.x - right.x, 0, left.z - right.z).length;
+  }
+
+  bool _samePoint(Vector3? left, Vector3? right) {
+    if (left == null || right == null) return left == right;
+    return left.x == right.x && left.y == right.y && left.z == right.z;
   }
 
   void _validateTick(Duration simulationTime, double deltaSeconds) {

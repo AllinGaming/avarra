@@ -290,7 +290,9 @@ final class ObjectPalettePanel extends StatelessWidget {
                 title: const Text('Combat mission'),
                 subtitle: Text(
                   missionTemplateIssue ??
-                      'Guardian + guarded loot + completion console',
+                      (guardianMissionSettings.bossEncounter
+                          ? 'Three-phase boss + power reward + completion console'
+                          : 'Guardian + guarded loot + completion console'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -432,6 +434,313 @@ final class ObjectPalettePanel extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              key: const Key('mission_boss_encounter'),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Three-phase boss'),
+              subtitle: const Text(
+                'Adds boss attacks, encounter beats, and a permanent reward',
+              ),
+              value: guardianMissionSettings.bossEncounter,
+              onChanged: (value) => onGuardianMissionSettingsChanged(
+                guardianMissionSettings.copyWith(bossEncounter: value),
+              ),
+            ),
+            if (guardianMissionSettings.bossEncounter) ...[
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_boss_name_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: TextFormField(
+                  key: const Key('mission_boss_name'),
+                  initialValue: guardianMissionSettings.bossDisplayName,
+                  maxLength: 80,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Boss name',
+                  ),
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(bossDisplayName: value),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_phase_two_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_phase_two',
+                        label: 'Phase II HP',
+                        value:
+                            guardianMissionSettings.bossPhaseTwoHealthFraction,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossPhaseTwoHealthFraction: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_phase_three_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_phase_three',
+                        label: 'Phase III HP',
+                        value: guardianMissionSettings
+                            .bossPhaseThreeHealthFraction,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossPhaseThreeHealthFraction: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_melee_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_melee',
+                        label: 'Melee radius',
+                        value: guardianMissionSettings.bossMeleeRange,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossMeleeRange: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_sweep_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_sweep',
+                        label: 'Sweep range',
+                        value: guardianMissionSettings.bossSweepRange,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossSweepRange: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_angle_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_sweep_angle',
+                        label: 'Sweep half angle',
+                        value:
+                            guardianMissionSettings.bossSweepHalfAngleDegrees,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossSweepHalfAngleDegrees: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_eruption_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_eruption',
+                        label: 'Eruption radius',
+                        value: guardianMissionSettings.bossEruptionRadius,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossEruptionRadius: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_fissure_inner_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_fissure_inner',
+                        label: 'Fissure safe core',
+                        value:
+                            guardianMissionSettings.bossFissureInnerSafeRadius,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossFissureInnerSafeRadius: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: KeyedSubtree(
+                      key: ValueKey((
+                        'mission_boss_fissure_outer_profile',
+                        guardianMissionProfileRevision,
+                      )),
+                      child: _missionNumberField(
+                        keyName: 'mission_boss_fissure_outer',
+                        label: 'Fissure outer edge',
+                        value: guardianMissionSettings.bossFissureOuterRadius,
+                        onChanged: (value) => onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            bossFissureOuterRadius: value,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_boss_reward_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: _missionNumberField(
+                  keyName: 'mission_boss_reward_health',
+                  label: 'Reward maximum-health bonus',
+                  value: guardianMissionSettings.playerPowerMaximumHealthBonus,
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(
+                      playerPowerMaximumHealthBonus: value,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_boss_engage_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: TextFormField(
+                  key: const Key('mission_boss_engage_text'),
+                  initialValue: guardianMissionSettings.bossEngageText,
+                  minLines: 2,
+                  maxLines: 3,
+                  maxLength: 280,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Boss entrance beat',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(bossEngageText: value),
+                  ),
+                ),
+              ),
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_boss_phase_two_text_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: TextFormField(
+                  key: const Key('mission_boss_phase_two_text'),
+                  initialValue: guardianMissionSettings.bossPhaseTwoText,
+                  minLines: 2,
+                  maxLines: 3,
+                  maxLength: 280,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Phase II beat',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(bossPhaseTwoText: value),
+                  ),
+                ),
+              ),
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_boss_phase_three_text_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: TextFormField(
+                  key: const Key('mission_boss_phase_three_text'),
+                  initialValue: guardianMissionSettings.bossPhaseThreeText,
+                  minLines: 2,
+                  maxLines: 3,
+                  maxLength: 280,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Phase III beat',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(bossPhaseThreeText: value),
+                  ),
+                ),
+              ),
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_boss_defeat_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: TextFormField(
+                  key: const Key('mission_boss_defeat_text'),
+                  initialValue: guardianMissionSettings.bossDefeatText,
+                  minLines: 2,
+                  maxLines: 3,
+                  maxLength: 280,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Boss defeat beat',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(bossDefeatText: value),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             TextFormField(
               key: const Key('mission_item_label'),

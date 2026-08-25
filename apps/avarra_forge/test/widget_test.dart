@@ -501,11 +501,7 @@ void main() {
         )
         .first;
     final profileDropdown = find.byKey(const Key('mission_profile'));
-    await tester.scrollUntilVisible(
-      profileDropdown,
-      80,
-      scrollable: paletteScrollable,
-    );
+    await tester.ensureVisible(profileDropdown);
     await tester.pumpAndSettle();
     await tester.tap(profileDropdown);
     await tester.pumpAndSettle();
@@ -567,6 +563,87 @@ void main() {
     expect(narrative.openingText, contains('Hollow Warden'));
     expect(narrative.returnText, contains('relay shrine'));
     expect(narrative.completionText, contains('path through the ash'));
+  });
+
+  testWidgets('stamps an authored Ascendant boss mission atomically', (
+    tester,
+  ) async {
+    final storage = _MemoryForgeStorage();
+    final dialogs = _FakeForgeFileDialogs()
+      ..savePaths.add('build/ascendant-boss.avarra');
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      AvarraForgeApp(
+        initialWorld: createForgeStarterWorld(),
+        projectStorage: storage,
+        fileDialogs: dialogs,
+        enableRenderer: false,
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('palette_guardian_mission')));
+    await tester.pump();
+    final profileDropdown = find.byKey(const Key('mission_profile'));
+    await tester.ensureVisible(profileDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(profileDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Ascendant').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.byKey(const Key('mission_boss_encounter')),
+          )
+          .value,
+      isTrue,
+    );
+    final bossName = find.byKey(const Key('mission_boss_name'));
+    await tester.ensureVisible(bossName);
+    await tester.pumpAndSettle();
+    await tester.enterText(bossName, 'Kharos, Forge Ascendant');
+    final fissureOuter = find.byKey(const Key('mission_boss_fissure_outer'));
+    await tester.ensureVisible(fissureOuter);
+    await tester.pumpAndSettle();
+    await tester.enterText(fissureOuter, '3.6');
+    final reward = find.byKey(const Key('mission_boss_reward_health'));
+    await tester.ensureVisible(reward);
+    await tester.pumpAndSettle();
+    await tester.enterText(reward, '40');
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('forge_viewport')));
+    await tester.pump();
+    expect(find.textContaining('6 entities'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('export')));
+    await tester.pumpAndSettle();
+
+    final decoded = WorldPackageCodec().decode(
+      storage.files['build/ascendant-boss.avarra']!,
+    );
+    final boss = decoded.allEntities.singleWhere(
+      (entity) => entity.component<GuardianBossDefinition>() != null,
+    );
+    final rewardEntity = decoded.allEntities.singleWhere(
+      (entity) => entity.component<PlayerPowerRewardDefinition>() != null,
+    );
+    expect(decoded.contentSchemaVersion, currentContentSchemaVersion);
+    expect(
+      boss.component<GuardianBossDefinition>()!.displayName,
+      'Kharos, Forge Ascendant',
+    );
+    expect(boss.component<HealthDefinition>()!.maximumHealth, 120);
+    expect(boss.component<GuardianArenaHazardDefinition>()!.outerRadius, 3.6);
+    expect(
+      rewardEntity.component<PlayerPowerRewardDefinition>()!.maximumHealthBonus,
+      40,
+    );
+
+    await tester.tap(find.byKey(const Key('undo')));
+    await tester.pump();
+    expect(find.textContaining('3 entities'), findsOneWidget);
   });
 
   testWidgets('paints and erases one asset-backed floor stroke atomically', (

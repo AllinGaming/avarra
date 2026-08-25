@@ -209,12 +209,22 @@ void main() {
       targetEntityId: _localId,
     );
     await second.sent;
+    final dodge = connected.client.submitGameplayCommand(
+      kind: GameplayCommandKind.dodge,
+      directionX: 0.6,
+      directionZ: -0.8,
+    );
+    await dodge.sent;
     await Future<void>.delayed(const Duration(milliseconds: 5));
     final commands = server.takeGameplayCommands(connected.connectionId);
     expect(commands.map((command) => command.sequence), [
       submission.sequence,
       second.sequence,
+      dodge.sequence,
     ]);
+    expect(commands.last.kind, GameplayCommandKind.dodge);
+    expect(commands.last.directionX, 0.6);
+    expect(commands.last.directionZ, -0.8);
 
     final resultEvent = connected.client.events
         .where((event) => event is ReplicationGameplayCommandResult)
@@ -248,8 +258,12 @@ void main() {
           NetworkGuardianState(
             entityId: _globalId,
             phase: NetworkGuardianPhase.windingUp,
+            encounterPhase: NetworkGuardianEncounterPhase.phaseThree,
+            attackPattern: NetworkGuardianAttackPattern.eruption,
             targetEntityId: _localId,
             windUpRemainingMicroseconds: 420000,
+            telegraphTargetX: 1.5,
+            telegraphTargetZ: -2,
           ),
         ],
         inventoryItemIds: const {'relay.core'},

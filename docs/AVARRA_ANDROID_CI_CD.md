@@ -1,7 +1,7 @@
 # AVARRA Android CI/CD Build Contract
 
 **Status:** Android CI build verification implemented
-**Date:** 2026-08-20
+**Date:** 2026-08-25
 
 ## Purpose
 
@@ -44,7 +44,8 @@ build entry point for CI and local reproduction. From the repository root:
 
 The script requires Flutter 3.44.4 and Dart 3.12.2, requires Java 17 or newer,
 installs and verifies the pinned Android SDK components, resolves workspace
-dependencies, and runs `flutter build apk --debug --no-pub`. It then
+dependencies, and runs `flutter build apk --debug --no-pub`. It fails if any
+plugin reports that it still applies the legacy Kotlin Gradle Plugin, then
 requires
 `apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk` to be a
 non-empty file and logs its absolute path, byte length, and SHA-256 hash.
@@ -87,10 +88,21 @@ Production CD requires a separately approved workflow with:
 - an explicit artifact destination and retention policy; and
 - a manual/environment approval gate before store publication.
 
-## Known upstream warning
+## Thermion Kotlin compatibility overlay
 
-The pinned Thermion Flutter plugin still applies the Kotlin Gradle Plugin.
-Flutter 3.44.4 reports this as a future compatibility warning, not a build
-failure. A future Flutter/AGP upgrade must either use an upstream Thermion
-revision compatible with built-in Kotlin or record a measured compatibility
-workaround. Do not silently remove the current compatibility flags.
+The pinned Thermion Flutter plugin's upstream Gradle file still embeds AGP 7.3,
+Kotlin 1.7.10, compile SDK 33, and `apply plugin: 'kotlin-android'`.
+`settings.gradle.kts` redirects only that subproject's build file to the
+repository-owned `android/gradle/thermion_flutter_compat.gradle`. The overlay
+keeps Thermion's pinned source directory while using API 36, Java 17, and the
+AGP 9 `kotlin.compilerOptions` contract without applying KGP.
+
+This closes Flutter's future-compatibility warning without editing the Pub
+cache or vendoring Thermion source. CI captures the Android build output and
+fails if the warning returns.
+
+Flutter 3.44.4 still requires `android.builtInKotlin=false`; enabling the flag
+requires Flutter 3.47 or later. Do not silently change the compatibility flags.
+Remove the overlay only when a deliberately pinned upstream Thermion revision
+passes the same Windows, clean Android, and emulator lifecycle gates. See
+`AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md` and ADR-017.

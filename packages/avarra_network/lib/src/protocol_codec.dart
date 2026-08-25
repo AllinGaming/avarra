@@ -90,6 +90,9 @@ final class NetworkProtocolCodec {
         'sequence': message.sequence,
         'kind': message.kind.name,
         'targetEntityId': message.targetEntityId?.value,
+        'direction': message.directionX == null
+            ? null
+            : [message.directionX, message.directionZ],
       },
       SpawnEntityMessage() => {
         'networkEntityId': message.networkEntityId.value,
@@ -136,8 +139,12 @@ final class NetworkProtocolCodec {
             {
               'entityId': state.entityId.value,
               'phase': state.phase.name,
+              'encounterPhase': state.encounterPhase.name,
+              'attackPattern': state.attackPattern.name,
               'targetEntityId': state.targetEntityId?.value,
               'windUpRemainingMicroseconds': state.windUpRemainingMicroseconds,
+              'telegraphTargetX': state.telegraphTargetX,
+              'telegraphTargetZ': state.telegraphTargetZ,
             },
         ],
         'inventoryItemIds': message.inventoryItemIds.toList(),
@@ -208,7 +215,14 @@ final class NetworkProtocolCodec {
           'sequence',
           'kind',
           'targetEntityId',
+          'direction',
         }, r'$.payload');
+        final direction = payload['direction'] == null
+            ? null
+            : _list(payload['direction'], r'$.payload.direction');
+        if (direction != null && direction.length != 2) {
+          _malformed('Gameplay command direction must contain two numbers.');
+        }
         return GameplayCommandMessage(
           sequence: _int(payload['sequence'], r'$.payload.sequence'),
           kind: _gameplayCommandKind(payload['kind'], r'$.payload.kind'),
@@ -218,6 +232,12 @@ final class NetworkProtocolCodec {
                   payload['targetEntityId'],
                   r'$.payload.targetEntityId',
                 ),
+          directionX: direction == null
+              ? null
+              : _double(direction[0], r'$.payload.direction[0]'),
+          directionZ: direction == null
+              ? null
+              : _double(direction[1], r'$.payload.direction[1]'),
         );
       case NetworkMessageType.spawnEntity:
         _exactFields(payload, const {
@@ -471,8 +491,12 @@ final class NetworkProtocolCodec {
     _exactFields(value, const {
       'entityId',
       'phase',
+      'encounterPhase',
+      'attackPattern',
       'targetEntityId',
       'windUpRemainingMicroseconds',
+      'telegraphTargetX',
+      'telegraphTargetZ',
     }, r'$.payload.guardianStates[]');
     final phaseText = _string(
       value['phase'],
@@ -484,12 +508,31 @@ final class NetworkProtocolCodec {
     if (phase == null) {
       _malformed('Network guardian phase is unknown.');
     }
+    final encounterPhaseText = _string(
+      value['encounterPhase'],
+      r'$.payload.guardianStates[$index].encounterPhase',
+    );
+    final encounterPhase = NetworkGuardianEncounterPhase.values
+        .where((value) => value.name == encounterPhaseText)
+        .firstOrNull;
+    final attackPatternText = _string(
+      value['attackPattern'],
+      r'$.payload.guardianStates[$index].attackPattern',
+    );
+    final attackPattern = NetworkGuardianAttackPattern.values
+        .where((value) => value.name == attackPatternText)
+        .firstOrNull;
+    if (encounterPhase == null || attackPattern == null) {
+      _malformed('Network guardian encounter state is unknown.');
+    }
     return NetworkGuardianState(
       entityId: _entityId(
         value['entityId'],
         r'$.payload.guardianStates[$index].entityId',
       ),
       phase: phase,
+      encounterPhase: encounterPhase,
+      attackPattern: attackPattern,
       targetEntityId: value['targetEntityId'] == null
           ? null
           : _entityId(
@@ -500,6 +543,18 @@ final class NetworkProtocolCodec {
         value['windUpRemainingMicroseconds'],
         r'$.payload.guardianStates[$index].windUpRemainingMicroseconds',
       ),
+      telegraphTargetX: value['telegraphTargetX'] == null
+          ? null
+          : _double(
+              value['telegraphTargetX'],
+              r'$.payload.guardianStates[$index].telegraphTargetX',
+            ),
+      telegraphTargetZ: value['telegraphTargetZ'] == null
+          ? null
+          : _double(
+              value['telegraphTargetZ'],
+              r'$.payload.guardianStates[$index].telegraphTargetZ',
+            ),
     );
   }
 

@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 9,
+  "contentSchemaVersion": 11,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero: Ashfall",
@@ -321,9 +321,9 @@
             "avarra.story.mission_narrative": {
               "schemaVersion": 1,
               "title": "Ashfall's Last Signal",
-              "openingText": "Relight the three stabilizers, breach the sealed core chamber, and wrest the Relay Core from the Ash Warden.",
-              "returnText": "The Relay Core beats like a buried heart. Carry it to the transmitter before the ash storm swallows the signal.",
-              "completionText": "The transmitter answers. Avarra's last signal cuts through the ash, and something distant answers in return."
+              "openingText": "Relight the three stabilizers, breach the sealed core chamber, and break Vharos, the Ashen Castellan, before he extinguishes Relay Zero.",
+              "returnText": "Vharos is broken. The Relay Core beats like a buried heart, and his Ashen Heart still carries forbidden strength. Return the Core to the transmitter.",
+              "completionText": "The transmitter answers. Avarra's last signal cuts through the ash, the Ashen Heart burns in your chest, and something distant answers in return."
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,
@@ -570,24 +570,43 @@
             },
             "avarra.character_controller": {
               "schemaVersion": 1,
-              "moveSpeed": 1,
+              "moveSpeed": 0.9,
               "skinWidth": 0.03,
               "arrivalTolerance": 0.08
             },
             "avarra.health": {
               "schemaVersion": 1,
-              "maximumHealth": 60
+              "maximumHealth": 120
             },
             "avarra.combat.basic_attack": {
               "schemaVersion": 1,
-              "damage": 10,
-              "range": 1,
-              "cooldownSeconds": 1.1
+              "damage": 12,
+              "range": 3.2,
+              "cooldownSeconds": 1.2
             },
             "avarra.ai.guardian_behavior": {
               "schemaVersion": 1,
-              "perceptionRange": 3.5,
-              "leashRange": 5
+              "perceptionRange": 4.5,
+              "leashRange": 5.5
+            },
+            "avarra.ai.guardian_boss": {
+              "schemaVersion": 1,
+              "displayName": "Vharos, Ashen Castellan",
+              "phaseTwoHealthFraction": 0.67,
+              "phaseThreeHealthFraction": 0.34,
+              "meleeRange": 1.15,
+              "sweepRange": 2.6,
+              "sweepHalfAngleDegrees": 55,
+              "eruptionRadius": 0.9,
+              "engageText": "Vharos tears free of the ash throne. The last signal dies with you.",
+              "phaseTwoText": "The Castellan splits his burning guard. Watch the sweep.",
+              "phaseThreeText": "Vharos cracks the chamber floor. Move when the ash marks your ground.",
+              "defeatText": "The Ashen Castellan falls. Claim the Relay Core and the heart that kept him burning."
+            },
+            "avarra.ai.guardian_arena_hazard": {
+              "schemaVersion": 1,
+              "innerSafeRadius": 0.9,
+              "outerRadius": 3.2
             }
           }
         },
@@ -700,6 +719,47 @@
               "itemLabel": "Relay Core",
               "collectedFlagKey": "collected",
               "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000009"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"collected": false}
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000023",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4.8, 0.32, 5.4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.38, 0.38, 0.38]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000007"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.3, 0.3, 0.3],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Claim Ashen Heart",
+              "range": 2.4
+            },
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "relic.ashen_heart",
+              "itemLabel": "Ashen Heart",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000009"
+            },
+            "avarra.item.player_power_reward": {
+              "schemaVersion": 1,
+              "maximumHealthBonus": 25
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,

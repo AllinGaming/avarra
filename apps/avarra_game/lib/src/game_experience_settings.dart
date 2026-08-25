@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 const _settingsFormat = 'avarra.game_experience_settings';
-const _settingsVersion = 1;
+const _settingsVersion = 2;
 
 /// Game-owned preferences that never enter world or save authority.
 @immutable
@@ -16,7 +16,14 @@ final class GameExperienceSettings {
     this.showQuestGuidance = true,
     this.showEnemyHealthBars = true,
     this.showCombatText = true,
-  }) : assert(cameraShakeStrength >= 0 && cameraShakeStrength <= 1);
+    this.audioEnabled = true,
+    this.masterVolume = 0.8,
+    this.musicVolume = 0.55,
+    this.effectsVolume = 0.85,
+  }) : assert(cameraShakeStrength >= 0 && cameraShakeStrength <= 1),
+       assert(masterVolume >= 0 && masterVolume <= 1),
+       assert(musicVolume >= 0 && musicVolume <= 1),
+       assert(effectsVolume >= 0 && effectsVolume <= 1);
 
   static const defaults = GameExperienceSettings();
 
@@ -25,6 +32,10 @@ final class GameExperienceSettings {
   final bool showQuestGuidance;
   final bool showEnemyHealthBars;
   final bool showCombatText;
+  final bool audioEnabled;
+  final double masterVolume;
+  final double musicVolume;
+  final double effectsVolume;
 
   double get effectiveCameraShakeStrength =>
       reducedMotion ? 0 : cameraShakeStrength;
@@ -35,12 +46,20 @@ final class GameExperienceSettings {
     bool? showQuestGuidance,
     bool? showEnemyHealthBars,
     bool? showCombatText,
+    bool? audioEnabled,
+    double? masterVolume,
+    double? musicVolume,
+    double? effectsVolume,
   }) => GameExperienceSettings(
     reducedMotion: reducedMotion ?? this.reducedMotion,
     cameraShakeStrength: cameraShakeStrength ?? this.cameraShakeStrength,
     showQuestGuidance: showQuestGuidance ?? this.showQuestGuidance,
     showEnemyHealthBars: showEnemyHealthBars ?? this.showEnemyHealthBars,
     showCombatText: showCombatText ?? this.showCombatText,
+    audioEnabled: audioEnabled ?? this.audioEnabled,
+    masterVolume: masterVolume ?? this.masterVolume,
+    musicVolume: musicVolume ?? this.musicVolume,
+    effectsVolume: effectsVolume ?? this.effectsVolume,
   );
 
   String encode() => jsonEncode({
@@ -51,6 +70,10 @@ final class GameExperienceSettings {
     'showQuestGuidance': showQuestGuidance,
     'showEnemyHealthBars': showEnemyHealthBars,
     'showCombatText': showCombatText,
+    'audioEnabled': audioEnabled,
+    'masterVolume': masterVolume,
+    'musicVolume': musicVolume,
+    'effectsVolume': effectsVolume,
   });
 
   factory GameExperienceSettings.decode(String source) {
@@ -62,14 +85,20 @@ final class GameExperienceSettings {
     }
     if (decoded is! Map<String, dynamic> ||
         decoded['format'] != _settingsFormat ||
-        decoded['version'] != _settingsVersion) {
+        decoded['version'] is! int ||
+        (decoded['version'] != 1 && decoded['version'] != _settingsVersion)) {
       throw const FormatException('Unsupported AVARRA Game settings.');
     }
+    final version = decoded['version'] as int;
     final reducedMotion = decoded['reducedMotion'];
     final shake = decoded['cameraShakeStrength'];
     final quest = decoded['showQuestGuidance'];
     final health = decoded['showEnemyHealthBars'];
     final combat = decoded['showCombatText'];
+    final audioEnabled = version == 1 ? true : decoded['audioEnabled'];
+    final master = version == 1 ? 0.8 : decoded['masterVolume'];
+    final music = version == 1 ? 0.55 : decoded['musicVolume'];
+    final effects = version == 1 ? 0.85 : decoded['effectsVolume'];
     if (reducedMotion is! bool ||
         shake is! num ||
         !shake.toDouble().isFinite ||
@@ -77,7 +106,20 @@ final class GameExperienceSettings {
         shake > 1 ||
         quest is! bool ||
         health is! bool ||
-        combat is! bool) {
+        combat is! bool ||
+        audioEnabled is! bool ||
+        master is! num ||
+        !master.toDouble().isFinite ||
+        master < 0 ||
+        master > 1 ||
+        music is! num ||
+        !music.toDouble().isFinite ||
+        music < 0 ||
+        music > 1 ||
+        effects is! num ||
+        !effects.toDouble().isFinite ||
+        effects < 0 ||
+        effects > 1) {
       throw const FormatException('Invalid AVARRA Game settings values.');
     }
     return GameExperienceSettings(
@@ -86,6 +128,10 @@ final class GameExperienceSettings {
       showQuestGuidance: quest,
       showEnemyHealthBars: health,
       showCombatText: combat,
+      audioEnabled: audioEnabled,
+      masterVolume: master.toDouble(),
+      musicVolume: music.toDouble(),
+      effectsVolume: effects.toDouble(),
     );
   }
 
@@ -96,7 +142,11 @@ final class GameExperienceSettings {
       cameraShakeStrength == other.cameraShakeStrength &&
       showQuestGuidance == other.showQuestGuidance &&
       showEnemyHealthBars == other.showEnemyHealthBars &&
-      showCombatText == other.showCombatText;
+      showCombatText == other.showCombatText &&
+      audioEnabled == other.audioEnabled &&
+      masterVolume == other.masterVolume &&
+      musicVolume == other.musicVolume &&
+      effectsVolume == other.effectsVolume;
 
   @override
   int get hashCode => Object.hash(
@@ -105,6 +155,10 @@ final class GameExperienceSettings {
     showQuestGuidance,
     showEnemyHealthBars,
     showCombatText,
+    audioEnabled,
+    masterVolume,
+    musicVolume,
+    effectsVolume,
   );
 }
 
@@ -341,6 +395,45 @@ Future<void> showGameExperienceSettingsDialog(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SwitchListTile(
+                    key: const Key('setting_audio_enabled'),
+                    value: current.audioEnabled,
+                    onChanged: (value) =>
+                        update(current.copyWith(audioEnabled: value)),
+                    secondary: const Icon(Icons.volume_up_outlined),
+                    title: const Text('Audio'),
+                    subtitle: const Text(
+                      'Ashfall ambience and gameplay feedback.',
+                    ),
+                  ),
+                  _VolumeSetting(
+                    settingKey: const Key('setting_master_volume'),
+                    icon: Icons.speaker_outlined,
+                    label: 'Master volume',
+                    value: current.masterVolume,
+                    enabled: current.audioEnabled,
+                    onChanged: (value) =>
+                        update(current.copyWith(masterVolume: value)),
+                  ),
+                  _VolumeSetting(
+                    settingKey: const Key('setting_music_volume'),
+                    icon: Icons.music_note_outlined,
+                    label: 'Ambience',
+                    value: current.musicVolume,
+                    enabled: current.audioEnabled,
+                    onChanged: (value) =>
+                        update(current.copyWith(musicVolume: value)),
+                  ),
+                  _VolumeSetting(
+                    settingKey: const Key('setting_effects_volume'),
+                    icon: Icons.graphic_eq_outlined,
+                    label: 'Effects',
+                    value: current.effectsVolume,
+                    enabled: current.audioEnabled,
+                    onChanged: (value) =>
+                        update(current.copyWith(effectsVolume: value)),
+                  ),
+                  const Divider(),
+                  SwitchListTile(
                     key: const Key('setting_reduced_motion'),
                     value: current.reducedMotion,
                     onChanged: (value) =>
@@ -413,4 +506,36 @@ Future<void> showGameExperienceSettingsDialog(
       },
     ),
   );
+}
+
+final class _VolumeSetting extends StatelessWidget {
+  const _VolumeSetting({
+    required this.settingKey,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final Key settingKey;
+  final IconData icon;
+  final String label;
+  final double value;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(label),
+      subtitle: Slider(
+        key: settingKey,
+        value: value,
+        onChanged: enabled ? onChanged : null,
+      ),
+      trailing: Text('${(value * 100).round()}%'),
+    );
+  }
 }

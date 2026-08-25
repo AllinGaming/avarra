@@ -23,4 +23,13 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
 }
 
+// Thermion 0.5.0-pre.5 still applies the legacy Kotlin Android plugin and
+// pins AGP 7.3 inside its package. Keep the immutable renderer source pin, but
+// evaluate the plugin with AVARRA's AGP 9 compatibility build instead.
+val thermionFlutterProject = project(":thermion_flutter")
+val thermionCompatibilityBuildFile =
+    file("gradle/thermion_flutter_compat.gradle").absoluteFile.normalize()
+thermionFlutterProject.buildFileName =
+    thermionCompatibilityBuildFile.relativeTo(thermionFlutterProject.projectDir).path
+
 include(":app")

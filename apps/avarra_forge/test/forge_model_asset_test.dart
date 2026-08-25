@@ -89,6 +89,7 @@ void main() {
           'Idle',
           'Run',
           'Attack',
+          'Dodge',
         },
         'assets/models/gothic/HollowWarden.gltf' => const {
           'Idle',

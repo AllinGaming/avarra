@@ -232,10 +232,14 @@ final class ReplicationClient {
   Future<int> sendGameplayCommand({
     required GameplayCommandKind kind,
     EntityId? targetEntityId,
+    double? directionX,
+    double? directionZ,
   }) async {
     final submission = submitGameplayCommand(
       kind: kind,
       targetEntityId: targetEntityId,
+      directionX: directionX,
+      directionZ: directionZ,
     );
     await submission.sent;
     return submission.sequence;
@@ -244,6 +248,8 @@ final class ReplicationClient {
   GameplayCommandSubmission submitGameplayCommand({
     required GameplayCommandKind kind,
     EntityId? targetEntityId,
+    double? directionX,
+    double? directionZ,
   }) {
     if (!isJoined) {
       throw AvarraException(
@@ -259,6 +265,8 @@ final class ReplicationClient {
           sequence: sequence,
           kind: kind,
           targetEntityId: targetEntityId,
+          directionX: directionX,
+          directionZ: directionZ,
         ),
       ),
     );

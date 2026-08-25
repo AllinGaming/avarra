@@ -196,8 +196,11 @@ Thermion / Filament
 Thermion is pinned to official `v0.5.0-pre.5` commit `caad378…` after published
 0.4.1 passed compile gates but failed the live Windows Vulkan gate. The pinned
 commit passes Windows runtime stability/close and Android package gates on
-Flutter 3.44.4 stable, with a scoped Android compile-SDK workaround. The
-Windows visual/lifecycle gate and Pixel 10 Pro Android emulator
+Flutter 3.44.4 stable. A Game-owned Gradle overlay now replaces only the pinned
+plugin's obsolete AGP 7.3/Kotlin build instructions with AVARRA's API 36,
+Java 17, and AGP 9 compiler-options contract; a clean APK builds without the
+legacy-KGP warning and CI rejects its return. The Windows visual/lifecycle gate
+and Pixel 10 Pro Android emulator
 cold-start/lifecycle checks also pass. The renderer choice is not irreversible
 and remains subject to physical Android and later interaction validation. See
 ADR-015 through ADR-017.
@@ -524,6 +527,11 @@ return-console turn-in, derived mission feedback, and restored completion.
 Protocol v3 and Stage 11.5 add bounded attack/interaction/restart commands,
 host-owned guardian/combat/adventure simulation, revisioned health/flag/player
 inventory mirrors, and a connected end-to-end Relay Zero completion proof.
+Protocol v4 and Stage 12.26 add bounded Guardian phase, locked-target, and
+remaining-wind-up state to those gameplay snapshots. The host-owned state
+machine now commits for 650 ms before `CombatSystem` revalidates the strike.
+Game consumes this state only to project a truthful danger radius and dodge
+countdown.
 Stage 11.6 turns that proof into `Relay Zero: Ashfall`: selected hostiles are
 pursued and repeatedly attacked, selected interactions are approached and used,
 three authored Hollow Wardens reveal enemy-bound loot on defeat, and an
@@ -750,6 +758,65 @@ entering world/save/network authority. Forge Test Play bypasses this shell.
 Formatting, workspace analysis, the Game Windows release, and the 18-suite
 matrix pass 301 tests; live packaged visual acceptance and physical Android
 remain open.
+Stage 12.26 replaces the Hollow Warden's immediate melee hit with an explicit
+server-safe `windingUp` phase and a fixed 650 ms commitment. Damage still
+resolves through the existing combat system at completion, so a player who
+moves outside the radius takes no damage. Protocol v4 replicates bounded
+Guardian phase, target, and remaining timing; Game mirrors that state only for
+a projected radius, urgency arc, target lock, and semantic dodge warning.
+Formatting, workspace analysis, the Game Windows release, the Server compile,
+and the 18-suite matrix pass 306 tests. No world/content/save schema changed;
+live packaged acceptance, degraded-network timing, and physical Android remain
+open.
+Stage 12.27 adds an injectable Game-only audio response boundary. A provisional
+`audioplayers` adapter loops original generated ambience and uses bounded pools
+for UI, authoritative Guardian wind-up, confirmed combat, pickup, objective,
+and completion cues. The Game host owns live mix updates, pause/prologue
+ducking, app suspension, failure-to-silence fallback, and disposal. Recoverable
+preferences advance to version 2 with audio enable and validated
+master/ambience/effects levels; version-1 data migrates to defaults. No audio
+state enters simulation, ECS, `.avarra` content, saves, commands, replication,
+Forge, or Server. Workspace analysis and the 18-suite matrix pass 311 tests;
+Game Windows release and Android debug packages build and contain all nine
+assets. Human listening, loudness/latency tuning, community-world audio
+authoring, and physical Android acceptance remain open.
+Stage 12.28 turns Relay Zero's core Warden into Vharos, Ashen Castellan.
+Content schema v10 authors a named three-phase Guardian boss and a collectible
+player-power reward. Protocol v5 mirrors phase, attack pattern, and locked
+telegraph target; authoritative melee, sweep, and eruption geometry remains
+server-safe. The persisted Ashen Heart derives +25 maximum health.
+Stage 12.29 adds bounded Game-only boss posture, projected ritual VFX,
+resolved-attack shake, and three pattern-specific original cues over that
+authority. Stage 12.30 exposes the same existing schema through Forge's atomic
+Combat mission template and new Ascendant profile. Creators tune boss identity,
+phase thresholds, attack shapes, story beats, and reward power through typed
+creator actions with validation and Undo/Redo. No generic encounter engine,
+new schema version, renderer authority, or direct JSON mutation path was added.
+Stage 12.31 adds optional content-schema-v11 Guardian arena hazard authoring.
+Vharos's authority-owned phase-three fissure ring damages only the authored
+annulus; Game exposes the safe core and Forge tunes both radii. Protocol v6
+mirrors the new pattern. Stage 12.32 uses the same protocol version for a
+bounded player dodge command. Offline and host simulation share one
+collision-swept 1.8-unit move and 1.5-second cooldown, while Game supplies
+Shift/action-bar input, correction-aware visual easing, and one cue without
+invulnerability or save changes. Stage 12.33 adds Game-only dodge combat feel:
+the existing authored Run clip plays once at 2.8x speed, and a projected
+three-strand trail, ember motes, and landing crescent follow the latest
+authority endpoint. Reduced motion removes this layer. Stage 12.34 replaces the
+provisional Run mapping with a dedicated generated 180 ms Dodge clip. One Game
+profile centralizes playback and projected-effect tuning; one deterministic
+tool writes matching Game/Forge buffers and glTF metadata, verifies them
+read-only with `--check`, and is enforced by CI. Workspace analysis and
+340 tests across 18
+suites pass. Game and Forge Windows releases, Server, and Android debug build;
+all 17 audio assets are packaged.
+Stage 12.35 keeps the immutable Thermion source pin but redirects its Android
+subproject to a repository-owned Gradle compatibility overlay. The obsolete
+embedded AGP 7.3/Kotlin 1.7 buildscript, compile SDK 33, and KGP application no
+longer run. Clean Android packaging passes without Flutter's legacy-KGP warning,
+and the Android CI script now fails if it returns.
+Human packaged play/listening, bespoke skeletal boss/dodge animation,
+renderer-native VFX, and physical Android acceptance remain open.
 Android CI hardening separates native Game packaging from the combined
 quality/Windows job. A parallel Windows job pins Java 17, Android API 36,
 Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1. CI calls the shared
@@ -800,8 +867,10 @@ See
 `AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
 `AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
 `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
+`AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`,
+`AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-033.
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-035.
 
 ---
 
@@ -1615,6 +1684,20 @@ an independent controlled stable entity; dynamic player-avatar spawns carry an
 explicit kind while authored world entities remain under streaming ownership.
 Server tick/network metrics stay in the host runtime. Flutter frame/chunk and
 Android memory/thermal measurements remain application/platform concerns.
+
+Stage 11.5 advances that boundary to protocol v3 for host-authoritative
+adventure commands and revisioned health/flag/inventory state. Stage 12.26
+advances it to protocol v4 for bounded Guardian phase, locked-target, and
+wind-up timing state. `avarra_gameplay` still owns the deterministic phase and
+final combat validation; `avarra_replication` mirrors it; only Avarra Game
+projects the warning.
+
+Stage 12.27 keeps device audio at the same outer application boundary. Avarra
+Game maps accepted UI and authoritative/replicated gameplay transitions to an
+injectable controller backed provisionally by `audioplayers`. The host owns
+ambience, mixing, ducking, lifecycle suspension, and graceful silence.
+Server-safe packages, Forge, world definitions, saves, and the protocol do not
+import or persist audio presentation state.
 
 Server-safe packages must not import:
 
@@ -2527,6 +2610,65 @@ quest guidance, enemy bars, or combat text. These settings select downstream
 presentation only: they do not mutate `PresentationSnapshot`, ECS, saves,
 world packages, commands, or replication.
 
+Stage 12.26 consumes an explicit simulation-owned `windingUp` phase rather than
+guessing from an animation. Game projects each active warning into a bounded
+pointer-transparent attack-radius fill, urgency arc, locked-target line and
+reticle, plus a semantic local-player dodge countdown. The Warden uses its
+non-looping Attack clip during commitment, but animation playback cannot decide
+the strike. Reduced motion removes pulse modulation and retains the complete
+warning. Connected timing is reconstructed from the authoritative bounded
+remaining duration at snapshot receipt.
+
+Stage 12.27 maps accepted presentation moments to a small injectable
+`GameAudioController`. Local UI confirmation, authoritative Guardian wind-up,
+accepted combat/loot/objective results, and replicated health/phase transitions
+select bounded Game-owned cues. `GameAudioHost` owns ambience, live mix
+settings, pause/prologue ducking, app-lifecycle suspension, graceful
+failure-to-silence behavior, and disposal. Device playback uses a provisional
+`audioplayers` adapter; silent/recording implementations keep widget tests
+deterministic. Audio never feeds back into simulation, ECS, presentation
+snapshots, world/save data, commands, or replication.
+
+Stage 12.28 consumes protocol-v5 boss truth without creating client combat
+authority. Game projects melee range, the locked sweep sector, or the locked
+eruption circle and presents authored encounter copy in a semantic banner.
+Health bars, target frames, and status use Vharos's authored name. The Game-only
+audio controller selects exploration or one of three boss intensities from
+confirmed state and resets on defeat, restart, world replacement, and disposal.
+
+Stage 12.29 adds a bounded boss-feel layer over that same truth. Immutable
+presentation snapshots receive phase-scaled posture and attack anticipation;
+active bosses project ritual auras, sigils, and phase-three cracks; and a short
+camera impulse follows an authority-confirmed attack resolution, including a
+successful dodge without fabricated damage. Three pattern-specific generated
+audio cues remain behind the Game-only controller. Reduced-motion and
+camera-shake settings govern the entire addition.
+
+Stage 12.31 projects protocol-v6 fissure-ring truth as an even-odd annulus,
+distinct safe-core outline, and semantic `ENTER SAFE CORE` instruction.
+Stage 12.32 adds player dodge presentation without moving its result into the
+client. The host/offline gameplay system applies collision-safe displacement;
+Game may predict the same sweep and visually ease from the pre-dodge position
+toward the latest snapshot endpoint for 170 ms. An arriving authority
+correction therefore changes the visual endpoint rather than being hidden.
+Reduced motion bypasses the ease. The action-bar cooldown and dodge audio are
+also downstream presentation.
+
+Stage 12.33 layers bounded combat feel onto that same 170 ms presentation
+window. A pure Game selector gives dodge priority over attack/locomotion/idle
+and requests the existing Run clip once at 2.8x speed with a 25 ms crossfade.
+A pointer-transparent CustomPainter projects three air strands, deterministic
+ember motes, and a landing crescent through `IsometricCameraRig`. Both player
+easing and VFX sample the latest snapshot endpoint, so host correction remains
+truthful. Reduced motion removes both interpolation and trail motion.
+
+Stage 12.34 replaces the temporary Run request with a dedicated generated
+`Dodge` clip. `GameplayDodgeFeelProfile` is the single Game tuning surface
+for clip playback, visual duration, trail strands, ember count, and colors.
+The deterministic Gothic generator creates matching animation buffers and glTF
+metadata for Game and Forge, while `--check` and CI prevent generated-asset
+drift. World displacement still comes exclusively from Stage 12.32 authority.
+
 Physical Android cost, production skinning/material effects, and an explicit
 replicated impact-event message remain open. See
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
@@ -2539,6 +2681,17 @@ See `AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`.
 See `AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`.
 See `AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`.
 See `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`.
+See `AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md` and
+ADR-034.
+See `AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md` and ADR-035.
+See `AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md` and ADR-036.
+See `AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md`.
+See `AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md` and ADR-037.
+See `AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md` and
+ADR-038.
+See `AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`.
+See `AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md` and
+`AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`.
 
 <!-- END AVARRA_CLIENT_PRESENTATION.md -->
 
@@ -8438,6 +8591,1092 @@ permanent world, save, protocol, renderer, or authority contract.
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md -->
+
+# AVARRA Stage 12.26 - Authoritative Guardian Telegraph Validation
+
+**Status:** Implementation, automated matrix, Game release, and Server compile
+gates passed
+
+**Date:** 2026-08-24
+
+## Outcome
+
+Stage 12.26 turns the Hollow Warden's instant hit into a readable,
+server-authoritative commitment and dodge loop.
+
+- entering melee range starts a deterministic 650 ms wind-up;
+- no damage is possible before the wind-up completes;
+- the target stays locked during the commitment;
+- leaving attack range during the warning makes the real combat attempt fail;
+- protocol v4 replicates phase, target, and bounded remaining time;
+- Game projects the danger radius, urgency progress, target lock, and a live
+  local-player dodge warning; and
+- reduced-motion mode retains all essential spatial/timing information without
+  pulsing the ring.
+
+## Authority flow
+
+```text
+Guardian reaches attack range
+  -> server-safe windingUp phase + locked target
+  -> gameplay revision / protocol-v4 Guardian snapshot
+  -> Game projects warning only
+  -> 650 ms completion
+  -> CombatSystem revalidates range and obstruction
+     -> accepted: authoritative damage + attacking recovery
+     -> rejected: no damage + pursuit
+```
+
+The Flutter overlay cannot cause, accelerate, delay, or cancel an attack.
+Offline Game and the listen/headless host both run the same gameplay state
+machine. Connected Game consumes the replicated state through
+`ReplicationClient` and mirrors it only into the established presentation ECS.
+
+## Simulation and protocol contract
+
+`GuardianBehaviorStateComponent` owns the transient completion timestamp and
+validates that only `windingUp` may carry one. `GuardianBehaviorSystem` holds
+position until that time and delegates the final strike to the existing
+`CombatSystem`; this preserves its health, range, line-of-sight, cooldown, and
+death rules.
+
+Protocol v4 extends `GameplayStateSnapshotMessage` with at most 256 unique,
+stable-ID-ordered `NetworkGuardianState` values. The codec rejects unknown
+phases, duplicate IDs, invalid target/timing combinations, negative timing,
+and values over the ten-second transport bound. The normal content/protocol
+handshake rejects older clients.
+
+No world-package, content, or save schema changed.
+
+## Game presentation
+
+`GameplayEnemyTelegraphOverlay` lives inside the same shaken world layer as
+enemy bars, quest guidance, loot, and combat feedback. It uses active animated
+`PresentationSnapshot` transforms and the isometric camera projection to draw:
+
+- a filled attack-radius polygon;
+- an urgency arc that fills toward impact;
+- a line and reticle on the locked target; and
+- `DODGE` plus the remaining tenth of a second when the local player is
+  targeted.
+
+The overlay ignores pointers, caps itself at eight warnings by default, rejects
+duplicate Guardian IDs, omits inactive/off-screen labels, and exposes the local
+warning as a semantic live region. It does not require a renderer-specific
+particle or decal API.
+
+## Automated evidence
+
+- `dart analyze .`: no issues.
+- Complete documented matrix: **306 tests across 18 suites**.
+- Shared packages, renderer bridge, and Server: **193 tests**.
+- Game suite: **89 tests**.
+- Forge suite: **24 tests**.
+- Gameplay tests prove no early damage and a successful movement dodge.
+- Network tests prove Guardian-state round trip and malformed timing rejection.
+- Replication tests prove the client receives phase and target identity.
+- The real loopback Server proof observes `windingUp` before the first health
+  loss.
+- Flutter tests prove state validation, projection, pointer transparency,
+  bounded duplicate handling, reduced-motion compatibility, and the semantic
+  live warning.
+
+Five tests were added over the Stage 12.25 inventory of 301.
+
+## Build evidence
+
+- `apps/avarra_game`: `flutter build windows --release` passed.
+- Game artifact:
+  `apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe`.
+- `apps/avarra_server`:
+  `dart compile exe bin/avarra_server.dart -o build/avarra_server.exe`
+  passed.
+- Server artifact: `apps/avarra_server/build/avarra_server.exe`.
+- Forge code did not change; its full 24-test regression suite passed.
+
+## Remaining limits and next priorities
+
+- No live packaged visual/UX capture was performed for this stage.
+- Remote countdown is receipt-relative; transit latency shortens the visible
+  warning and no clock synchronization or compensation exists yet.
+- All Guardians currently share the fixed 650 ms circular basic-strike
+  language. Authored timings, cones/lines/ground zones, stagger/cancellation,
+  elite patterns, and animation-event synchronization remain future work.
+- Audio, haptics, input remapping, and branching story/dialogue still have no
+  selected permanent contracts.
+- Physical Android touch, frame timing, thermal, battery, and direct-LAN
+  acceptance remain open.
+
+The next high-value pass should perform packaged encounter acceptance, then
+choose an audio POC boundary and add richer typed encounter variety without
+creating a generic ability framework prematurely. See ADR-034.
+
+<!-- END AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md -->
+
+# AVARRA Stage 12.27 - Game Audio Foundation Validation
+
+**Status:** Implementation, automated matrix, Windows release, and Android
+debug package gates passed
+
+**Date:** 2026-08-24
+
+## Outcome
+
+Stage 12.27 gives AVARRA Game its first complete audio-response loop without
+placing device playback or presentation state inside authoritative gameplay.
+
+- a dark looping ambience starts with the Game experience;
+- title, pause, resume, and world navigation receive a confirmation cue;
+- the Guardian's authoritative wind-up transition has an audible warning;
+- confirmed hit, player damage, enemy defeat, pickup, objective, and mission
+  completion moments receive distinct one-shot cues;
+- pause and the blocking mission prologue duck the mix;
+- app backgrounding suspends playback;
+- persistent Game-only settings expose audio enable, master, ambience, and
+  effects levels; and
+- audio initialization or playback failure degrades to silence instead of
+  blocking play.
+
+## Product and authority flow
+
+```text
+accepted local UI action ------------------------> UI confirmation
+server-safe Guardian enters windingUp ----------> warning cue
+accepted combat result / replicated health -----> hit, hurt, defeat cues
+accepted inventory or objective transition -----> pickup/progression cues
+
+authoritative state remains in gameplay/world/replication
+                         |
+                         v
+Game maps accepted presentation moments to GameAudioCue
+                         |
+                         v
+injectable GameAudioController -> provisional device adapter
+```
+
+The audio layer cannot attack, damage, collect, complete objectives, advance a
+story phase, or change a network revision. Connected cues are derived from
+replicated transitions rather than optimistic input, and an initial snapshot
+does not replay stale combat feedback.
+
+## Cue contract
+
+| Cue | Trigger source |
+| --- | --- |
+| `uiConfirm` | Accepted Game-shell navigation or pause action |
+| `guardianWindUp` | Transition into authoritative `windingUp` |
+| `combatHit` | Confirmed nonlethal enemy damage |
+| `playerHurt` | Confirmed local-player health decrease |
+| `enemyDefeated` | Confirmed enemy health reaches zero |
+| `pickup` | Accepted player inventory addition |
+| `objective` | Accepted objective/story progression |
+| `missionComplete` | Authoritative mission completion |
+| ambience | Game audio host lifecycle |
+
+Offline results and connected health/Guardian revisions feed the same pure cue
+mapping where their authority evidence is equivalent.
+
+## Adapter, settings, and lifecycle
+
+`GameAudioController` is a Game-only interface with configure, ambience,
+ducking, suspension, cue, and disposal operations. Production loads a
+provisional `AudioplayersGameAudioController`; tests use
+`SilentGameAudioController` or a recording fake. Each one-shot cue owns a
+bounded pool so rapid combat sounds can overlap without creating unbounded
+players.
+
+`GameAudioMix` validates normalized volumes and derives effective ambience and
+effects levels from the enabled/master/channel values. `GameAudioHost` applies
+settings immediately, ducks during pause/prologue, suspends with Flutter app
+lifecycle, resumes safely, and disposes the adapter. The settings file is now
+version 2; version-1 data migrates to audio-enabled defaults without touching
+world definitions or saves.
+
+## Reproducible original assets
+
+`tool/generate_avarra_audio.dart` deterministically synthesizes nine original
+mono, 22,050 Hz, 16-bit PCM WAV files:
+
+| Asset | Duration |
+| --- | ---: |
+| `ashfall_ambience.wav` | 12.00 s |
+| `ui_confirm.wav` | 0.14 s |
+| `warden_windup.wav` | 0.65 s |
+| `combat_hit.wav` | 0.24 s |
+| `player_hurt.wav` | 0.38 s |
+| `enemy_defeated.wav` | 0.80 s |
+| `pickup_shard.wav` | 0.72 s |
+| `objective_awakened.wav` | 0.95 s |
+| `mission_complete.wav` | 1.65 s |
+
+The nine files total 773,472 bytes. Tests validate the RIFF/WAVE headers,
+format, sample rate, bit depth, exact data size/duration, and non-silent sample
+content. No third-party sound source or license enters the repository.
+
+## Automated evidence
+
+- `dart analyze .`: no issues.
+- Complete documented matrix: **311 tests across 18 suites**.
+- Shared packages, Thermion bridge, and Server: **193 tests**.
+- Game suite: **94 tests**.
+- Forge suite: **24 tests**.
+- Unit tests cover mix derivation, range validation, and authoritative
+  damage-to-cue mapping.
+- Widget tests cover controller loading, live settings propagation, lifecycle
+  suspension/resume, controller replacement, disposal, ambience startup, and
+  an accepted title-screen confirmation.
+- Settings tests cover version-2 round trip, version-1 migration, audio
+  controls, and disabled-slider behavior.
+
+Five tests were added over the Stage 12.26 inventory of 306.
+
+## Build and package evidence
+
+- `apps/avarra_game`: `flutter build windows --release` passed.
+- Windows artifact:
+  `apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe`.
+- `apps/avarra_game`: `flutter build apk --debug` passed.
+- Android artifact:
+  `apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk`.
+- All nine WAV assets were verified inside the Android APK under
+  `assets/flutter_assets/assets/audio/` and in the Windows release data
+  bundle.
+- Android native compilation reported only the repository's known provisional
+  Thermion/Kotlin warnings; no AVARRA audio error was reported.
+
+## Remaining limits and next priorities
+
+- The packaged builds compiled and contain the assets, but no human listening
+  pass was performed. Loudness balance, clipping, cue fatigue, Windows/Android
+  latency, Bluetooth behavior, interruption recovery, and physical-device
+  lifecycle still require live acceptance.
+- PCM is suitable for this small proof but no production compression,
+  streaming, preload-budget, memory, or download policy is selected.
+- Audio is currently Game-bundled. `.avarra` packages cannot yet declare
+  licensed music, ambience, emitters, or cue substitutions, and Forge has no
+  audio authoring workflow.
+- There is no spatial audio, occlusion, adaptive combat music, biome layering,
+  voice, haptic pairing, or subtitle/visual alternative policy.
+- Rapid cue priority and voice stealing use the adapter's bounded pools but
+  have not been tuned through a dense encounter.
+- Physical Android touch, frame time, thermal, battery, and direct-LAN
+  acceptance plus a human 10-15 minute product playtest remain open.
+
+The next high-value pass should listen to the packaged encounter on Windows
+and physical Android, tune the mix and cue cadence from evidence, then add one
+typed encounter variation or story beat rather than prematurely building a
+generic audio engine. See ADR-035 and OD-011.
+
+<!-- END AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md -->
+
+# AVARRA Stage 12.28 - Ashen Castellan Boss Encounter Validation
+
+**Status:** Automated implementation/build gate passed; live encounter
+acceptance remains open
+
+**Date:** 2026-08-24
+
+## Outcome
+
+Stage 12.28 turns Relay Zero's generic final Warden into one complete authored
+boss vertical slice:
+
+- **Vharos, Ashen Castellan** has 120 health and three readable phases;
+- phase one uses a committed melee strike;
+- phase two alternates a locked cone sweep and melee;
+- phase three cycles locked ground eruption, sweep, and melee;
+- authored engagement, phase, and defeat text follows authoritative state;
+- the score adds a phase-scaled combat layer plus phase/defeat stingers;
+- defeating Vharos reveals the Relay Core and optional **Ashen Heart**; and
+- owning the Ashen Heart derives +25 maximum health from saved inventory.
+
+This is a product-specific encounter, not a generic ability engine.
+
+## Authority and data flow
+
+~~~text
+content schema v10 boss definition
+        |
+        v
+server-safe phase / pattern / locked target
+        |
+        +----> CombatSystem damage after shape revalidation
+        |
+        +----> protocol v5 encounter state
+                         |
+                         v
+             Game telegraph / boss beat / adaptive audio
+
+saved inventory item ID
+        |
+        v
+authored player-power derivation
+        |
+        v
+authoritative or offline Health maximum
+~~~
+
+Simulation owns phase, attack choice, timing, target lock, spatial hit truth,
+cooldown, damage, and defeat. Game consumes confirmed state only.
+
+## Content and compatibility
+
+Content schema v10 adds:
+
+| Component | Purpose |
+| --- | --- |
+| avarra.ai.guardian_boss | Name, thresholds, attack geometry, phase copy |
+| avarra.item.player_power_reward | Passive health bonus on a collectible |
+
+Both are additive definitions with machine-readable schema metadata and strict
+composition validation. Content v1-v9 continues to decode.
+
+Relay Zero keeps world format v2 and save format v2. The Ashen Heart stable
+item ID is relic.ashen_heart; existing player inventory already persists it.
+Maximum health is recomputed from the authored player base plus owned rewards
+on offline restore, host restore, connect/reconnect, and accepted collection.
+No runtime handle is persisted.
+
+Protocol v5 extends the bounded Guardian snapshot with encounter phase, attack
+pattern, and paired finite X/Z telegraph coordinates. The codec rejects
+incomplete coordinates, impossible combinations, unknown enums, and
+out-of-bound values.
+
+## Encounter presentation
+
+| Pattern | Commitment | Counterplay |
+| --- | ---: | --- |
+| melee | 650 ms | break melee range |
+| sweep | 900 ms | leave the locked cone |
+| eruption | 1,100 ms | leave the locked ground mark |
+
+The overlay remains bounded, pointer-transparent, reduced-motion compatible,
+and semantic. Target/health UI uses Vharos's authored name. A live-region
+banner presents engagement, phase II, final phase, and defeat copy.
+
+The Game-only audio controller now supports exploration and three boss
+intensities. One original 12-second combat loop cross-mixes with ambience;
+original 0.9-second phase and 1.8-second defeat stingers reinforce transitions.
+Restart, defeat, world replacement, disposal, and app lifecycle reset or
+suspend the mix safely.
+
+The deterministic audio generator now reproduces 12 mono, 22,050 Hz, 16-bit
+PCM WAV assets totaling **1,421,874 bytes**. No third-party audio was added.
+
+## Automated evidence
+
+- dart analyze .: no issues.
+- Complete matrix: **319 tests across 18 suites**.
+- Shared packages, Thermion bridge, and Server: **198 tests**.
+- Game suite: **97 tests**.
+- Forge suite: **24 tests**.
+- Eight tests were added over Stage 12.27's 311.
+- Gameplay tests prove deterministic patterns and real sweep/eruption dodges.
+- Content/world tests prove v10 decoding, reward derivation, and relationship
+  rejection.
+- Network/replication tests prove protocol-v5 round trip and strict validation.
+- Game widgets prove named banners, semantic expiry, pattern counterplay,
+  valid audio assets, and offline restored 125 health.
+- The real TCP Server mission test receives boss state, defeats Vharos, claims
+  the Heart, receives authoritative 125 maximum health, and completes the
+  Relay Core turn-in while retaining the relic.
+
+## Build and package evidence
+
+- Game Windows release build passed:
+  apps/avarra_game/build/windows/x64/runner/Release/avarra_game.exe
+- Headless Server compile passed:
+  apps/avarra_server/build/avarra_server.exe
+- Game Android debug build passed:
+  apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk
+- All 12 WAV assets were verified in source, Windows, and the Android APK.
+- Android reported only the known provisional Thermion/Kotlin warning.
+
+## Remaining limits and next priorities
+
+- No human play or listening pass was performed. Health, damage, phase cadence,
+  timings, shapes, reward value, mix, fatigue, and latency are untuned starts.
+- No physical Android touch, frame-time, thermal, battery, Bluetooth,
+  interruption, or direct-LAN acceptance was performed.
+- There is no stagger, interrupt, hit-stop, status system, player skill choice,
+  adds, arena hazards, phase checkpoint, or boss-specific animation/particles.
+- Forge has machine-readable schemas but no dedicated boss/reward workflow.
+- Network countdown remains receipt-relative without clock synchronization.
+- Audio remains Game-bundled PCM behind a provisional adapter; community-world
+  audio, licensing, compression, spatial emitters, and permanent policy remain
+  open.
+
+Next, run a real Windows and physical-Android play/listen session focused on
+dodge feel, cadence, touch readability, loudness, latency, and sustained
+frame/thermal evidence. Tune Vharos before adding more systems. See ADR-036.
+
+<!-- END AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md -->
+
+# AVARRA Stage 12.29 - Boss Combat Feel Validation
+
+**Status:** Implemented and automated gates pass
+
+**Date:** 2026-08-24
+
+## Product outcome
+
+Stage 12.29 makes Vharos feel like a changing encounter instead of a static
+model standing inside a warning shape. It remains a presentation pass over
+authoritative Stage 12.28 state; it does not add client damage authority or a
+generic VFX engine.
+
+Game now presents:
+
+- bounded boss-specific anticipation posture layered over immutable
+  presentation snapshots;
+- phase-scaled body presence, ground aura, rotating ritual sigils, and
+  phase-three ground cracks;
+- a short camera impulse when an authority-owned boss attack resolves,
+  including a correctly dodged attack;
+- distinct original melee, sweep, and eruption anticipation sounds; and
+- the existing settings boundary: Reduced motion removes cosmetic motion and
+  camera shake, while the camera-shake slider scales the remaining impulse.
+
+## Authority and dependency boundary
+
+`GameplayBossFxState` is sampled from `GuardianBehaviorStateComponent`,
+`GuardianBossComponent`, and `HealthComponent`. The overlay and motion
+functions receive immutable presentation snapshots and never write to ECS,
+combat, cooldown, health, persistence, or networking.
+
+Offline Game records a boss impact only after `GuardianBehaviorSystem` returns
+an attack result. A dodged geometry check still produces resolution feedback
+but no damage feedback. Connected Game derives the same moment from a
+replicated wind-up exit while rejecting stale initial-snapshot feedback. Phase
+changes that cancel a wind-up do not masquerade as an impact.
+
+Audio remains behind `GameAudioController`. The provisional adapter adds three
+bounded pools, and the silent adapter continues to preserve deterministic tests
+and play when a device backend is unavailable.
+
+## Bounded cost
+
+- at most four bosses receive cosmetic transform motion;
+- at most four active boss auras are painted;
+- existing telegraph and combat-event limits remain unchanged;
+- no new per-frame ECS mutation or renderer object ownership was introduced;
+- all three new WAVs are deterministic output of
+  `tool/generate_avarra_audio.dart`.
+
+## Automated evidence
+
+- `dart analyze .`: no issues;
+- Game suite: 101 tests;
+- complete repository matrix after Stages 12.29 and 12.30: 325 tests across
+  18 suites;
+- Game Windows x64 release builds;
+- Server executable builds;
+- Android debug APK builds;
+- source, Windows, and APK packages each contain all 15 WAV assets; and
+- the source audio bundle is 1,538,872 bytes.
+
+The Android build retains the known provisional Thermion Kotlin Gradle Plugin
+warning. It is not a build failure.
+
+## Honest limitations
+
+- The actor still uses the existing generic Idle/Run/Attack/Hit/Death clips;
+  the new posture is a bounded transform layer, not newly captured skeletal
+  animation.
+- Auras and sigils are projected Flutter paint, not renderer-native particles,
+  decals, lights, or material effects.
+- Audio loudness, device latency, camera comfort, and encounter balance have
+  not been accepted by a human packaged play session.
+- Physical Android touch, sustained performance, battery/thermal behavior, and
+  direct-LAN validation remain open.
+
+## Next product step
+
+Stage 12.30 closes the immediate creator gap by letting Forge stamp and tune
+the same three-phase boss and persistent reward through typed creator actions.
+
+<!-- END AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md -->
+
+# AVARRA Stage 12.30 - Forge Boss Mission Authoring Validation
+
+**Status:** Implemented and automated gates pass
+
+**Date:** 2026-08-24
+
+## Product outcome
+
+Stage 12.30 lets a creator build AVARRA's proven boss loop without editing
+JSON or source code. Forge's existing Combat mission template now offers an
+`Ascendant` profile and an optional three-phase boss mode.
+
+Before placement, the creator can author:
+
+- boss name;
+- maximum health and damage;
+- phase-two and phase-three thresholds;
+- melee radius, sweep range and half angle, and eruption radius;
+- entrance, phase, and defeat story beats;
+- permanent maximum-health reward value;
+- mission layout, loot label, mission narrative, and independent role assets.
+
+One viewport click creates the boss, guarded collectible, and completion
+console with their exact stable entity/item references. One Undo removes the
+entire chain and one Redo restores it.
+
+## Typed creator boundary
+
+The pass reuses the existing AI-friendly/human-friendly creator path:
+
+`ForgeGuardianMissionSettings`
+  -> validated immutable template input
+  -> `WorldEntityDefinition` values
+  -> one `CreatorCommandBatch`
+  -> shared world validation
+  -> canonical `.avarra` export
+
+Boss data serializes as the existing content-schema-v10
+`GuardianBossDefinition`. The guarded reward serializes as the existing
+`PlayerPowerRewardDefinition`. No Forge-only runtime component, prefab
+identity, scripting model, parallel file mutation path, or schema version was
+added.
+
+The `Ascendant` profile selects 120 health, 12 damage, a four-unit layout, the
+three-phase boss contract, and a +25 maximum-health reward. Any field can be
+customized; changes become ordinary authored component values and the Inspector
+can continue editing them after placement.
+
+## Validation behavior
+
+Pre-placement validation rejects:
+
+- empty or overlong boss names/story beats;
+- unordered or out-of-range phase thresholds;
+- invalid or unordered attack geometry;
+- non-positive reward power;
+- invalid core mission settings or undeclared role assets; and
+- worlds whose player is not combat-capable.
+
+The existing shared codec and playable-world validator remain the export gate.
+
+## Automated evidence
+
+- `dart analyze .`: no issues;
+- Forge focused matrix: 26 tests total, including canonical Ascendant assembly,
+  editor customization, export, and atomic undo;
+- complete repository matrix: 325 tests across 18 suites;
+- Forge Windows x64 release builds;
+- Game Windows x64 release builds;
+- Server executable builds; and
+- Game Android debug APK builds.
+
+## Honest limitations
+
+- This is one AVARRA-specific boss mission template, not a generic encounter
+  graph, wave editor, ability editor, or scripting language.
+- The template uses declared assets already available to the world; arbitrary
+  source-asset import/cooking and self-contained archive packaging remain open.
+- Saved reusable prefabs/template libraries are not implemented.
+- Forge Test Play remains one isolated solo process rather than an automated
+  multiplayer preview.
+- Human creator usability and physical Android end-to-end acceptance remain
+  open.
+
+## Next product step
+
+The next highest-value gate is a real packaged create-test-play-play loop:
+author an Ascendant mission in Forge, launch it through Test Play, evaluate the
+boss on Windows and physical Android, then tune animation, VFX, audio, controls,
+and balance from measured human evidence.
+
+<!-- END AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md -->
+
+# AVARRA Stage 12.31 - Authoritative Fissure Ring Validation
+
+**Status:** Implemented and automated gates pass
+
+**Date:** 2026-08-24
+
+## Product outcome
+
+Vharos's final phase now includes a fourth, encounter-wide pattern: a locked
+fissure ring. A 1,300 ms warning asks the player to enter the safe core or clear
+the arena edge before authority resolves the hit.
+
+The Game draws the actual annulus rather than a decorative approximation,
+labels the counterplay `ENTER SAFE CORE`, outlines the safe center, and plays
+a distinct original anticipation cue. The authoritative result remains in the
+server-safe Guardian and combat systems.
+
+## Authored and authority boundary
+
+- content schema v11 adds the optional typed
+  `avarra.ai.guardian_arena_hazard` v1 component;
+- the component stores ordered inner-safe and outer-danger radii;
+- shared world validation requires the Guardian-boss/behavior/attack
+  composition and enough Basic Attack range;
+- phase-three authority uses eruption, sweep, fissure ring, melee only when the
+  component exists;
+- content-v10 and component-absent bosses retain their previous sequence;
+- protocol v6 mirrors the new bounded pattern and existing locked timing data;
+- Forge Ascendant settings expose and validate both radii through the same
+  atomic CreatorCommandBatch; and
+- Relay Zero authors a 0.9-unit safe core and 3.2-unit outer ring for Vharos.
+
+World, save, and Forge-project format versions do not change.
+
+## Automated evidence
+
+- `dart analyze .`: no issues;
+- content, gameplay, world, network, Game telegraph/audio, and Forge authoring
+  regression tests pass;
+- complete repository matrix: 335 tests across 18 suites;
+- Game and Forge Windows x64 release builds pass;
+- the headless Server executable compiles;
+- Game Android debug APK builds; and
+- all 17 generated WAV assets are present in source, Windows release, and APK.
+
+## Honest limitations
+
+- This is one fixed AVARRA ring mechanic, not a generic hazard or ability graph.
+- The effect is a renderer-neutral projected warning rather than bespoke mesh,
+  decal, particles, lighting, or authored skeletal animation.
+- Only the locked target is evaluated; multiplayer area-of-effect victim sets
+  are not part of this slice.
+- Human readability and balance plus physical Android touch/performance remain
+  open.
+
+See ADR-037.
+
+<!-- END AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md -->
+
+# AVARRA Stage 12.32 - Authority-Owned Player Dodge Validation
+
+**Status:** Implemented and automated gates pass
+
+**Date:** 2026-08-24
+
+## Product outcome
+
+The Game now has a real dodge action instead of relying on ordinary walking.
+Left or right Shift and the visible action-bar slot perform a fast 1.8-unit
+planar move with a readable 1.5-second cooldown.
+
+The move is collision swept, wall sliding, world-boundary safe, rejected while
+defeated, and owned by the same server-safe product system in offline and
+connected play. It grants no invulnerability: the value is rapid positioning
+against truthful attack warnings.
+
+## Authority and presentation boundary
+
+- `DodgeStateComponent` stores the next simulation ready time;
+- `DodgeSystem` validates direction, life state, cooldown, and collision;
+- fully blocked attempts do not spend cooldown;
+- multiplayer dynamic avatars receive the same state;
+- protocol v6 carries a finite bounded planar dodge direction and forbids
+  targets on the command;
+- the host executes the move and reports acceptance or a stable rejection;
+- Game may predict the collision-safe displacement for responsiveness, but
+  replicated transforms remain authoritative;
+- a 170 ms Game-only ease follows the latest endpoint, including host
+  correction, and reduced motion bypasses the tween; and
+- an original dodge cue expands the packaged audio set to 17 WAVs.
+
+No world, content, Forge-project, or save schema changes were required.
+
+## Automated evidence
+
+- `dart analyze .`: no issues;
+- gameplay tests prove displacement, wall collision, cooldown, defeat, and
+  blocked-attempt behavior;
+- protocol and replication tests prove bounded command encoding/submission;
+- a real loopback TCP host test proves authoritative displacement and cooldown
+  rejection;
+- Game tests prove Shift mapping, action-bar cooldown, adaptive smoothing,
+  reduced motion, audio packaging, and runtime dodge state;
+- complete repository matrix: 335 tests across 18 suites;
+- Game and Forge Windows x64 release builds pass;
+- the headless Server executable compiles;
+- Game Android debug APK builds; and
+- source, Windows, and APK each contain all 17 generated WAV assets.
+
+## Honest limitations
+
+- There are no invulnerability frames, stamina, charges, cancel windows,
+  animation root motion, or authored class-specific dodge values.
+- Touch currently uses the visible action slot; gesture controls, controller
+  mapping, and user-remappable input remain open.
+- Real latency correction quality, physical Android touch feel, animation,
+  audio mix, thermal behavior, and balance still need human acceptance.
+
+See ADR-038.
+
+<!-- END AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md -->
+
+# AVARRA Stage 12.33 - Dodge Combat Feel Validation
+
+**Status:** Implemented and automated gates pass
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+The authority-owned dodge now reads as a deliberate action-RPG burst rather
+than an instantaneous transform change. During its 170 ms visual window, Game
+immediately overrides attack, locomotion, and idle presentation with the
+existing authored Run clip at 2.8x speed and a 25 ms crossfade.
+
+A projected three-strand air trail follows the player, ember motes break up the
+path, and a short landing crescent marks the leading edge. The effect follows
+the same correction-aware endpoint as the player presentation, so a host
+collision correction changes the trail destination instead of leaving a false
+client path.
+
+## Presentation boundary
+
+- gameplay displacement, collision, cooldown, defeat checks, and acceptance
+  remain in the server-safe Dodge system from Stage 12.32;
+- the animation selector is a pure Game policy over presentation state;
+- the trail consumes immutable presentation snapshots and the existing
+  isometric projection API;
+- no clip, particle, or timing state enters ECS, content, saves, commands, or
+  replication;
+- reduced motion bypasses position easing and removes the trail completely;
+- defeated players request no traversal animation; and
+- player assets without a Run clip remain playable because the Thermion adapter
+  already treats missing optional clips as a safe presentation fallback.
+
+This pass adds no schema, protocol, save, renderer-adapter, Forge, or Server
+change.
+
+## Automated evidence
+
+- `dart analyze .`: no issues;
+- focused tests prove dodge animation precedence, bounded playback policy,
+  correction-aware easing, projected overlay composition, and reduced-motion
+  removal;
+- complete repository matrix: 338 tests across 18 suites;
+- Game and Forge Windows x64 release builds pass;
+- the headless Server executable compiles;
+- Game Android debug APK builds; and
+- all 17 generated WAV assets remain present in source, Windows, and APK.
+
+## Honest limitations
+
+- This reuses the authored Run clip at high speed; it is not a bespoke
+  skeletal roll, sidestep, phase-shift, or root-motion animation.
+- The trail is a bounded screen-space projection rather than renderer-native
+  particles, mesh ribbons, decals, lighting, or motion vectors.
+- There is no haptic response, controller mapping, input remapping, or touch
+  gesture yet.
+- Human visual tuning, real network-latency feel, and physical Android
+  performance/touch acceptance remain open.
+
+Stage 12.33 is a downstream presentation refinement of ADR-038.
+
+Stage 12.34 supersedes the provisional 2.8x Run mapping with a dedicated
+generated Dodge clip and a centralized, reproducible authoring workflow.
+
+<!-- END AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md -->
+
+# AVARRA Stage 12.34 - Reproducible Dodge Feel Authoring Validation
+
+**Status:** Implemented and automated gates pass
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+AVARRA's built-in player now uses a dedicated 180 ms `Dodge` animation rather
+than the provisional high-speed Run mapping. The articulated pose leans the
+CharacterRoot into the burst, lowers its center, braces the sword, and returns
+to the authored rest pose while simulation owns all world displacement.
+
+The work is now easy to reproduce:
+
+- one AVARRA-specific profile controls clip name, playback, duration, trail
+  strands, ember count, and colors;
+- one deterministic Dart tool generates binary animation data and glTF
+  metadata for Game and Forge together;
+- buffer length and metadata offsets are calculated automatically;
+- `--check` verifies every output without writing; and
+- Windows CI runs the read-only check before the package suites.
+
+## Architecture boundary
+
+- `avarra_gameplay` continues to own dodge displacement, collision, cooldown,
+  defeat checks, and acceptance;
+- Game owns `GameplayDodgeFeelProfile`, animation requests, and projected VFX;
+- the generator is bounded repository tooling for AVARRA's two built-in Gothic
+  character assets;
+- Game and Forge receive byte-identical generated assets but do not import each
+  other's application code; and
+- no content, world, Forge-project, save, protocol, or renderer-adapter schema
+  changes.
+
+## Easy authoring path
+
+```text
+edit four Dodge pose samples
+  -> run deterministic generator
+  -> Game + Forge bin/glTF copies
+  -> run --check
+  -> asset/profile tests
+  -> package
+```
+
+See `AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`.
+
+## Automated evidence
+
+- generator write mode creates a 768-byte Ashen Vanguard buffer with Idle, Run,
+  Attack, and Dodge clips in both apps;
+- generator `--check` verifies both Ashen Vanguard copies and both unchanged
+  five-clip Hollow Warden copies;
+- Game tests verify the dedicated Dodge clip, 180 ms accessor, centralized
+  profile override, animation precedence, projected effects, and reduced
+  motion;
+- Forge tests verify byte-identical glTF/resource closure and named clips;
+- `dart analyze .`: no issues;
+- complete repository matrix: 340 tests across 18 suites;
+- Game and Forge Windows x64 release builds pass;
+- the headless Server executable compiles;
+- Game Android debug APK builds; and
+- all 17 WAV assets remain packaged in source, Windows, and APK.
+
+## Honest limitations
+
+- This is a hand-authored articulated-node dash pose, not a production
+  motion-captured/skinned roll with root motion.
+- The pose workflow is code-based; a visual timeline, preview scrubber,
+  retargeting, blend trees, animation events, and source-asset cooking remain
+  open.
+- The VFX profile tunes the current projected effect; renderer-native particle
+  authoring remains an unresolved POC/ADR decision.
+- Physical Android animation timing, touch feel, GPU cost, and human visual
+  tuning remain open.
+
+<!-- END AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md -->
+
+# AVARRA Stage 12.35 - Android Kotlin Compatibility Validation
+
+**Status:** Implemented and clean Android gate passes
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+AVARRA Game now builds its pinned Thermion Android plugin without Flutter's
+future-incompatibility warning for plugins that apply the Kotlin Gradle Plugin
+(KGP). The solution is checkout-local and reproducible in CI: it does not edit
+the Pub cache, float the renderer dependency, or fork Thermion's Dart, Kotlin,
+C++, or platform source.
+
+## Implementation
+
+- Game's `settings.gradle.kts` keeps the immutable Thermion project directory
+  but redirects only its Gradle build file through Gradle's
+  `ProjectDescriptor`;
+- `android/gradle/thermion_flutter_compat.gradle` removes Thermion's embedded
+  AGP 7.3/Kotlin 1.7 buildscript and `kotlin-android` application;
+- the overlay uses AVARRA's Android API 36, NDK 28.2.13676358, Java 17, and
+  `kotlin.compilerOptions` contract;
+- the prior root-project `afterEvaluate` compile-SDK mutation is no longer
+  required; and
+- `tool/build_android_ci.ps1` captures Flutter build output and fails if the
+  legacy-KGP warning returns.
+
+## Boundary
+
+This is an application build compatibility overlay, not an AVARRA renderer
+fork. Thermion remains pinned to official commit
+`caad37835e7d379621247b24b7de9d84071bd474`, and the scene bridge remains the
+only runtime dependency boundary.
+
+Flutter 3.44.4 currently keeps `android.builtInKotlin=false`; Flutter's
+migration documentation requires Flutter 3.47 or later before enabling
+built-in Kotlin. The source is migration-ready, but AVARRA does not silently
+change that toolchain flag.
+
+## Automated evidence
+
+- a normal `flutter build apk --debug` passes without the KGP warning;
+- `flutter clean` followed by a fresh `flutter build apk --debug` passes
+  without the warning;
+- `tool/build_android_ci.ps1 -SkipToolchainInstall` passes its new warning
+  regression gate;
+- the resulting debug APK is non-empty and hashed by the CI script; and
+- the existing 340-test repository matrix and Windows/Server package gates
+  remain unchanged by this Android-only build configuration.
+
+## Removal condition
+
+Remove the overlay only after a deliberately pinned upstream Thermion revision:
+
+1. no longer applies KGP on AGP 9;
+2. declares a compatible compile SDK and Java/Kotlin target;
+3. passes AVARRA's Windows runtime and close gates;
+4. passes clean Android packaging and emulator lifecycle checks; and
+5. preserves the scene-bridge API used by Game and Forge.
+
+## Sources
+
+- <https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors>
+- <https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers>
+- <https://github.com/nmfisher/thermion/blob/develop/thermion_flutter/thermion_flutter/android/build.gradle>
+
+<!-- END AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md -->
+
+# AVARRA Combat Feel Authoring Guide
+
+**Current scope:** built-in player dodge animation and projected Game effects
+
+**Date:** 2026-08-25
+
+This is the shortest supported path for tuning AVARRA's built-in dodge feel
+without hand-editing glTF JSON, binary offsets, Game/Forge asset copies, or
+selection logic.
+
+It is intentionally AVARRA-specific. It is not a general animation editor,
+particle graph, ability framework, or replacement for DCC tools.
+
+## Quick workflow
+
+From the repository root:
+
+```powershell
+dart run tool/generate_gothic_animation_buffers.dart
+dart run tool/generate_gothic_animation_buffers.dart --check
+```
+
+The first command deterministically regenerates:
+
+- Game Ashen Vanguard and Hollow Warden animation buffers;
+- Forge copies of the same buffers;
+- each glTF animation buffer declaration;
+- buffer views and accessors;
+- named samplers and channels; and
+- articulated character-root scene metadata.
+
+The second command is read-only. It reconstructs the expected bytes and glTF
+documents in memory and fails if any generated Game or Forge file is stale.
+CI runs the same check after analysis.
+
+## Tune the dodge animation
+
+Edit `tool/generate_gothic_animation_buffers.dart`.
+
+The built-in player clips are declared together:
+
+```dart
+_AnimationClip('Idle', 1.6)
+_AnimationClip('Run', 0.6)
+_AnimationClip('Attack', 0.6)
+_AnimationClip('Dodge', 0.18)
+```
+
+The corresponding `_ashenClip` block contains four key samples for:
+
+- time;
+- local CharacterRoot translation;
+- local CharacterRoot rotation; and
+- sword rotation.
+
+After changing those values, rerun the two commands above. Buffer size,
+offsets, accessors, and duplicate Game/Forge output are calculated
+automatically.
+
+Keep clip translation local and returning to zero. The server-safe Dodge system
+owns actual displacement and collision; skeletal/root presentation must never
+become movement authority.
+
+## Tune runtime feel
+
+Edit the single built-in profile in
+`apps/avarra_game/lib/src/gameplay_dodge_feel_profile.dart`.
+
+It controls:
+
+- animation clip name;
+- playback speed and crossfade;
+- visual duration;
+- odd trail-strand count;
+- ember-mote count; and
+- trail, ember, and landing colors.
+
+The Game animation selector and projected VFX consume this profile. Reduced
+motion still removes interpolation and the trail regardless of style tuning.
+
+## Focused validation
+
+```powershell
+dart analyze .
+Push-Location apps/avarra_game
+flutter test test/gameplay_character_animation_test.dart test/gameplay_dodge_presentation_test.dart test/gothic_animation_asset_test.dart
+Pop-Location
+Push-Location apps/avarra_forge
+flutter test test/forge_model_asset_test.dart
+Pop-Location
+```
+
+The Game test checks the dedicated clip and generated buffer metadata. The
+Forge test requires every built-in glTF and referenced resource to remain
+byte-identical between application bundles.
+
+## Current limits
+
+- Pose authoring is typed Dart with four key samples, not a graphical timeline.
+- The starter assets are articulated rigid-node glTF models, not production
+  skinned characters with retargeting.
+- Projected trails are Game-owned CustomPainter effects, not Thermion-native
+  ribbons, particles, decals, or lights.
+- Community-world animation/VFX import, cooking, validation, and licensing are
+  separate open product requirements.
+
+<!-- END AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md -->
+
+---
+
 <!-- BEGIN AVARRA_FORGE_GAME_MAKER_GUIDE.md -->
 
 # Avarra Forge Game Maker Guide
@@ -8491,7 +9730,11 @@ launches the real Game application with a disposable export.
   labels before stamping;
 - write the mission title, opening briefing, return beat, and completion
   epilogue that Game presents from authoritative progress;
-- start from an Initiate, Sentinel, or Champion encounter profile and select
+- start from an Initiate, Sentinel, Champion, or Ascendant encounter profile;
+- author a named three-phase boss, attack shapes, phase story beats, and a
+  persistent maximum-health reward before one atomic mission stamp;
+- tune the Ascendant fissure-ring inner safe radius and outer danger radius;
+- select
   separate declared assets for the Guardian, loot, and completion console;
 - undo and redo typed creator commands;
 - aggregate validation issues before export;
@@ -8649,6 +9892,11 @@ performance acceptance are still open.
 - A guarded collectible references an authored Guardian by stable entity ID.
 - An item turn-in references an authored collectible by stable item ID.
 - A mission narrative attaches to an item turn-in and bounds each prose field.
+- A boss requires Guardian behavior and a compatible basic attack. Phase
+  thresholds descend from Phase II to Phase III, and attack shapes are bounded.
+- A Guardian arena hazard requires a boss and strictly ordered positive inner
+  safe and outer danger radii. Basic Attack range must cover the outer edge.
+- A player-power reward attaches to a collectible and must be positive.
 - Renderable references must use assets declared by the world.
 - World definitions and runtime save state stay separate.
 
@@ -8672,8 +9920,8 @@ bundled Relay Zero adventure.
   permanent scripting model is still an open technical decision.
 - Quest graphs, dialogue, weighted loot tables, encounter waves, spawn
   configuration, lobby rules, and server presets still need creator-facing
-  tools. The current combat mission chain is one Guardian, one guaranteed
-  collectible, and one item turn-in.
+  tools. The current combat mission chain is one Guardian or three-phase boss,
+  one guaranteed collectible/power reward, and one item turn-in.
 - The Combat mission template supports separate role assets, but only from the
   world's existing declarations. Settings persist for the Forge session, but
   user-authored reusable prefabs and saved template libraries remain future
@@ -8725,7 +9973,7 @@ For architectural detail, read:
 # AVARRA Android CI/CD Build Contract
 
 **Status:** Android CI build verification implemented
-**Date:** 2026-08-20
+**Date:** 2026-08-25
 
 ## Purpose
 
@@ -8768,7 +10016,8 @@ build entry point for CI and local reproduction. From the repository root:
 
 The script requires Flutter 3.44.4 and Dart 3.12.2, requires Java 17 or newer,
 installs and verifies the pinned Android SDK components, resolves workspace
-dependencies, and runs `flutter build apk --debug --no-pub`. It then
+dependencies, and runs `flutter build apk --debug --no-pub`. It fails if any
+plugin reports that it still applies the legacy Kotlin Gradle Plugin, then
 requires
 `apps/avarra_game/build/app/outputs/flutter-apk/app-debug.apk` to be a
 non-empty file and logs its absolute path, byte length, and SHA-256 hash.
@@ -8811,13 +10060,24 @@ Production CD requires a separately approved workflow with:
 - an explicit artifact destination and retention policy; and
 - a manual/environment approval gate before store publication.
 
-## Known upstream warning
+## Thermion Kotlin compatibility overlay
 
-The pinned Thermion Flutter plugin still applies the Kotlin Gradle Plugin.
-Flutter 3.44.4 reports this as a future compatibility warning, not a build
-failure. A future Flutter/AGP upgrade must either use an upstream Thermion
-revision compatible with built-in Kotlin or record a measured compatibility
-workaround. Do not silently remove the current compatibility flags.
+The pinned Thermion Flutter plugin's upstream Gradle file still embeds AGP 7.3,
+Kotlin 1.7.10, compile SDK 33, and `apply plugin: 'kotlin-android'`.
+`settings.gradle.kts` redirects only that subproject's build file to the
+repository-owned `android/gradle/thermion_flutter_compat.gradle`. The overlay
+keeps Thermion's pinned source directory while using API 36, Java 17, and the
+AGP 9 `kotlin.compilerOptions` contract without applying KGP.
+
+This closes Flutter's future-compatibility warning without editing the Pub
+cache or vendoring Thermion source. CI captures the Android build output and
+fails if the warning returns.
+
+Flutter 3.44.4 still requires `android.builtInKotlin=false`; enabling the flag
+requires Flutter 3.47 or later. Do not silently change the compatibility flags.
+Remove the overlay only when a deliberately pinned upstream Thermion revision
+passes the same Windows, clean Android, and emulator lifecycle gates. See
+`AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md` and ADR-017.
 
 <!-- END AVARRA_ANDROID_CI_CD.md -->
 
@@ -8941,6 +10201,48 @@ player, survived a ten-minute connected soak, exposed the expected canonical
 save, and restored mission completion after a cold launch. A packaged Windows
 Game client also joined the native headless host and passed held-key movement.
 The soak exposed and closed idle zero-vector autosave amplification.
+
+Stage 12.26 gives that combat loop its first real enemy commitment/readability
+contract. Hollow Wardens enter a 650 ms authority-owned wind-up before the
+existing combat system revalidates their strike. Protocol v4 mirrors phase,
+target, and bounded remaining time, while Game projects the attack radius and
+dodge countdown. A player who exits the radius during the warning avoids the
+damage in both offline and hosted simulation.
+
+Stage 12.27 makes that loop audible through a replaceable Game-only boundary.
+Original ambience and distinct Guardian warning, combat, defeat, loot,
+objective, completion, and UI cues follow accepted local actions or
+authoritative state transitions. Persistent mix settings, pause/prologue
+ducking, lifecycle suspension, and graceful silence keep device playback out
+of the gameplay contract.
+
+Stage 12.28 gives the chamber a real climax. Vharos, Ashen Castellan, escalates
+from committed melee to a locked cone sweep and then a locked ground eruption
+across three authoritative phases. Named encounter beats and adaptive combat
+audio expose that escalation. Defeat reveals the required Relay Core and an
+optional persisted Ashen Heart that raises maximum health to 125. This is a
+typed AVARRA product slice, not a generic ability framework.
+
+Stage 12.29 makes that escalation legible at a glance: Vharos changes posture
+and ritual aura by phase, phase three cracks the projected arena floor, each
+attack family has its own anticipation sound, and resolved attacks deliver a
+bounded camera impulse. Stage 12.30 lets Forge creators reproduce the same
+boss/guarded-power-reward/turn-in structure through one typed, undoable
+Ascendant mission stamp.
+
+Stage 12.31 adds a final-phase fissure ring with a 0.9-unit safe core and
+3.2-unit danger edge. Authority locks the ring to Vharos while Game shows the
+real annulus and asks the player to enter the core. Forge Ascendant missions
+author the same radii. Stage 12.32 gives the player a real collision-swept
+dodge: Shift or the action bar moves 1.8 units on a 1.5-second authority-owned
+cooldown, with short correction-aware smoothing and a dedicated cue.
+Stage 12.33 gives that burst readable velocity: the authored character motion
+accelerates immediately while projected air strands, ember motes, and a
+landing crescent track the latest authority endpoint. Reduced motion removes
+the effect without changing the move.
+Stage 12.34 gives Ashen Vanguard a dedicated generated Dodge pose and puts its
+clip/VFX tuning behind one AVARRA profile. The same deterministic tool updates
+and verifies Game and Forge copies, making further iteration repeatable.
 
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle
@@ -9572,6 +10874,23 @@ size, so guidance does not require activating a chunk. Active clients may use
 the corresponding live ECS transform for presentation, but that runtime handle
 is never persisted as identity.
 
+Content schema v10 adds the first narrow authored boss and player-power slice.
+`GuardianBossDefinition` augments an existing Guardian/Health/BasicAttack
+entity with a name, two thresholds, three attack shapes, and bounded encounter
+copy. `PlayerPowerRewardDefinition` augments a collectible with a positive
+maximum-health bonus. Runtime boss tuning materializes into server-safe ECS;
+player power is derived from stable saved inventory item IDs. Existing content
+v1-v9 remains readable and no runtime handle or duplicate reward state is
+persisted.
+
+Content schema v11 adds optional
+`GuardianArenaHazardDefinition(innerSafeRadius, outerRadius)`. It augments a
+Guardian boss rather than replacing its behavior contract. Shared validation
+requires strictly ordered positive radii, the Guardian-boss/behavior/attack
+composition, and Basic Attack range that covers the outer radius. Runtime
+materialization is server safe. Existing content v1-v10 remains readable;
+component-absent bosses keep their previous attack sequence.
+
 ---
 
 # 11. Versioning
@@ -9632,7 +10951,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4–11.2 Implementation
+# 14. Current Stage 4-12.32 Implementation
 
 The initial vertical slice now provides:
 
@@ -9640,10 +10959,11 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 6, with versions 1 through 5 still readable
+  content schema version 11, with versions 1 through 10 still readable
   typed persistent-flag interaction effect
   typed health and deterministic basic-attack definitions
   typed guardian perception and leash policy
+  typed boss, player-power reward, and Guardian arena-hazard definitions
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -9782,9 +11102,12 @@ v3 adds monotonic typed attack, interaction, and restart commands. The host
 resolves their outcome; clients never declare damage, inventory grants, or
 objective completion.
 
-Protocol v3 retains the stable controlled entity returned by v2. The host consumes
-movement per connection and never routes two players to the same authored
-avatar.
+Protocols v3-v5 retain the stable controlled entity returned by v2. The host
+consumes movement per connection and never routes two players to the same
+authored avatar. Protocol v4 additionally carries bounded Guardian
+phase/target/wind-up state; clients still never declare the strike result.
+Protocol v5 adds encounter phase, attack pattern, and paired locked planar
+target coordinates for boss presentation.
 
 Client does not send:
 
@@ -9827,6 +11150,30 @@ Stage 11.5 adds revisioned gameplay snapshots containing authoritative combat
 health, world persistent flags, and the receiving player's inventory. Clients
 ignore stale revisions. These are still full JSON state messages, not the final
 bandwidth representation.
+
+Stage 12.26 advances the handshake to protocol v4 and adds a bounded,
+stable-ID-ordered Guardian-state list to those revisioned snapshots. Phase,
+optional locked target, and remaining wind-up microseconds let connected Game
+show the same server-owned 650 ms commitment used offline. The host increments
+gameplay revision on Guardian phase transitions and accepted attacks. Clients
+may count down from the received remaining duration for presentation, but only
+the host's completion-time `CombatSystem` result changes health. Clock
+synchronization, latency compensation, deltas, and degraded-network tuning
+remain open.
+
+Stage 12.28 advances the handshake to protocol v5. Guardian snapshots add the
+encounter phase, selected melee/sweep/eruption pattern, and paired finite X/Z
+telegraph target. The host validates the true attack shape before CombatSystem
+may damage a target. Clients use receipt-relative timing only for warnings;
+clock synchronization and latency compensation remain open.
+
+Stages 12.31-12.32 advance the handshake to protocol v6. Guardian snapshots can
+select the fissure-ring pattern; authored radii remain world data already
+shared by the content handshake. Gameplay commands add a target-free dodge with
+a complete finite non-zero bounded planar direction. The host executes the
+shared collision sweep and cooldown and replicates the resulting transform;
+client prediction cannot declare acceptance. Clock synchronization, rollback,
+loss/jitter tuning, and compact event/delta representation remain open.
 
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape
@@ -10162,6 +11509,26 @@ completion console nor Guardian invalidates the player spawn or playable area.
 These are starter/template corrections, not a new world component or generic
 navigation system.
 
+Stage 12.34 extends the same deterministic animation generator with Ashen
+Vanguard's dedicated Dodge clip, automatic buffer sizing, and a read-only
+`--check` mode enforced by CI. The tool writes both application bundles;
+Forge's asset-closure test still requires byte equality. This is repository
+asset tooling, not player presentation or animation editing UI inside Forge.
+
+Stage 12.30 extends the same mission input with an optional boss contract and
+the Ascendant profile. Boss identity, thresholds, attack shapes, encounter
+copy, and collectible power are validated before the factory emits existing
+`GuardianBossDefinition` and `PlayerPowerRewardDefinition` values. The boss,
+guarded reward, and completion console still enter one `CreatorCommandBatch`
+with exact stable references. No Forge-only component, serialized profile,
+generic encounter graph, or direct file mutation path is introduced.
+
+Stage 12.31 adds two ordered Ascendant settings for the fissure-ring safe core
+and danger edge. The same factory emits the optional content-v11
+`GuardianArenaHazardDefinition` and expands Basic Attack range when needed.
+The schema upgrade, boss, reward, and console remain one validated undoable
+batch; Forge does not add a parallel encounter representation.
+
 Stage 12.21 extends `ForgeGuardianMissionSettings` with a title and three
 bounded story beats. The same three-entity factory attaches
 `MissionNarrativeDefinition` to the completion console. Profiles still change
@@ -10389,8 +11756,13 @@ The required delivery order is:
 17. **Complete:** package and integrity-check the shared built-in Gothic catalog
     and prove a real profiled mission through Game import/restart; and
 18. **Complete:** author bounded opening, return, and completion story beats
-    through the same mission factory and portable content contract; and
-19. only after the human creator loop works, add Stage 10A transactions,
+    through the same mission factory and portable content contract;
+19. **Complete:** author the existing three-phase boss and persistent power
+    reward through an Ascendant mission profile and the same atomic command
+    boundary; and
+20. **Complete:** author the existing phase-three fissure-ring radii through
+    the Ascendant mission profile and content-v11 arena-hazard component; and
+21. only after the human creator loop works, add Stage 10A transactions,
     permissions, semantic diff, and agent adapters.
 
 ADR-025 resolves the initial OD-020 representation and minimum OD-019 dependency
@@ -10406,8 +11778,10 @@ and gates are in `AVARRA_STAGE_10_2_EDITOR_COMPLETION_VALIDATION.md`,
 `AVARRA_STAGE_12_11_FORGE_MISSION_PROFILES_AND_ASSETS_VALIDATION.md`,
 `AVARRA_STAGE_12_12_FORGE_BUILT_IN_ASSET_CATALOG_VALIDATION.md`,
 `AVARRA_STAGE_12_21_AUTHORED_MISSION_NARRATIVE_VALIDATION.md`,
+`AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-ADR-026, ADR-033, and
+ADR-026, ADR-033, ADR-037, and
 `AVARRA_ENGINEERING_REVIEW_2026-08-12.md`.
 
 <!-- END AVARRA_FORGE_ARCHITECTURE.md -->
@@ -13644,6 +15018,192 @@ attack telegraph. Live packaged visual acceptance and physical Android remain
 open. The next product order is hands-on acceptance, audio POC/decision,
 server-visible enemy wind-up, then richer typed story authoring.
 
+Stage 12.26 status (authoritative-guardian-telegraph gate completed 2026-08-24):
+
+- the Guardian state machine has an explicit `windingUp` phase with a fixed
+  650 ms product commitment;
+- the locked Guardian holds position and cannot deal damage before completion;
+- completion delegates to the existing combat system, so range and obstruction
+  are checked again and movement can avoid the strike;
+- protocol v4 adds bounded Guardian phase, target, and remaining-time values to
+  revisioned gameplay snapshots;
+- listen/headless host revision changes expose both wind-up start and the
+  authoritative strike result;
+- connected Game mirrors the replicated phase only for presentation;
+- a bounded pointer-transparent overlay projects attack radius, urgency,
+  locked-target reticle, and a semantic local-player dodge countdown;
+- reduced motion keeps the complete spatial and timing warning without pulse
+  modulation; and
+- formatting, workspace analysis, the Game Windows release, the Server
+  compile, and all 18 suites pass. Five tests were added, so the inventory is
+  now 306.
+
+This closes the immediate-hit readability gap identified in Stage 12.24 and
+12.25. It does not define authored per-enemy wind-up data, general abilities,
+area shapes, animation-event synchronization, stagger/cancellation,
+clock-synchronized network timing, latency compensation, audio, haptics, or
+physical Android acceptance. The next product order is packaged encounter
+acceptance, audio POC/decision, richer typed encounter variety, then story
+expansion.
+
+Stage 12.27 status (Game-audio-foundation gate completed 2026-08-24):
+
+- Game owns an injectable audio controller; simulation, world, persistence,
+  replication, Forge, and Server stay device-independent;
+- the provisional `audioplayers` adapter loops ambience and uses bounded pools
+  for overlapping one-shot cues on Windows and Android;
+- nine original mono PCM WAV assets are reproducibly generated from the
+  checked-in Dart audio tool;
+- accepted UI navigation and authoritative Guardian, combat, loot, objective,
+  and mission transitions drive distinct cues;
+- connected Game derives cues from replicated health/phase changes and does
+  not replay stale initial-snapshot combat feedback;
+- pause and prologue presentation duck the mix, app backgrounding suspends it,
+  and backend failures degrade safely to silence;
+- recoverable Game settings advance to version 2 with audio enable and
+  validated master, ambience, and effects values plus version-1 migration;
+- Windows release and Android debug packages build and contain all nine audio
+  assets; and
+- formatting, workspace analysis, and all 18 suites pass. Five tests were
+  added, so the inventory is now 311.
+
+This closes the initial silent-game and audio-backend POC gap without selecting
+a permanent codec/device/spatial stack or changing world, save, content, or
+network schemas. Live listening and mix/latency tuning, community-world audio
+authoring, compression/streaming, adaptive music, spatial emitters, haptics,
+and physical Android acceptance remain open. The next product order is
+packaged listening/tuning, richer typed encounter variety, story expansion,
+then an authored audio contract only when a concrete community-world
+requirement needs it.
+
+Stage 12.28 status (Ashen-Castellan boss gate completed 2026-08-24):
+
+- content schema v10 adds typed Guardian-boss and collectible power-reward
+  definitions without changing world/save formats;
+- Vharos uses three deterministic health phases with melee, locked cone sweep,
+  and locked ground eruption counterplay under server-safe authority;
+- protocol v5 replicates encounter phase, pattern, and locked target data;
+- Game adds named boss HUD/banners, true-shape warnings, phase-scaled combat
+  music, and boss stingers;
+- the persisted Ashen Heart raises maximum health from 100 to 125 offline and
+  under connected host authority; and
+- root analysis, 319 tests across 18 suites, Windows release, Server compile,
+  and Android debug packaging pass.
+
+This is one complete AVARRA boss slice, not a generic ability or encounter
+framework. Live play/listening and physical Android evidence now outrank more
+system breadth. See the Stage 12.28 validation and ADR-036.
+
+Stage 12.29 status (boss combat-feel gate completed 2026-08-24):
+
+- Game derives bounded phase posture, ritual aura/sigils, phase-three cracks,
+  and boss-impact shake from authoritative boss state;
+- resolved dodges receive impact feedback without inventing damage;
+- three distinct original melee/sweep/eruption anticipation cues expand the
+  packaged audio bundle from 12 to 15 WAVs;
+- reduced-motion and camera-shake settings continue to own accessibility; and
+- root analysis, the 325-test final matrix, Game Windows release, Server
+  compile, and Android debug packaging pass.
+
+This is Game presentation over existing authority, not a new renderer/VFX or
+combat framework. See the Stage 12.29 validation.
+
+Stage 12.30 status (Forge boss-mission authoring gate completed 2026-08-24):
+
+- the existing atomic Combat mission template adds an Ascendant profile and
+  optional three-phase boss mode;
+- creators can tune boss identity, health thresholds, attack shapes, story
+  beats, and persistent maximum-health reward before placement;
+- one typed command batch creates the boss, guarded reward, and completion
+  console with stable references and one-step Undo/Redo;
+- the pass reuses content schema v10 and adds no Forge-only runtime schema or
+  direct JSON mutation path; and
+- Forge analysis, its 26-test suite, the complete 325-test matrix, and the
+  Forge Windows release build pass.
+
+This closes the immediate boss-authoring gap without building a generic
+encounter graph. See the Stage 12.30 validation.
+
+Stage 12.31 status (authoritative fissure-ring gate completed 2026-08-24):
+
+- content schema v11 adds one optional typed Guardian arena-hazard component
+  with strictly ordered inner-safe and outer-danger radii;
+- Vharos's phase-three authority cycles eruption, sweep, fissure ring, and
+  melee, while component-absent content keeps the prior sequence;
+- protocol v6 mirrors the bounded pattern, and Game presents the true annulus,
+  safe core, semantic guidance, and dedicated original warning cue;
+- Forge Ascendant settings author both radii through the existing typed atomic
+  mission batch; and
+- root analysis, the 335-test matrix, Game/Forge Windows releases, Server
+  compile, and Android debug packaging pass.
+
+This is one authored AVARRA boss mechanic, not a generic hazard graph. See the
+Stage 12.31 validation and ADR-037.
+
+Stage 12.32 status (authority-owned player-dodge gate completed 2026-08-24):
+
+- one server-safe system owns a 1.8-unit collision sweep, wall slide, defeat
+  check, blocked-path rejection, and 1.5-second cooldown;
+- offline play and the multiplayer host use the same product rule, while
+  protocol v6 carries only a bounded planar dodge intent;
+- Shift and a visible action-bar slot trigger the move, and connected Game
+  prediction receives a 170 ms correction-aware visual ease;
+- reduced motion snaps to the current authoritative endpoint and one original
+  cue expands the packaged audio set to 17 WAVs; and
+- analysis, 335 tests across all 18 suites, both Windows releases, Server
+  compile, Android debug APK, and source/Windows/APK audio inspection pass.
+
+This creates crisp counterplay without invulnerability, a generic skill
+framework, or schema/save changes. See the Stage 12.32 validation and ADR-038.
+
+Stage 12.33 status (dodge-combat-feel gate completed 2026-08-25):
+
+- dodge receives immediate presentation priority and plays the existing
+  authored Run clip once at 2.8x speed with a 25 ms crossfade;
+- a bounded projected three-strand trail, deterministic ember motes, and
+  landing crescent share the correction-aware 170 ms endpoint;
+- reduced motion removes the trail and retains immediate authority truth;
+- missing optional Run clips degrade through the existing adapter fallback;
+  and
+- analysis, 338 tests across 18 suites, both Windows releases, Server compile,
+  Android debug APK, and the 17-asset package check pass.
+
+This is Game-only combat feel, not root motion, renderer-owned gameplay, or a
+generic VFX system. See the Stage 12.33 validation.
+
+Stage 12.34 status (reproducible dodge-feel authoring gate completed
+2026-08-25):
+
+- Ashen Vanguard gains a dedicated generated 180 ms Dodge pose instead of the
+  provisional high-speed Run mapping;
+- one Game-only profile centralizes clip playback, visual duration, trail
+  strands, ember count, and colors;
+- one deterministic tool writes matching Game/Forge binary buffers and glTF
+  metadata without manual byte offsets or size bookkeeping;
+- `--check` detects stale assets read-only and the Windows CI gate runs it;
+- the authoring guide documents the two-command workflow and authority
+  guardrails; and
+- analysis, 340 tests across 18 suites, both Windows releases, Server compile,
+  Android debug APK, and package inspection pass.
+
+This is bounded AVARRA asset/presentation tooling, not a general animation or
+particle editor. See Stage 12.34 validation and the combat-feel authoring guide.
+
+Stage 12.35 status (Android Kotlin compatibility gate completed 2026-08-25):
+
+- Game redirects only the pinned Thermion Android build file through Gradle's
+  project descriptor while preserving the immutable upstream source directory;
+- the repository-owned overlay removes embedded AGP 7.3/Kotlin 1.7 and legacy
+  KGP application, using API 36, Java 17, and `compilerOptions`;
+- the old root `afterEvaluate` compile-SDK mutation is removed;
+- normal and clean Android debug APK builds pass without Flutter's
+  future-incompatibility warning; and
+- the repository Android CI command captures build output and fails if the
+  legacy-KGP warning returns.
+
+This is a temporary pinned-dependency build overlay, not a Thermion source fork
+or permanent renderer decision. See the Stage 12.35 validation and ADR-017.
+
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
@@ -13672,8 +15232,19 @@ product playtest remain open. See
 `AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`,
 `AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`,
 `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
+`AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`,
+`AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md`,
+`AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md`,
+`AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md`,
+`AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`,
+`AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md`,
+`AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`,
+`AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`,
+`AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`, and
-ADR-033.
+ADR-038.
 
 Polish:
 
@@ -13795,7 +15366,13 @@ localization representation, branching story/dialogue/cinematic schema,
 authoritative global-pause protocol, or physical Android performance policy.
 The preference representation is provisional app storage, not a world/save
 format, and closes none of those decisions.
-See ADR-015 through ADR-017.
+Stage 12.26 adds a replaceable projected circular melee warning driven by a
+real server-safe wind-up phase. It closes the previous requirement for an
+explicit Guardian attack-warning contract, recorded in ADR-034, but does not
+select a renderer decal/particle system, permanent telegraph vocabulary,
+authored ability/timing schema, animation-event contract, audio/haptics
+backend, or physical Android performance policy.
+See ADR-015 through ADR-017 and ADR-034.
 
 Decision criteria:
 
@@ -13881,6 +15458,18 @@ used ADB forwarding, so it does not close direct-LAN, degraded-network,
 unreliable-sequenced, encryption/authentication, or NAT/relay criteria. See
 ADR-022.
 
+Stage 12.26 protocol-v4 evidence carries Guardian phase and remaining wind-up
+time over that same reliable ordered adapter. The host remains authoritative,
+but the client countdown is receipt-relative, so latency shortens the visible
+warning. Clock synchronization, compensation, jitter/loss testing, transport
+priority, and direct physical LAN remain open.
+
+Protocol v6 evidence adds one bounded Guardian fissure-ring pattern and one
+target-free planar dodge command. A loopback TCP test proves the host owns
+dodge displacement and cooldown rejection, while Game prediction is corrected
+by replicated transforms. This does not close clock synchronization,
+prediction/rollback, jitter/loss, transport priority, or physical-LAN criteria.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -13908,6 +15497,18 @@ Stage 9 advances the strict network schema to protocol v2 for controlled-entity
 ownership and entity-kind metadata. Its measured full-snapshot traffic is
 additional evidence for evaluating compact encoding/deltas, not a decision to
 adopt JSON permanently. See ADR-022.
+
+Stage 11.5 advances to protocol v3 for gameplay commands and revisioned
+health/flag/inventory snapshots. Stage 12.26 advances to protocol v4 with
+bounded Guardian phase/target/timing values. Both remain strict prototype JSON
+contracts behind the same codec/frame boundary; their full-state cost
+strengthens the case for future compact encoding and deltas without choosing a
+permanent format.
+
+Stage 12.28 advances to protocol v5 for boss phase/pattern/locked-target truth.
+Stages 12.31-12.32 advance to protocol v6 for the fissure-ring pattern and
+bounded dodge direction. These remain strict prototype JSON messages behind
+the replaceable codec/frame boundary.
 
 ---
 
@@ -14001,6 +15602,32 @@ Choose based on current Dart tooling and maintenance.
 Use mature backend/library.
 
 Avarra owns the event/presentation boundary, not codec/device implementation.
+
+Stage 12.27 evidence defines that replaceable Game-only event boundary and uses
+`audioplayers` 6.8.1 provisionally for looping ambience plus bounded overlapping
+one-shots on Windows and Android. Original generated PCM assets, lifecycle
+suspension, mix settings, ducking, and failure-to-silence behavior validate the
+first integration. This does not permanently select the backend, codec,
+compression/streaming, spatial model, voice priority, adaptive-music,
+community-world asset/licensing, Forge authoring, haptic, or accessibility
+policy. Live Windows and physical-Android listening/latency evidence is still
+required. See ADR-035.
+
+Stage 12.28 exercises that same boundary with one phase-scaled combat layer and
+two boss stingers. This proves authoritative encounter state can drive adaptive
+mixing without entering simulation or portable content. It still does not
+finalize crossfade policy, dynamic range, compression/streaming, spatial audio,
+device latency, community licensing/authoring, or backend permanence. See
+ADR-036.
+
+Stage 12.29 adds three pattern-specific anticipation cues and packages 15
+generated WAVs total. The cue selection remains downstream of authoritative
+boss state and does not close backend, codec, spatial, compression, priority,
+community-authoring, haptic, or live-device tuning decisions.
+
+Stages 12.31-12.32 add distinct fissure-ring anticipation and player-dodge cues,
+bringing the reproducible package to 17 WAVs. They continue to exercise the
+same provisional Game-only boundary and do not resolve the open audio choices.
 
 ---
 
@@ -15116,8 +16743,15 @@ commit `caad37835e7d379621247b24b7de9d84071bd474` (`v0.5.0-pre.5`). Keep the
 Git dependency isolated to `avarra_thermion_bridge` and the root dependency
 override. Do not vendor or patch Thermion native source into AVARRA.
 
-Keep the Android compile-SDK workaround: the pre-release still declares
-compile SDK 33 and uses the legacy Kotlin Gradle Plugin path.
+Keep the exact source pin, but evaluate its Android subproject through Game's
+repository-owned `thermion_flutter_compat.gradle`. Gradle's project descriptor
+redirects only the build file; Thermion's Dart, Kotlin, C++, and platform source
+still comes from the immutable official commit.
+
+The overlay replaces the pre-release's embedded AGP 7.3/Kotlin 1.7 buildscript,
+compile SDK 33, Java 8 target, and legacy `kotlin-android` application with API
+36, Java 17, and the AGP 9 `kotlin.compilerOptions` contract. This supersedes
+the earlier root-project `afterEvaluate` compile-SDK mutation.
 
 ## Verification
 
@@ -15131,6 +16765,11 @@ Passed with the exact commit:
 - no `VK_ERROR_DEVICE_LOST` or unsupported widget update;
 - controlled Windows close and process exit;
 - Windows and Android packaging of all three cube asset files.
+
+Stage 12.35 additionally passed a clean Android debug APK build on Flutter
+3.44.4/AGP 9.0.1/Gradle 9.1 without Flutter's legacy-KGP warning. The
+repository-owned Android CI command also passes and now fails if that warning
+returns.
 
 The first human visual inspection subsequently found an AVARRA fixture defect:
 `Cube.gltf` referenced `Cube_BaseColor.png`, which had not been copied into the
@@ -15150,6 +16789,9 @@ open, so Stage 2 is not yet complete.
 - `flutter pub get` currently requires GitHub access in addition to pub.dev.
 - The full commit hash makes the dependency immutable and reviewable.
 - CI cold builds compile the newer native layer and may take longer.
+- The Game-owned Gradle overlay is temporary compatibility configuration and
+  must be reviewed whenever the immutable Thermion pin or Flutter/AGP toolchain
+  changes.
 - Move back to a published version when it contains the queue fix and passes
   the same Windows/Android compile and live runtime gates.
 - Any future Thermion update must be deliberate; never widen this pin to a
@@ -15160,6 +16802,7 @@ open, so Stage 2 is not yet complete.
 - <https://pub.dev/packages/thermion_flutter>
 - <https://github.com/nmfisher/thermion/tree/v0.5.0-pre.5>
 - <https://github.com/nmfisher/thermion/blob/caad37835e7d379621247b24b7de9d84071bd474/thermion_dart/native/src/vulkan/windows/WindowsVulkanContext.cpp>
+- <https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors>
 
 <!-- END adr/ADR-017-thermion-windows-runtime-compatibility.md -->
 
@@ -16399,5 +18042,385 @@ an opening premise, a return beat, and a completion epilogue.
   progress model is introduced.
 
 <!-- END adr/ADR-033-authored-mission-narrative.md -->
+
+---
+
+<!-- BEGIN adr/ADR-034-authoritative-guardian-wind-up-and-telegraph.md -->
+
+# ADR-034: Authoritative Guardian Wind-Up and Dodge Telegraph
+
+**Status:** Accepted for Stage 12.26
+
+**Date:** 2026-08-24
+
+## Context
+
+The Hollow Warden previously dealt damage as soon as its deterministic AI
+entered attack range. Game could animate that result after authority resolved,
+but it had no truthful pre-impact state from which to build a readable
+action-RPG dodge window. Inferring danger from a client animation would allow
+offline, listen-host, and remote-client presentation to disagree with damage
+authority.
+
+AVARRA needs one small complete encounter slice that feels more active without
+moving simulation into Flutter or choosing a general ability, animation-event,
+or area-of-effect framework.
+
+## Decision
+
+1. `GuardianBehaviorPhase.windingUp` is an explicit server-safe simulation
+   phase. The initial product duration is a fixed 650 milliseconds.
+2. A Guardian locks its current target while winding up and does not move or
+   deal damage before the completion timestamp.
+3. On completion, the existing `CombatSystem.attack` performs the real range,
+   line-of-sight, health, and cooldown validation. Moving out of range during
+   the warning therefore causes the strike to miss and returns the Guardian to
+   pursuit.
+4. Network protocol v4 adds a bounded, stable-ID-based
+   `NetworkGuardianState` list to revisioned gameplay snapshots. Each state
+   carries phase, optional target, and remaining wind-up microseconds. A
+   winding-up state requires a target and a positive remaining value.
+5. The host advances gameplay revision when a Guardian phase changes or an
+   attack is accepted, so clients receive both the warning transition and the
+   authoritative result.
+6. Connected Game mirrors replicated Guardian state into its existing local
+   ECS only as a presentation mirror. The local completion timestamp is
+   reconstructed from receipt time plus bounded remaining duration; it never
+   decides damage.
+7. Game renders a pointer-transparent projected attack-radius ring, urgency
+   arc, locked-target line/reticle, and live dodge label from that state.
+   Reduced-motion mode removes the pulse modulation while retaining the timing
+   and spatial warning.
+8. Wind-up is transient encounter state. It is not added to world definitions,
+   content schema, or durable saves; unfinished encounters continue to reset
+   under the existing save policy.
+
+## Consequences
+
+- Offline, listen-host, and remote play use the same deterministic Guardian
+  phase and completion-time combat validation.
+- A player can make a meaningful movement response before damage instead of
+  watching an immediate health change.
+- Protocol-v3 clients are rejected by the existing handshake instead of
+  silently decoding incomplete gameplay snapshots.
+- The server and shared gameplay packages remain free of Flutter and GPU
+  dependencies; Game owns only the projection and accessibility treatment.
+- The fixed duration and circular melee language are intentionally narrow.
+  Authored per-enemy timings, ability shapes, animation-event synchronization,
+  cancellation/stagger, clock synchronization, latency compensation, and
+  degraded-network tuning require later product evidence.
+- Network transit time reduces the warning visible to a remote client because
+  this stage reconstructs a receipt-relative countdown. Authority remains
+  correct, but a future timing contract may be needed before competitive or
+  high-latency play.
+
+<!-- END adr/ADR-034-authoritative-guardian-wind-up-and-telegraph.md -->
+
+---
+
+<!-- BEGIN adr/ADR-035-provisional-game-audio-boundary.md -->
+
+# ADR-035: Provisional Game Audio Boundary
+
+**Status:** Accepted provisionally for Stage 12.27
+
+**Date:** 2026-08-24
+
+## Context
+
+AVARRA Game had visual feedback for combat, loot, objectives, navigation,
+story, and menus, but it remained silent. That made accepted actions and
+authoritative state changes feel less responsive even though the underlying
+gameplay was working.
+
+Audio is a presentation concern. Adding it must not move device APIs into
+server-safe packages, let sound decide gameplay, leak player-app UI into Forge,
+or prematurely define an authored audio schema for portable `.avarra` worlds.
+The first slice also needs to compile on AVARRA's current Windows and Android
+targets and degrade safely when a device backend cannot initialize.
+
+## Decision
+
+1. Avarra Game owns a small injectable `GameAudioController` boundary. Shared
+   simulation, ECS, world, content, replication, persistence, Forge, and Server
+   packages do not depend on it.
+2. The production adapter provisionally uses
+   [`audioplayers` 6.8.1](https://pub.dev/packages/audioplayers). One looping
+   player owns ambience and bounded `AudioPool` instances allow overlapping
+   one-shot cues. This selects a replaceable Stage 12.27 adapter, not a
+   permanent codec, mixer, spatial-audio, or device policy.
+3. Production injects the adapter asynchronously. Tests inject a stable silent
+   implementation. Initialization and playback failures fall back to silence
+   and never block world loading, input, simulation, or lifecycle handling.
+4. `GameAudioHost` owns app-lifecycle suspension, pause/prologue ducking, mix
+   changes, ambience startup, and controller disposal. It does not own
+   gameplay state.
+5. Cues are emitted only from accepted presentation boundaries:
+   - accepted local navigation emits UI confirmation;
+   - authoritative Guardian transition into `windingUp` emits its warning;
+   - accepted offline combat results or replicated health decreases emit hit,
+     hurt, and defeat cues;
+   - accepted inventory additions emit pickup cues; and
+   - authoritative objective/mission progress emits progression cues.
+6. Stage 12.27 assets are original, deterministic, Game-bundled mono PCM WAV
+   files generated by `tool/generate_avarra_audio.dart`. The generator is the
+   reproducible source; no third-party audio is introduced.
+7. Game presentation preferences advance from version 1 to version 2 with an
+   audio enable switch and independent master, ambience, and effects volumes.
+   Version-1 files migrate to validated defaults. Preferences remain
+   recoverable app-local presentation data.
+8. No sound choice, mixer value, playback cursor, or transient cue enters
+   `.avarra` content, durable saves, ECS identity, gameplay commands, or
+   network snapshots.
+
+## Consequences
+
+- The title flow, combat commitment, impacts, defeat, loot, and mission
+  progression now have a coherent audible response without weakening
+  server authority.
+- Windows and Android receive the same Game-owned adapter while pure-Dart
+  Server and shared tests remain device-independent.
+- Pausing or showing the mission prologue lowers the ambience/effects mix;
+  backgrounding suspends playback; changing settings updates the live mix.
+- Deterministic generated assets are easy to audit and reproduce, but PCM is
+  intentionally a small proof asset pipeline rather than a production
+  compression/streaming choice.
+- Current ambience and cues are bundled with Game. Community-authored audio,
+  per-world music identity, asset licensing/validation, spatial emitters,
+  music layers, concurrency/priority policy, haptics, accessibility
+  alternatives, and live-device loudness/latency acceptance remain open under
+  OD-011.
+- A later adapter can replace `audioplayers` behind
+  `GameAudioController` if measured Android/Windows latency, lifecycle,
+  mixing, or spatial requirements justify it.
+
+Stage 12.28 extends this accepted boundary, without changing its provisional
+status, with one boss-combat loop, phase intensity selection, and two stingers.
+Authoritative encounter state selects presentation intensity; audio still
+cannot affect gameplay. See ADR-036.
+
+Stage 12.29 adds three bounded, generated boss-pattern anticipation cues.
+Their selection is derived from authoritative wind-up state through the same
+Game-only controller. This improves encounter identity without changing the
+provisional backend decision or making audio part of gameplay truth.
+
+<!-- END adr/ADR-035-provisional-game-audio-boundary.md -->
+
+---
+
+<!-- BEGIN adr/ADR-036-authored-vharos-boss-encounter.md -->
+
+# ADR-036: Authored Vharos Boss Encounter
+
+**Status:** Accepted provisionally for Stage 12.28
+
+**Date:** 2026-08-24
+
+## Context
+
+Relay Zero had a complete mission shell, movement, direct combat, Guardian AI,
+one dodgeable strike, story presentation, loot, persistence, multiplayer, and
+audio. Its climax was still a generic 60-health Guardian that repeated one
+circular melee attack. The fight had no named identity, escalation, spatial
+variety, encounter-specific story, adaptive score, or permanent reward.
+
+AVARRA needs one stronger product encounter now. It does not yet need a generic
+ability graph, scripting language, raid framework, or broad combat engine. The
+slice must preserve server authority, renderer-independent simulation,
+portable typed content, stable IDs, old content readability, and app
+separation.
+
+## Decision
+
+1. Content schema v10 adds additive avarra.ai.guardian_boss version 1
+   authoring. It names one Guardian, defines two health thresholds, the melee/
+   sweep/eruption shapes, and four bounded encounter story beats.
+2. The component augments the existing Guardian, Health, and Basic Attack
+   contracts. It does not replace them or create a general ability system.
+3. GuardianBehaviorSystem remains the server-safe authority. It derives phases
+   from current health and selects one fixed product pattern: phase one melee;
+   phase two sweep/melee; phase three eruption/sweep/melee.
+4. Melee uses the existing 650 ms commitment. Sweep uses 900 ms and a locked
+   55-degree half-angle cone. Eruption uses 1,100 ms and a locked ground point
+   with a 0.9-unit radius. Completion revalidates the true shape before
+   delegating accepted damage to CombatSystem.
+5. Protocol v5 adds bounded encounter phase, attack pattern, and optional
+   locked planar target coordinates to NetworkGuardianState. Connected Game
+   mirrors this state for presentation only.
+6. Content schema v10 also adds additive avarra.item.player_power_reward
+   version 1. Maximum-health reward is derived from owned collectible item IDs.
+   Existing inventory persistence is sufficient, so save format v2 does not
+   change.
+7. Relay Zero authors **Vharos, Ashen Castellan** at 120 health and one guarded
+   **Ashen Heart** reward worth +25 maximum health. The Relay Core mission path
+   remains intact.
+8. Game projects melee, cone, and locked-ground warnings from authoritative
+   state, presents authored encounter notices, and labels Vharos by name.
+9. The Game-only audio boundary gains one looping combat layer plus phase and
+   defeat stingers. Game selects intensity from authoritative encounter state.
+   Playback state never enters simulation, content, saves, or networking.
+
+## Consequences
+
+- Relay Zero now has a named, escalating, dodge-driven climax and a durable
+  character-power reward.
+- Offline, listen-host, headless-host, reconnect, and restored-save paths use
+  the same authored reward derivation.
+- Content v1-v9 remains readable. Protocol v5 is an intentional handshake
+  boundary; v4 clients cannot join v5 hosts.
+- The score adapts without authoring device audio into portable world data.
+- The fixed Vharos pattern is product code. General cooldown graphs, arbitrary
+  abilities, status effects, stagger, cancellation, animation events, phase
+  persistence, checkpoints, weighted loot, scaling, and Forge encounter
+  tooling remain deferred.
+- Physical Android playability, real listening/mix balance, latency, touch
+  dodge quality, frame time, thermal behavior, and human tuning remain open.
+
+Stage 12.29 adds bounded Game-only posture, projected ritual effects, impact
+shake, and pattern cues over this decision; none can affect authority. Stage
+12.30 closes the narrow Forge-tooling gap for this product slice: the existing
+atomic Combat mission template can author this component and its power reward
+through validated typed commands. General encounter graphs, arbitrary
+abilities, waves, and scripting remain deferred.
+
+<!-- END adr/ADR-036-authored-vharos-boss-encounter.md -->
+
+---
+
+<!-- BEGIN adr/ADR-037-authored-guardian-fissure-ring.md -->
+
+# ADR-037: Authored Guardian Fissure Ring
+
+**Status:** Accepted provisionally for Stage 12.31
+
+**Date:** 2026-08-24
+
+## Context
+
+Vharos had three readable authority-owned attack shapes, but his final phase
+still repeated a short deterministic sequence with no encounter-wide positioning
+test. AVARRA needed one more authored boss mechanic that creates a clear
+move-in/move-out decision. It did not need a generic hazard graph, spell
+language, arbitrary area scripting, or renderer-owned combat.
+
+The addition had to keep old content readable, preserve the old Guardian
+behavior when the component is absent, remain headless-server safe, and expose
+the same typed values to Forge.
+
+## Decision
+
+1. Content schema v11 adds the optional
+   `avarra.ai.guardian_arena_hazard` component at version 1.
+2. The component authors a strictly ordered inner safe radius and outer danger
+   radius. It requires the same entity to contain Guardian boss, Guardian
+   behavior, and Basic Attack contracts, and the attack range must cover the
+   outer radius.
+3. When the component exists, phase three uses the fixed Vharos sequence
+   eruption, sweep, fissure ring, melee. Without it, the content-v10 sequence
+   remains eruption, sweep, melee.
+4. The server-safe Guardian authority locks the ring center to the Guardian
+   when its 1,300 ms commitment starts. Completion damages a living locked
+   target only when its ground-plane distance is greater than the inner radius
+   and no greater than the outer radius. The core and the exterior are safe.
+5. Protocol v6 adds the bounded `fissureRing` attack pattern. Existing
+   Guardian timing and locked-target fields carry the commitment truth.
+6. Game renders the annulus with an even-odd path, a distinct safe-core outline,
+   the semantic instruction `ENTER SAFE CORE`, and a dedicated anticipation
+   cue. Presentation cannot declare the hit.
+7. Forge Ascendant settings expose both radii, validate their ordering, and
+   emit the typed component through the existing atomic Combat mission command
+   batch.
+8. Relay Zero authors Vharos with a 0.9-unit safe core and 3.2-unit outer
+   radius. Basic Attack range is raised to cover the authored geometry.
+
+## Consequences
+
+- Vharos's last phase now asks the player to read and cross a spatial boundary,
+  not only step away from danger.
+- Content v1-v10 remains readable. Worlds without the optional component keep
+  their prior deterministic behavior.
+- Protocol v6 is an intentional handshake boundary; protocol-v5 clients cannot
+  join protocol-v6 hosts.
+- Forge, offline Game authority, listen hosts, and headless hosts consume the
+  same typed radii.
+- This is one AVARRA boss mechanic. Arbitrary hazard graphs, moving rings,
+  persistent ground hazards, multiple targets, status effects, and a general
+  ability editor remain deferred.
+- Human readability, encounter balance, physical Android touch response, and
+  renderer-native VFX still require packaged play evidence.
+
+<!-- END adr/ADR-037-authored-guardian-fissure-ring.md -->
+
+---
+
+<!-- BEGIN adr/ADR-038-authority-owned-player-dodge.md -->
+
+# ADR-038: Authority-Owned Collision-Swept Player Dodge
+
+**Status:** Accepted provisionally for Stage 12.32
+
+**Date:** 2026-08-24
+
+## Context
+
+AVARRA's warnings were dodgeable only through ordinary walking. That made the
+action bar feel incomplete and gave the stronger Vharos patterns no crisp
+player counter-action. A real dodge must not let the client teleport through
+walls, bypass the authored world boundary, invent invulnerability, or decide
+its own multiplayer result.
+
+The product needs one responsive traversal move now. It does not yet need a
+general skill system, stamina model, animation-event combat, ability loadouts,
+or status-effect framework.
+
+## Decision
+
+1. The server-safe gameplay package owns a fixed AVARRA dodge: 1.8 units of
+   planar displacement with a 1,500 ms cooldown.
+2. `DodgeStateComponent` stores the next authority-owned ready time.
+   `DodgeSystem` rejects zero direction, cooldown, defeated actors, and fully
+   blocked movement. A blocked attempt does not consume cooldown.
+3. Dodge reuses the deterministic character collision sweep and wall slide,
+   plus Game's authored-world-boundary rollback. It grants no invulnerability
+   and does not alter health or combat resolution.
+4. Offline play and the multiplayer host call the same system. Dynamic
+   connected avatars receive the same dodge state as the authored player.
+5. Protocol v6 adds a target-free dodge command with a complete, finite,
+   non-zero, bounded planar direction. The host validates and executes it;
+   connected Game prediction is presentation responsiveness, not authority.
+6. Game maps left/right Shift and a visible action-bar slot to dodge. Direction
+   preference is current movement, then current ground target, then the last
+   valid direction.
+7. Game visually eases the already-applied endpoint over 170 ms. The tween
+   follows the latest replicated endpoint so an authority correction remains
+   smooth. Reduced-motion mode presents the endpoint immediately.
+8. One original Game-only dodge cue is added behind the existing audio
+   boundary. No dodge audio state enters content, simulation, saves, or
+   networking.
+
+## Consequences
+
+- The player has a deliberate, readable counter-action for boss commitments
+  while collision and cooldown remain deterministic and host authoritative.
+- No content, world, or save schema changes are required. Protocol v6 carries
+  the new intent.
+- Prediction can still be corrected by the host; the short adaptive tween
+  reduces visible snapping without hiding the authoritative endpoint.
+- There are no invulnerability frames, stamina costs, charges, cancel windows,
+  animation-root motion, remappable bindings, touch gesture, or authored dodge
+  values yet.
+- Physical Android touch quality, real network-latency feel, controller support,
+  animation quality, and balance require human acceptance.
+
+Stage 12.33 adds a bounded Game-only high-speed Run request and projected
+trail/ember/landing effect over the correction-aware 170 ms presentation
+window. It does not alter this authority decision.
+
+Stage 12.34 replaces that provisional Run request with a dedicated generated
+Dodge clip and centralizes Game tuning in one profile. Deterministic
+Game/Forge asset generation and read-only CI verification do not alter this
+authority decision.
+
+<!-- END adr/ADR-038-authority-owned-player-dodge.md -->
 
 ---

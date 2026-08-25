@@ -391,6 +391,65 @@ quest guidance, enemy bars, or combat text. These settings select downstream
 presentation only: they do not mutate `PresentationSnapshot`, ECS, saves,
 world packages, commands, or replication.
 
+Stage 12.26 consumes an explicit simulation-owned `windingUp` phase rather than
+guessing from an animation. Game projects each active warning into a bounded
+pointer-transparent attack-radius fill, urgency arc, locked-target line and
+reticle, plus a semantic local-player dodge countdown. The Warden uses its
+non-looping Attack clip during commitment, but animation playback cannot decide
+the strike. Reduced motion removes pulse modulation and retains the complete
+warning. Connected timing is reconstructed from the authoritative bounded
+remaining duration at snapshot receipt.
+
+Stage 12.27 maps accepted presentation moments to a small injectable
+`GameAudioController`. Local UI confirmation, authoritative Guardian wind-up,
+accepted combat/loot/objective results, and replicated health/phase transitions
+select bounded Game-owned cues. `GameAudioHost` owns ambience, live mix
+settings, pause/prologue ducking, app-lifecycle suspension, graceful
+failure-to-silence behavior, and disposal. Device playback uses a provisional
+`audioplayers` adapter; silent/recording implementations keep widget tests
+deterministic. Audio never feeds back into simulation, ECS, presentation
+snapshots, world/save data, commands, or replication.
+
+Stage 12.28 consumes protocol-v5 boss truth without creating client combat
+authority. Game projects melee range, the locked sweep sector, or the locked
+eruption circle and presents authored encounter copy in a semantic banner.
+Health bars, target frames, and status use Vharos's authored name. The Game-only
+audio controller selects exploration or one of three boss intensities from
+confirmed state and resets on defeat, restart, world replacement, and disposal.
+
+Stage 12.29 adds a bounded boss-feel layer over that same truth. Immutable
+presentation snapshots receive phase-scaled posture and attack anticipation;
+active bosses project ritual auras, sigils, and phase-three cracks; and a short
+camera impulse follows an authority-confirmed attack resolution, including a
+successful dodge without fabricated damage. Three pattern-specific generated
+audio cues remain behind the Game-only controller. Reduced-motion and
+camera-shake settings govern the entire addition.
+
+Stage 12.31 projects protocol-v6 fissure-ring truth as an even-odd annulus,
+distinct safe-core outline, and semantic `ENTER SAFE CORE` instruction.
+Stage 12.32 adds player dodge presentation without moving its result into the
+client. The host/offline gameplay system applies collision-safe displacement;
+Game may predict the same sweep and visually ease from the pre-dodge position
+toward the latest snapshot endpoint for 170 ms. An arriving authority
+correction therefore changes the visual endpoint rather than being hidden.
+Reduced motion bypasses the ease. The action-bar cooldown and dodge audio are
+also downstream presentation.
+
+Stage 12.33 layers bounded combat feel onto that same 170 ms presentation
+window. A pure Game selector gives dodge priority over attack/locomotion/idle
+and requests the existing Run clip once at 2.8x speed with a 25 ms crossfade.
+A pointer-transparent CustomPainter projects three air strands, deterministic
+ember motes, and a landing crescent through `IsometricCameraRig`. Both player
+easing and VFX sample the latest snapshot endpoint, so host correction remains
+truthful. Reduced motion removes both interpolation and trail motion.
+
+Stage 12.34 replaces the temporary Run request with a dedicated generated
+`Dodge` clip. `GameplayDodgeFeelProfile` is the single Game tuning surface
+for clip playback, visual duration, trail strands, ember count, and colors.
+The deterministic Gothic generator creates matching animation buffers and glTF
+metadata for Game and Forge, while `--check` and CI prevent generated-asset
+drift. World displacement still comes exclusively from Stage 12.32 authority.
+
 Physical Android cost, production skinning/material effects, and an explicit
 replicated impact-event message remain open. See
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
@@ -403,3 +462,14 @@ See `AVARRA_STAGE_12_22_AUTHORITATIVE_QUEST_GUIDANCE_VALIDATION.md`.
 See `AVARRA_STAGE_12_23_REACTIVE_PLAYER_DANGER_VALIDATION.md`.
 See `AVARRA_STAGE_12_24_WORLD_SPACE_ENEMY_HEALTH_VALIDATION.md`.
 See `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`.
+See `AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md` and
+ADR-034.
+See `AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md` and ADR-035.
+See `AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md` and ADR-036.
+See `AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md`.
+See `AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md` and ADR-037.
+See `AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md` and
+ADR-038.
+See `AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`.
+See `AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md` and
+`AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`.
