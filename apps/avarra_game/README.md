@@ -229,6 +229,51 @@ remains immutable, clean Android builds no longer report the legacy Kotlin
 Gradle Plugin warning, and the Android CI command rejects its return. See
 `docs/AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`.
 
+Stage 12.36 advances recoverable Game settings to version 3 with conflict-safe
+keyboard bindings for movement, Basic Strike, Dodge, and Interact plus an
+optional haptic-feedback switch. A one-tap action restores every default.
+Arrow movement and Escape remain fixed safety fallbacks; controller X/B/A (or
+generic Buttons 3/2/1) map to strike/dodge/use, and Start pauses. The action bar
+displays the live keyboard assignments.
+Confirmed dodge, combat, hurt, defeat, pickup, and objective transitions route
+through an injectable platform-haptics boundary that safely degrades to
+silence. See
+`docs/AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`.
+
+Stage 12.37 gives the title, gameplay HUD, movement semantics/tooltips, and
+pause menu one adaptive input-prompt mode. Keyboard/pointer presentation uses
+the live remapped keys; controller input switches to direction-specific D-pad,
+X/B/A, and Start language. The title, mission briefing, and pause menu focus
+their useful primary action, and generic Button 1 can activate it alongside
+Flutter's standard controller behavior. Settings remain version 3 and input
+authority is unchanged. See
+`docs/AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md`.
+
+Stage 12.38 turns a newly earned authored completion into a responsive
+mission-complete recap with epilogue, completion result, inventory, champion
+vitality, connected-session truth, Continue Exploring, and Return to Title.
+It clears held input, pauses local presentation/simulation, ducks ambience,
+respects Reduced Motion, and immediately flushes the existing offline save.
+Restored completed saves and initial completed replication snapshots remain
+non-blocking. See
+`docs/AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md`.
+
+Stage 12.39 gives every newly earned authored objective a centered,
+non-blocking OBJECTIVE SECURED banner with exact progress. If the transition
+satisfies an authored gate, PATH OPENED and the gate's authored name take
+precedence. Restored progress and first replicated snapshots stay silent;
+later connected transitions remain host-authoritative. The banner respects
+Reduced Motion, live-region accessibility, existing objective audio, and
+optional haptics. See
+`docs/AVARRA_STAGE_12_39_OBJECTIVE_MILESTONE_PRESENTATION_VALIDATION.md`.
+
+Stage 12.40 expands the pause story panel into a JOURNEY chronicle. It derives
+all authored objective steps, the collectible required by each mission turn-in,
+and the final authored action, then marks them completed, current, or pending
+with an exact progress count. Optional loot stays outside the required journey,
+and no parallel quest state is stored. See
+`docs/AVARRA_STAGE_12_40_QUEST_CHRONICLE_VALIDATION.md`.
+
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
 GitHub Actions now gives Android native compilation a dedicated Windows job

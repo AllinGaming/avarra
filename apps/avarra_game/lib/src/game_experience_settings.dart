@@ -4,8 +4,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'game_controls.dart';
+
 const _settingsFormat = 'avarra.game_experience_settings';
-const _settingsVersion = 2;
+const _settingsVersion = 3;
 
 /// Game-owned preferences that never enter world or save authority.
 @immutable
@@ -20,6 +22,8 @@ final class GameExperienceSettings {
     this.masterVolume = 0.8,
     this.musicVolume = 0.55,
     this.effectsVolume = 0.85,
+    this.hapticsEnabled = true,
+    this.controlBindings = GameControlBindings.defaults,
   }) : assert(cameraShakeStrength >= 0 && cameraShakeStrength <= 1),
        assert(masterVolume >= 0 && masterVolume <= 1),
        assert(musicVolume >= 0 && musicVolume <= 1),
@@ -36,6 +40,8 @@ final class GameExperienceSettings {
   final double masterVolume;
   final double musicVolume;
   final double effectsVolume;
+  final bool hapticsEnabled;
+  final GameControlBindings controlBindings;
 
   double get effectiveCameraShakeStrength =>
       reducedMotion ? 0 : cameraShakeStrength;
@@ -50,6 +56,8 @@ final class GameExperienceSettings {
     double? masterVolume,
     double? musicVolume,
     double? effectsVolume,
+    bool? hapticsEnabled,
+    GameControlBindings? controlBindings,
   }) => GameExperienceSettings(
     reducedMotion: reducedMotion ?? this.reducedMotion,
     cameraShakeStrength: cameraShakeStrength ?? this.cameraShakeStrength,
@@ -60,6 +68,8 @@ final class GameExperienceSettings {
     masterVolume: masterVolume ?? this.masterVolume,
     musicVolume: musicVolume ?? this.musicVolume,
     effectsVolume: effectsVolume ?? this.effectsVolume,
+    hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
+    controlBindings: controlBindings ?? this.controlBindings,
   );
 
   String encode() => jsonEncode({
@@ -74,6 +84,8 @@ final class GameExperienceSettings {
     'masterVolume': masterVolume,
     'musicVolume': musicVolume,
     'effectsVolume': effectsVolume,
+    'hapticsEnabled': hapticsEnabled,
+    'controlBindings': controlBindings.toJson(),
   });
 
   factory GameExperienceSettings.decode(String source) {
@@ -86,7 +98,9 @@ final class GameExperienceSettings {
     if (decoded is! Map<String, dynamic> ||
         decoded['format'] != _settingsFormat ||
         decoded['version'] is! int ||
-        (decoded['version'] != 1 && decoded['version'] != _settingsVersion)) {
+        (decoded['version'] != 1 &&
+            decoded['version'] != 2 &&
+            decoded['version'] != _settingsVersion)) {
       throw const FormatException('Unsupported AVARRA Game settings.');
     }
     final version = decoded['version'] as int;
@@ -99,6 +113,10 @@ final class GameExperienceSettings {
     final master = version == 1 ? 0.8 : decoded['masterVolume'];
     final music = version == 1 ? 0.55 : decoded['musicVolume'];
     final effects = version == 1 ? 0.85 : decoded['effectsVolume'];
+    final hapticsEnabled = version < 3 ? true : decoded['hapticsEnabled'];
+    final controlBindings = version < 3
+        ? GameControlBindings.defaults
+        : GameControlBindings.decode(decoded['controlBindings']);
     if (reducedMotion is! bool ||
         shake is! num ||
         !shake.toDouble().isFinite ||
@@ -119,7 +137,8 @@ final class GameExperienceSettings {
         effects is! num ||
         !effects.toDouble().isFinite ||
         effects < 0 ||
-        effects > 1) {
+        effects > 1 ||
+        hapticsEnabled is! bool) {
       throw const FormatException('Invalid AVARRA Game settings values.');
     }
     return GameExperienceSettings(
@@ -132,6 +151,8 @@ final class GameExperienceSettings {
       masterVolume: master.toDouble(),
       musicVolume: music.toDouble(),
       effectsVolume: effects.toDouble(),
+      hapticsEnabled: hapticsEnabled,
+      controlBindings: controlBindings,
     );
   }
 
@@ -146,7 +167,9 @@ final class GameExperienceSettings {
       audioEnabled == other.audioEnabled &&
       masterVolume == other.masterVolume &&
       musicVolume == other.musicVolume &&
-      effectsVolume == other.effectsVolume;
+      effectsVolume == other.effectsVolume &&
+      hapticsEnabled == other.hapticsEnabled &&
+      controlBindings == other.controlBindings;
 
   @override
   int get hashCode => Object.hash(
@@ -159,6 +182,8 @@ final class GameExperienceSettings {
     masterVolume,
     musicVolume,
     effectsVolume,
+    hapticsEnabled,
+    controlBindings,
   );
 }
 
@@ -460,6 +485,17 @@ Future<void> showGameExperienceSettingsDialog(
                       '${(current.cameraShakeStrength * 100).round()}%',
                     ),
                   ),
+                  SwitchListTile(
+                    key: const Key('setting_haptics_enabled'),
+                    value: current.hapticsEnabled,
+                    onChanged: (value) =>
+                        update(current.copyWith(hapticsEnabled: value)),
+                    secondary: const Icon(Icons.touch_app_outlined),
+                    title: const Text('Haptic feedback'),
+                    subtitle: const Text(
+                      'Dodge, impact, hurt, pickup, and objective pulses.',
+                    ),
+                  ),
                   const Divider(),
                   SwitchListTile(
                     key: const Key('setting_quest_guidance'),
@@ -486,6 +522,50 @@ Future<void> showGameExperienceSettingsDialog(
                     secondary: const Icon(Icons.text_fields),
                     title: const Text('Damage numbers'),
                   ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.gamepad_outlined),
+                    title: const Text('Controls'),
+                    subtitle: const Text(
+                      'Choose a key. Conflicts swap automatically; arrows and '
+                      'controller buttons remain safe fallbacks.',
+                    ),
+                    trailing: TextButton(
+                      key: const Key('setting_reset_controls'),
+                      onPressed:
+                          current.controlBindings ==
+                              GameControlBindings.defaults
+                          ? null
+                          : () => update(
+                              current.copyWith(
+                                controlBindings: GameControlBindings.defaults,
+                              ),
+                            ),
+                      child: const Text('Reset'),
+                    ),
+                  ),
+                  for (final control in GameControl.values)
+                    _ControlBindingSetting(
+                      control: control,
+                      value: current.controlBindings.keyFor(control),
+                      onChanged: (key) => update(
+                        current.copyWith(
+                          controlBindings: current.controlBindings.rebind(
+                            control,
+                            key,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const ListTile(
+                    dense: true,
+                    leading: Icon(Icons.sports_esports_outlined),
+                    title: Text('Controller aliases'),
+                    subtitle: Text(
+                      'X / Button 3: strike  ·  B / Button 2: dodge  ·  '
+                      'A / Button 1: interact  ·  Start: pause',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -506,6 +586,41 @@ Future<void> showGameExperienceSettingsDialog(
       },
     ),
   );
+}
+
+final class _ControlBindingSetting extends StatelessWidget {
+  const _ControlBindingSetting({
+    required this.control,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final GameControl control;
+  final GameInputKey value;
+  final ValueChanged<GameInputKey> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      title: Text(control.label),
+      trailing: SizedBox(
+        width: 132,
+        child: DropdownButton<GameInputKey>(
+          key: Key('setting_control_${control.name}'),
+          value: value,
+          isExpanded: true,
+          onChanged: (key) {
+            if (key != null) onChanged(key);
+          },
+          items: [
+            for (final key in gameBindableInputKeys)
+              DropdownMenuItem(value: key, child: Text(key.label)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 final class _VolumeSetting extends StatelessWidget {

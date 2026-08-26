@@ -382,6 +382,7 @@ void main() {
     expect(find.text('Mission complete · Signal transmitted'), findsOneWidget);
     expect(find.text('Inventory · Empty'), findsOneWidget);
     expect(find.text('9 ECS entities bound to the scene'), findsOneWidget);
+    expect(find.byKey(const Key('mission_complete_overlay')), findsNothing);
   });
 
   testWidgets('reports a living hostile in the active north annex', (

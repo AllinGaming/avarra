@@ -806,8 +806,50 @@ subproject to a repository-owned Gradle compatibility overlay. The obsolete
 embedded AGP 7.3/Kotlin 1.7 buildscript, compile SDK 33, and KGP application no
 longer run. Clean Android packaging passes without Flutter's legacy-KGP warning,
 and the Android CI script now fails if it returns.
-Human packaged play/listening, bespoke skeletal boss/dodge animation,
-renderer-native VFX, and physical Android acceptance remain open.
+Stage 12.36 advances Game-only settings to version 3 with typed remappable
+movement/strike/dodge/interact keys, automatic conflict swaps, live action-bar
+keycaps, controller action/Start aliases, and optional platform haptics for
+confirmed gameplay transitions. Versions 1–2 migrate safely; no simulation,
+world, save, protocol, Server, or Forge contract changes. Workspace analysis
+and 349 tests across 18 suites pass, along with Game Windows release and clean
+Android CI packaging. The CI wrapper now preserves native stderr warnings for
+inspection without mistaking them for a failed Flutter process.
+Stage 12.37 gives title onboarding, gameplay movement prompts, action keycaps,
+fallback interaction, and pause one ephemeral latest-input presentation mode.
+Keyboard/pointer copy reads the live version-3 remaps; controller events switch
+to direction-specific D-pad, X/B/A, and Start labels. Title, briefing, and
+pause primary actions autofocus, and generic Button 1 activates focused
+controls without replacing Flutter traversal. No persistence, simulation,
+world, content, protocol, Server, or Forge contract changes. Workspace
+analysis and 353 tests across 18 suites pass, along with Game Windows release
+and clean Android CI packaging.
+Stage 12.38 turns a newly earned authored completion into a responsive
+cinematic recap with the existing epilogue, turn-in result, carried inventory,
+champion vitality, truthful connected-session behavior, Continue Exploring,
+and Return to Title. Local input/simulation suspends and offline completion
+immediately flushes the existing save; connected authority continues.
+Restored saves and initial completed replication snapshots remain non-blocking.
+No content, save, protocol, simulation, Server, Forge, or settings contract
+changes. Workspace analysis and 355 tests across 18 suites pass, along with
+Game Windows release and clean Android CI packaging.
+Stage 12.39 adds transition-only objective milestone presentation. Newly
+completed authored objectives announce OBJECTIVE SECURED with authored labels
+and exact progress; a newly satisfied authored gate supersedes that with PATH
+OPENED. Restored progress and first replicated snapshots establish a silent
+baseline, while later connected notices derive only from host-authoritative
+state. The banner is non-blocking, pointer-transparent, Reduced-Motion aware,
+and reuses existing objective audio/haptics.
+Stage 12.40 adds a full JOURNEY chronicle to the responsive pause menu. It
+derives stable objective steps, required mission-item recovery, and turn-ins
+from `WorldDefinition` plus `AuthoredAdventureProgress`, then marks one current
+step and the surrounding completed/pending history. Optional loot is excluded
+and no quest state is duplicated. No content, save, protocol, simulation,
+renderer, Server, Forge, audio/haptic, or settings contract changes. Workspace
+analysis and 358 tests across 18 suites pass, along with Game Windows release
+and clean Android CI packaging.
+Human packaged play/listening, analog-controller and tactile-device acceptance,
+bespoke skeletal boss/dodge animation, renderer-native VFX, and physical Android
+acceptance remain open.
 Android CI hardening separates native Game packaging from the combined
 quality/Windows job. A parallel Windows job pins Java 17, Android API 36,
 Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1. CI calls the shared
@@ -860,8 +902,17 @@ See
 `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
 `AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`,
 `AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md`,
+`AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md`,
+`AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md`,
+`AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`,
+`AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md`,
+`AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`,
+`AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`,
+`AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-035.
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-038.
 
 ---
 

@@ -283,11 +283,12 @@ Thermion packages are pinned to full commit
 create/update/destroy behavior and transform conversion behind
 `SceneBackend<THandle>`.
 
-The pinned Android plugin still declares compile SDK 33, while resolved
-AndroidX dependencies require 34 or newer. Game applies a narrowly scoped
-compile-SDK 36 override to only the `thermion_flutter` subproject. Builds emit
-non-fatal upstream native warnings, and the Android plugin's legacy Kotlin
-Gradle application path presents a future Flutter compatibility risk.
+The pinned Android plugin's upstream build file still declares compile SDK 33,
+AGP 7.3, and Kotlin 1.7. Game now redirects only that build file to a
+repository-owned AGP 9 compatibility overlay while preserving the immutable
+upstream source directory. The overlay uses API 36, Java 17, and modern Kotlin
+compiler options; clean Android CI fails if Flutter's legacy-KGP warning
+returns. Builds may still emit non-fatal upstream native compiler warnings.
 
 Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
@@ -450,6 +451,43 @@ The deterministic Gothic generator creates matching animation buffers and glTF
 metadata for Game and Forge, while `--check` and CI prevent generated-asset
 drift. World displacement still comes exclusively from Stage 12.32 authority.
 
+Stage 12.36 keeps input and tactile response at this client boundary. A typed
+Game-only binding map converts keyboard and fixed logical controller buttons to
+existing movement/action intents; settings v3 persists it with conflict swaps
+and v1/v2 migration. HUD keycaps read the same map. Confirmed local results or
+replicated state changes select cues through an injectable platform-haptics
+controller that safely degrades to silence. No input or haptic state enters
+presentation snapshots, ECS authority, saves, world content, or networking.
+
+Stage 12.37 adds a single ephemeral prompt mode at the same Game boundary.
+Supported controller buttons or Flutter controller device types switch title,
+movement, action, interaction, and pause copy to D-pad/X/B/A/Start; keyboard
+or pointer input restores the live remapped keyboard labels. Menu primary
+actions autofocus, Flutter keeps directional traversal, and a narrow shortcut
+adds generic Button 1 activation. The mode is neither persisted nor replicated
+and does not change the version-3 settings contract.
+
+Stage 12.38 adds a transition-only victory recap at this presentation boundary.
+It reads the existing authored completion beat and authoritative adventure
+results, clears local held input, ducks ambience, and suspends the local loop
+until Continue Exploring. Connected authority keeps running and the UI says so.
+Restored completion and the first completed replication snapshot keep the
+non-blocking toast path. The recap never grants rewards or changes mission
+truth.
+
+Stage 12.39 adds a second transition-only layer for mid-mission objective
+payoff. Consecutive `AuthoredObjectiveProgress` values reveal newly completed
+stable IDs or newly opened authored gates. The centered banner is
+pointer-transparent, live-region accessible, Reduced-Motion aware, and
+non-blocking. Restored state and first replicated state never replay earned
+milestones.
+
+Stage 12.40 expands the existing pause presentation with a derived mission
+chronicle. `gameplayQuestChronicleEntries` reads the same world/adventure view
+as the HUD and produces objective, required-collectible, and turn-in rows with
+completed/current/pending state. The UI is scrollable and read-only; it neither
+stores progress nor introduces a branching quest system.
+
 Physical Android cost, production skinning/material effects, and an explicit
 replicated impact-event message remain open. See
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
@@ -473,3 +511,7 @@ ADR-038.
 See `AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`.
 See `AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md` and
 `AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`.
+See `AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`.
+See `AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`.
+See `AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md`.
+See `AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md`.

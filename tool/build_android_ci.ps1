@@ -161,12 +161,22 @@ Write-Host 'Building the Avarra Game debug APK...'
 Push-Location $gameDirectory
 try {
     $buildOutput = [System.Collections.Generic.List[string]]::new()
-    & flutter build apk --debug --no-pub 2>&1 | ForEach-Object {
-        $line = $_.ToString()
-        $buildOutput.Add($line)
-        Write-Host $line
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        # Windows PowerShell wraps a native process's stderr lines as
+        # ErrorRecord values. Thermion emits known compiler warnings there, so
+        # capture both streams without letting the script-wide Stop policy
+        # pre-empt Flutter's real exit code or the warning regression check.
+        & flutter build apk --debug --no-pub 2>&1 | ForEach-Object {
+            $line = $_.ToString()
+            $buildOutput.Add($line)
+            Write-Host $line
+        }
+        $buildExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
     }
-    $buildExitCode = $LASTEXITCODE
     if ($buildExitCode -ne 0) {
         throw "Android APK build failed with exit code $buildExitCode"
     }

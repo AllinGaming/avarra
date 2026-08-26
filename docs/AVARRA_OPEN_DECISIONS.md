@@ -79,6 +79,32 @@ localization representation, branching story/dialogue/cinematic schema,
 authoritative global-pause protocol, or physical Android performance policy.
 The preference representation is provisional app storage, not a world/save
 format, and closes none of those decisions.
+Stage 12.36 validates a bounded keyboard-remapping model, fixed Flutter logical
+controller action aliases, and an injectable platform-haptics boundary inside
+that same Game-only preference/presentation layer. It does not select analog
+axis/dead-zone handling, controller discovery/rebinding, glyph families,
+controller rumble, arbitrary scan-code/chord bindings, or a permanent haptic
+hardware/accessibility policy. Physical Android and controller evidence remains
+required, so those decisions stay open.
+Stage 12.37 improves presentation consistency without closing those decisions.
+Its latest-input prompt mode, focused primary menu actions, and generic Button
+1 activation use existing Flutter events and shortcuts. It does not select
+device discovery, hot-plug policy, analog axes/dead zones, controller
+rebinding, controller-family glyphs, controller rumble, a custom focus engine,
+or a permanent accessibility/input policy.
+Stage 12.38 consumes the existing authored completion beat and authoritative
+adventure results in a Game-only recap. It does not choose a permanent
+post-game statistics schema, mission-rating policy, branching epilogue,
+cinematic renderer, post-completion encounter model, or connected global-pause
+contract. Those remain product decisions requiring playtest evidence.
+Stage 12.39 exposes completed objective stable IDs and compares consecutive
+authoritative progress values only for Game presentation. It does not choose a
+permanent objective-event protocol, renderer quest VFX, multi-change queue,
+milestone timing, audio mix, or tactile policy.
+Stage 12.40 derives a linear pause-menu chronicle from the existing content-v9
+objective/item/turn-in contract. It does not choose a branching quest graph,
+dialogue or lore schema, localization representation, quest-event history, or
+multi-mission campaign model.
 Stage 12.26 adds a replaceable projected circular melee warning driven by a
 real server-safe wind-up phase. It closes the previous requirement for an
 explicit Guardian attack-warning contract, recorded in ADR-034, but does not

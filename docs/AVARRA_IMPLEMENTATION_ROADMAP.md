@@ -1373,6 +1373,100 @@ Stage 12.35 status (Android Kotlin compatibility gate completed 2026-08-25):
 This is a temporary pinned-dependency build overlay, not a Thermion source fork
 or permanent renderer decision. See the Stage 12.35 validation and ADR-017.
 
+Stage 12.36 status (player-controls-and-haptics gate completed 2026-08-25):
+
+- Game experience settings v3 persist typed keyboard bindings for movement,
+  Basic Strike, Dodge, and Interact plus an optional haptic-feedback switch;
+- rebinding swaps conflicts automatically, keeps arrows/Escape as fixed safety
+  fallbacks, clears held state when settings change, and updates HUD keycaps;
+- fixed Flutter logical controller aliases provide strike, dodge, interact, and
+  pause without claiming analog-stick or device-discovery support;
+- an injected Game-only haptics boundary maps confirmed dodge, combat, hurt,
+  defeat, pickup, and objective transitions and fails safely to silence;
+- versions 1 and 2 migrate to safe defaults without touching world, save,
+  protocol, simulation, Server, or Forge state;
+- the Android CI wrapper no longer mistakes known native stderr warnings for a
+  failed Flutter process while retaining exit-code and legacy-KGP checks; and
+- root analysis, 349 tests across 18 suites, Game Windows release, clean Android
+  CI packaging, and source/Windows/APK asset inspection pass.
+
+This is a bounded Game presentation/input layer, not a permanent analog
+controller, rumble, arbitrary scan-code/chord, or haptic-device policy. See the
+Stage 12.36 validation.
+
+Stage 12.37 status (adaptive-input-UX gate completed 2026-08-25):
+
+- one Game-only latest-input prompt mode drives title onboarding, gameplay
+  movement labels, action-bar keycaps, fallback interaction, and pause copy;
+- keyboard/pointer prompts use the live version-3 remaps, while supported
+  controller events use direction-specific D-pad, X/B/A, and Start language;
+- enabled title Enter, mission Begin, and pause Resume actions autofocus;
+- existing Flutter directional focus traversal is retained and generic Button
+  1 gains focused-control activation;
+- prompt state remains ephemeral and changes no settings, simulation, world,
+  save, content, protocol, Server, or Forge contract; and
+- root analysis, 353 tests across 18 suites, Game Windows release, clean
+  Android CI packaging, and source/Windows/APK asset inspection pass.
+
+This is a truthful Game presentation layer, not controller discovery,
+controller-family glyph switching, analog-axis/dead-zone handling, controller
+rebinding, rumble, or a permanent input/accessibility policy. See the Stage
+12.37 validation.
+
+Stage 12.38 status (mission-completion-recap gate completed 2026-08-25):
+
+- a newly earned authored completion opens a responsive cinematic recap with
+  world/mission identity, epilogue, turn-in result, inventory, champion
+  vitality, and accurate connected-session behavior;
+- Continue Exploring autofocuses and supports pointer, keyboard,
+  Escape/Start, controller A, and generic Button 1; Return to Title reuses the
+  existing safe world-transition path;
+- local input/simulation suspends, held movement clears, ambience ducks, and
+  Reduced Motion removes the reveal animation;
+- restored completed saves and first completed replication snapshots remain
+  non-blocking, while later host-authoritative completion opens the recap;
+- accepted offline completion cancels the debounce timer and immediately
+  flushes the existing durable save; and
+- root analysis, 355 tests across 18 suites, Game Windows release, clean
+  Android CI packaging, and Windows/APK asset closure pass.
+
+This is authored mission payoff, not a post-game statistics/rating system,
+branching epilogue, new reward authority, global connected pause, or second
+mission. See the Stage 12.38 validation.
+
+Stage 12.39 status (objective-milestone-presentation gate completed
+2026-08-25):
+
+- `AuthoredObjectiveProgress` exposes immutable completed objective stable IDs
+  derived from existing flags;
+- consecutive local or replicated authority states produce at most one
+  non-blocking OBJECTIVE SECURED or higher-priority PATH OPENED notice;
+- restored progress and first connected snapshots establish a silent baseline;
+- authored labels, exact progress, objective audio/haptics, live semantics,
+  pointer transparency, and Reduced Motion are retained; and
+- the focused tests, root analysis, final 358-test matrix, Game Windows release,
+  clean Android CI package, and Windows/APK closure pass.
+
+This is derived Game presentation, not a new quest state, schema, protocol,
+renderer effect system, or connected prediction rule. See the Stage 12.39
+validation.
+
+Stage 12.40 status (quest-chronicle gate completed 2026-08-25):
+
+- the responsive pause menu presents the complete authored mission journey,
+  including stable objective order, required-item recovery, and turn-in;
+- existing authoritative adventure values mark steps completed, current, or
+  pending and drive an exact progress counter;
+- unrelated optional drops are excluded from required mission progression;
+- the chronicle keeps existing pause input/focus/session behavior and stores no
+  duplicate progress; and
+- root analysis, 358 tests across 18 suites, Game Windows release, clean
+  Android CI packaging, and Windows/APK asset/native-library closure pass.
+
+This is a readable linear mission chronicle, not branching quest graphs,
+dialogue, lore, localization, or a second mission. See the Stage 12.40
+validation.
+
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
@@ -1411,6 +1505,7 @@ product playtest remain open. See
 `AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`,
 `AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md`,
 `AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`,
+`AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`,
 `AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`, and
 ADR-038.

@@ -157,6 +157,22 @@ Stage 12.34 gives Ashen Vanguard a dedicated generated Dodge pose and puts its
 clip/VFX tuning behind one AVARRA profile. The same deterministic tool updates
 and verifies Game and Forge copies, making further iteration repeatable.
 
+Stage 12.38 gives the completed journey a deliberate ending. Newly transmitting
+the signal opens a responsive authored epilogue and result recap with carried
+inventory, champion vitality, session truth, Continue Exploring, and Return to
+Title. Restored completion does not replay the blocking moment, and accepted
+offline completion immediately flushes the existing durable save.
+
+Stage 12.39 gives the middle of that journey deliberate rhythm. Each newly
+secured stabilizer produces a short authored progress banner, and the final
+stabilizer announces the opened Core chamber path instead of leaving that
+consequence buried in HUD status text. Loading or joining never replays old
+milestones.
+
+Stage 12.40 preserves the whole journey in the pause menu. Stabilizers, Relay
+Core recovery, and signal transmission appear as completed/current/pending
+steps derived from the same save or host-replicated adventure state.
+
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle
 acceptance is still open. The CC0 cube remains only as a renderer fixture and

@@ -28,10 +28,18 @@ final class AuthoredObjectiveProgress {
   AuthoredObjectiveProgress(
     Map<String, AuthoredObjectiveGroupProgress> groups, {
     this.nextObjectiveEntityId,
-  }) : groups = Map.unmodifiable(SplayTreeMap.of(groups));
+    Iterable<EntityId> completedObjectiveEntityIds = const [],
+  }) : groups = Map.unmodifiable(SplayTreeMap.of(groups)),
+       completedObjectiveEntityIds = Set.unmodifiable(
+         SplayTreeSet<EntityId>.from(
+           completedObjectiveEntityIds,
+           (left, right) => left.value.compareTo(right.value),
+         ),
+       );
 
   final Map<String, AuthoredObjectiveGroupProgress> groups;
   final EntityId? nextObjectiveEntityId;
+  final Set<EntityId> completedObjectiveEntityIds;
 
   int get totalCount =>
       groups.values.fold(0, (total, progress) => total + progress.totalCount);
@@ -87,6 +95,7 @@ AuthoredObjectiveProgress authoredObjectiveProgress(
         ..sort((left, right) => left.id.value.compareTo(right.id.value));
   final totals = <String, int>{};
   final completed = <String, int>{};
+  final completedObjectiveEntityIds = <EntityId>{};
   final nextLabels = <String, String>{};
   EntityId? nextObjectiveEntityId;
 
@@ -100,6 +109,7 @@ AuthoredObjectiveProgress authoredObjectiveProgress(
         persistence.flagValue(entity.id, effect.flagKey) ??
         defaults.flags[effect.flagKey];
     if (current == effect.value) {
+      completedObjectiveEntityIds.add(entity.id);
       completed.update(
         objective.group,
         (count) => count + 1,
@@ -111,13 +121,17 @@ AuthoredObjectiveProgress authoredObjectiveProgress(
     }
   }
 
-  return AuthoredObjectiveProgress({
-    for (final entry in totals.entries)
-      entry.key: AuthoredObjectiveGroupProgress(
-        group: entry.key,
-        totalCount: entry.value,
-        completedCount: completed[entry.key] ?? 0,
-        nextLabel: nextLabels[entry.key],
-      ),
-  }, nextObjectiveEntityId: nextObjectiveEntityId);
+  return AuthoredObjectiveProgress(
+    {
+      for (final entry in totals.entries)
+        entry.key: AuthoredObjectiveGroupProgress(
+          group: entry.key,
+          totalCount: entry.value,
+          completedCount: completed[entry.key] ?? 0,
+          nextLabel: nextLabels[entry.key],
+        ),
+    },
+    nextObjectiveEntityId: nextObjectiveEntityId,
+    completedObjectiveEntityIds: completedObjectiveEntityIds,
+  );
 }

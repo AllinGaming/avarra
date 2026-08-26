@@ -815,8 +815,50 @@ subproject to a repository-owned Gradle compatibility overlay. The obsolete
 embedded AGP 7.3/Kotlin 1.7 buildscript, compile SDK 33, and KGP application no
 longer run. Clean Android packaging passes without Flutter's legacy-KGP warning,
 and the Android CI script now fails if it returns.
-Human packaged play/listening, bespoke skeletal boss/dodge animation,
-renderer-native VFX, and physical Android acceptance remain open.
+Stage 12.36 advances Game-only settings to version 3 with typed remappable
+movement/strike/dodge/interact keys, automatic conflict swaps, live action-bar
+keycaps, controller action/Start aliases, and optional platform haptics for
+confirmed gameplay transitions. Versions 1–2 migrate safely; no simulation,
+world, save, protocol, Server, or Forge contract changes. Workspace analysis
+and 349 tests across 18 suites pass, along with Game Windows release and clean
+Android CI packaging. The CI wrapper now preserves native stderr warnings for
+inspection without mistaking them for a failed Flutter process.
+Stage 12.37 gives title onboarding, gameplay movement prompts, action keycaps,
+fallback interaction, and pause one ephemeral latest-input presentation mode.
+Keyboard/pointer copy reads the live version-3 remaps; controller events switch
+to direction-specific D-pad, X/B/A, and Start labels. Title, briefing, and
+pause primary actions autofocus, and generic Button 1 activates focused
+controls without replacing Flutter traversal. No persistence, simulation,
+world, content, protocol, Server, or Forge contract changes. Workspace
+analysis and 353 tests across 18 suites pass, along with Game Windows release
+and clean Android CI packaging.
+Stage 12.38 turns a newly earned authored completion into a responsive
+cinematic recap with the existing epilogue, turn-in result, carried inventory,
+champion vitality, truthful connected-session behavior, Continue Exploring,
+and Return to Title. Local input/simulation suspends and offline completion
+immediately flushes the existing save; connected authority continues.
+Restored saves and initial completed replication snapshots remain non-blocking.
+No content, save, protocol, simulation, Server, Forge, or settings contract
+changes. Workspace analysis and 355 tests across 18 suites pass, along with
+Game Windows release and clean Android CI packaging.
+Stage 12.39 adds transition-only objective milestone presentation. Newly
+completed authored objectives announce OBJECTIVE SECURED with authored labels
+and exact progress; a newly satisfied authored gate supersedes that with PATH
+OPENED. Restored progress and first replicated snapshots establish a silent
+baseline, while later connected notices derive only from host-authoritative
+state. The banner is non-blocking, pointer-transparent, Reduced-Motion aware,
+and reuses existing objective audio/haptics.
+Stage 12.40 adds a full JOURNEY chronicle to the responsive pause menu. It
+derives stable objective steps, required mission-item recovery, and turn-ins
+from `WorldDefinition` plus `AuthoredAdventureProgress`, then marks one current
+step and the surrounding completed/pending history. Optional loot is excluded
+and no quest state is duplicated. No content, save, protocol, simulation,
+renderer, Server, Forge, audio/haptic, or settings contract changes. Workspace
+analysis and 358 tests across 18 suites pass, along with Game Windows release
+and clean Android CI packaging.
+Human packaged play/listening, analog-controller and tactile-device acceptance,
+bespoke skeletal boss/dodge animation, renderer-native VFX, and physical Android
+acceptance remain open.
 Android CI hardening separates native Game packaging from the combined
 quality/Windows job. A parallel Windows job pins Java 17, Android API 36,
 Build Tools 36.0.0, NDK 28.2.13676358, and CMake 3.22.1. CI calls the shared
@@ -869,8 +911,17 @@ See
 `AVARRA_STAGE_12_25_EPIC_GAME_EXPERIENCE_VALIDATION.md`,
 `AVARRA_STAGE_12_26_AUTHORITATIVE_GUARDIAN_TELEGRAPH_VALIDATION.md`,
 `AVARRA_STAGE_12_27_GAME_AUDIO_FOUNDATION_VALIDATION.md`,
+`AVARRA_STAGE_12_28_ASHEN_CASTELLAN_BOSS_VALIDATION.md`,
+`AVARRA_STAGE_12_29_BOSS_COMBAT_FEEL_VALIDATION.md`,
+`AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`,
+`AVARRA_STAGE_12_32_AUTHORITY_OWNED_PLAYER_DODGE_VALIDATION.md`,
+`AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`,
+`AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md`,
+`AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`,
+`AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`,
-`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-035.
+`AVARRA_FIRST_PLAYABLE_RELAY_ZERO.md`, ADR-024 through ADR-038.
 
 ---
 
@@ -2502,11 +2553,12 @@ Thermion packages are pinned to full commit
 create/update/destroy behavior and transform conversion behind
 `SceneBackend<THandle>`.
 
-The pinned Android plugin still declares compile SDK 33, while resolved
-AndroidX dependencies require 34 or newer. Game applies a narrowly scoped
-compile-SDK 36 override to only the `thermion_flutter` subproject. Builds emit
-non-fatal upstream native warnings, and the Android plugin's legacy Kotlin
-Gradle application path presents a future Flutter compatibility risk.
+The pinned Android plugin's upstream build file still declares compile SDK 33,
+AGP 7.3, and Kotlin 1.7. Game now redirects only that build file to a
+repository-owned AGP 9 compatibility overlay while preserving the immutable
+upstream source directory. The overlay uses API 36, Java 17, and modern Kotlin
+compiler options; clean Android CI fails if Flutter's legacy-KGP warning
+returns. Builds may still emit non-fatal upstream native compiler warnings.
 
 Thermion/Filament is therefore the provisional initial backend, pinned to an
 immutable upstream pre-release commit. It is not yet a permanent renderer
@@ -2669,6 +2721,43 @@ The deterministic Gothic generator creates matching animation buffers and glTF
 metadata for Game and Forge, while `--check` and CI prevent generated-asset
 drift. World displacement still comes exclusively from Stage 12.32 authority.
 
+Stage 12.36 keeps input and tactile response at this client boundary. A typed
+Game-only binding map converts keyboard and fixed logical controller buttons to
+existing movement/action intents; settings v3 persists it with conflict swaps
+and v1/v2 migration. HUD keycaps read the same map. Confirmed local results or
+replicated state changes select cues through an injectable platform-haptics
+controller that safely degrades to silence. No input or haptic state enters
+presentation snapshots, ECS authority, saves, world content, or networking.
+
+Stage 12.37 adds a single ephemeral prompt mode at the same Game boundary.
+Supported controller buttons or Flutter controller device types switch title,
+movement, action, interaction, and pause copy to D-pad/X/B/A/Start; keyboard
+or pointer input restores the live remapped keyboard labels. Menu primary
+actions autofocus, Flutter keeps directional traversal, and a narrow shortcut
+adds generic Button 1 activation. The mode is neither persisted nor replicated
+and does not change the version-3 settings contract.
+
+Stage 12.38 adds a transition-only victory recap at this presentation boundary.
+It reads the existing authored completion beat and authoritative adventure
+results, clears local held input, ducks ambience, and suspends the local loop
+until Continue Exploring. Connected authority keeps running and the UI says so.
+Restored completion and the first completed replication snapshot keep the
+non-blocking toast path. The recap never grants rewards or changes mission
+truth.
+
+Stage 12.39 adds a second transition-only layer for mid-mission objective
+payoff. Consecutive `AuthoredObjectiveProgress` values reveal newly completed
+stable IDs or newly opened authored gates. The centered banner is
+pointer-transparent, live-region accessible, Reduced-Motion aware, and
+non-blocking. Restored state and first replicated state never replay earned
+milestones.
+
+Stage 12.40 expands the existing pause presentation with a derived mission
+chronicle. `gameplayQuestChronicleEntries` reads the same world/adventure view
+as the HUD and produces objective, required-collectible, and turn-in rows with
+completed/current/pending state. The UI is scrollable and read-only; it neither
+stores progress nor introduces a branching quest system.
+
 Physical Android cost, production skinning/material effects, and an explicit
 replicated impact-event message remain open. See
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
@@ -2692,6 +2781,10 @@ ADR-038.
 See `AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`.
 See `AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md` and
 `AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`.
+See `AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`.
+See `AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`.
+See `AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md`.
+See `AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md`.
 
 <!-- END AVARRA_CLIENT_PRESENTATION.md -->
 
@@ -9565,6 +9658,553 @@ Remove the overlay only after a deliberately pinned upstream Thermion revision:
 
 ---
 
+<!-- BEGIN AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md -->
+
+# AVARRA Stage 12.36 - Player Controls and Haptics Validation
+
+**Status:** Implementation, full matrix, Windows release, and clean Android CI
+package gates passed
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+AVARRA Game now lets players configure every keyboard movement and core action
+binding from the existing settings menu. The HUD reflects the live bindings,
+common controller buttons can strike, dodge, interact, and pause, and confirmed
+gameplay transitions can produce optional platform haptics.
+
+This improves moment-to-moment control without moving input or tactile state
+into simulation, world packages, saves, networking, Server, or Forge.
+
+## Configurable controls
+
+The typed `GameControlBindings` model owns seven Game-only commands:
+
+| Command | Default |
+| --- | --- |
+| Move up / left / down / right | W / A / S / D |
+| Basic strike | Space |
+| Dodge | Shift |
+| Interact | E |
+
+The settings surface deliberately offers a bounded key set. Choosing an
+occupied key swaps the two bindings, so no command becomes ambiguous or
+unreachable. A one-tap Reset restores the full default map and disables itself
+when no reset is needed. Arrow keys remain fixed movement fallbacks, Escape
+remains pause, and right-side Shift/Ctrl/Alt follow their selected left-side
+modifier.
+
+Fixed logical controller aliases are:
+
+- X or generic Button 3: Basic strike;
+- B or generic Button 2: Dodge;
+- A or generic Button 1: Interact; and
+- Start: pause.
+
+The action bar and fallback Interact control display the current keyboard
+binding. Changing bindings clears held-key state before the next movement
+sample, preventing a changed setting from leaving the player moving or stuck.
+
+## Recoverable settings migration
+
+Game experience settings advance from version 2 to version 3 with:
+
+- `hapticsEnabled`; and
+- the complete typed control-binding map.
+
+Version-1 and version-2 files migrate automatically to enabled haptics and the
+default controls. Malformed, unknown, or duplicate binding values use the
+existing recoverable settings path rather than affecting world/save state.
+
+## Optional tactile feedback
+
+`GameHapticsController` is an injectable Game presentation boundary. Production
+uses Flutter platform haptics; tests and unsupported environments use a silent
+implementation. Dodge, confirmed combat impact, player hurt, enemy defeat,
+pickup, and objective transitions select bounded cues. Presentation failures
+are contained and never interrupt gameplay.
+
+Offline combat uses accepted local results, while connected combat uses
+replicated health decreases. Those paths are mutually exclusive and initial
+replication snapshots do not invent feedback.
+
+## Android CI hardening found during validation
+
+A clean native rebuild exposed that Windows PowerShell can wrap native stderr
+warnings as error records. The Android CI wrapper now captures both Flutter
+streams under a local non-terminating policy, restores the repository's strict
+policy immediately afterward, and still fails on Flutter's real exit code or
+the explicit legacy-KGP warning pattern. Known upstream compiler warnings stay
+visible without aborting a successful clean build.
+
+## Automated evidence
+
+- `dart analyze .`: no issues;
+- complete repository matrix: **349 tests across 18 suites**;
+- Game suite: **117 tests**;
+- remapping tests cover defaults, conflict swaps, serialization rejection,
+  modifier aliases, arrow fallback, action mapping, and dynamic HUD labels;
+- settings tests cover v1/v2 migration, persistence, haptic opt-out, and the
+  controls UI callback/reset flow;
+- haptic tests cover disabled routing, cue selection, and backend failure;
+- Game Windows x64 release build passes;
+- `tool/build_android_ci.ps1 -SkipToolchainInstall -Clean` passes without the
+  legacy-KGP warning;
+- final debug APK: **176,218,333 bytes**, SHA-256
+  `EBD285737E742D12094A25362B95C463C6C0244960B50D11D6B5509397321BF8`; and
+- APK contains Flutter and Thermion native libraries for ARMv7, ARM64, and x64,
+  while Windows and APK each retain all 17 WAV assets.
+
+The cleaned Windows build still reports the two known upstream Thermion C++
+warnings. They are unrelated to this Dart/Flutter presentation pass.
+
+## Boundary and decision status
+
+No ADR is required for this bounded pass. It extends the existing Game-only
+Flutter input/settings presentation boundary and does not choose a permanent
+controller, haptic hardware, accessibility, or platform-input policy.
+
+## Honest limitations and next order
+
+- Controller support is limited to Flutter logical button events. There is no
+  analog-stick axis sampling, dead-zone policy, device discovery, controller
+  rebinding, controller-family glyph switching, or controller rumble API.
+- Platform haptics are not controller vibration and may be a no-op on desktop.
+- Keyboard choices are intentionally bounded; arbitrary scan-code and chord
+  binding are not implemented.
+- No physical Android/controller tactile or latency acceptance was performed.
+- Physical Android touch quality, sustained performance, battery/thermal,
+  direct-LAN, and the 10–15 minute human encounter playtest remain release
+  gates.
+
+Next prioritize packaged human encounter tuning and physical Android/controller
+acceptance, then a measured analog-input/rumble POC only if those tests prove it
+is needed. Production skinned animation and renderer-native VFX remain separate
+visual POCs.
+
+<!-- END AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md -->
+
+# AVARRA Stage 12.37 - Adaptive Input UX Validation
+
+**Status:** Implementation, automated validation, Windows release, and clean
+Android CI package gates passed
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+AVARRA Game now presents the controls the player is actually using. The title
+screen, gameplay movement controls, action bar, fallback interaction, and pause
+menu share one lightweight keyboard/controller prompt mode. A controller input
+switches those surfaces to D-pad, X/B/A, and Start language; a keyboard key or
+pointer press returns them to the live remapped keyboard labels.
+
+The title, mission briefing, and pause surfaces also open with a useful primary
+action focused. Flutter's directional focus traversal remains in charge of
+menu navigation, while generic controller Button 1 joins the framework's
+standard game-button activation behavior.
+
+## Truthful prompt model
+
+`GameInputPromptMode` is Game-only presentation state. It derives controller
+mode from supported logical controller buttons or Flutter gamepad,
+directional-pad, and joystick device types. It does not enter settings, saves,
+world packages, simulation, replication, or server authority.
+
+Keyboard prompts read the existing version-3 `GameControlBindings`, so a
+remapped key is reflected consistently:
+
+- the title onboarding lists directional MOVE plus STRIKE, DODGE, and USE;
+- each movement-pad semantic label and desktop tooltip identifies its current
+  direction binding;
+- the action bar and fallback interaction label show current action bindings;
+  and
+- the pause footer changes between Escape and Start.
+
+Controller prompts use the already-supported fixed logical aliases: D-pad
+directions, X for Basic Strike, B for Dodge, A for Interact, and Start for
+pause. No new controller binding or settings schema is introduced.
+
+## Focus and menu activation
+
+The enabled title Enter action, mission Begin action, and pause Resume action
+request initial focus. Existing Flutter arrow/D-pad focus traversal remains
+intact. A narrow Game menu shortcut maps generic Button 1 to `ActivateIntent`;
+standard game Button A continues through Flutter's built-in activation
+shortcut. The added scope does not capture gameplay input or add a custom
+focus engine.
+
+## Automated and package evidence
+
+- `dart analyze .`: no issues;
+- complete repository matrix: **353 tests across 18 suites**;
+- Game suite: **121 tests**;
+- prompt tests cover remapped keyboard labels, directional D-pad labels,
+  logical controller aliases, and device-type detection;
+- widget tests cover controller action-bar keycaps, remap-aware title
+  onboarding, pointer return to keyboard prompts, dynamic Start pause copy,
+  and generic Button 1 primary-menu activation;
+- Game Windows x64 release build passes;
+- `tool/build_android_ci.ps1 -SkipToolchainInstall -Clean` passes without the
+  legacy-KGP warning;
+- final debug APK: **176,218,357 bytes**, SHA-256
+  `4984750352EADBF4CC166DAAB9FFCC68C5DB041A7DB626A4CB3EA96985DCB689`; and
+- Windows and APK package inspection retain all 17 WAV assets, while the APK
+  retains the selected Flutter/Thermion native libraries for ARMv7, ARM64, and
+  x64.
+
+The Windows build still reports the two known upstream Thermion C++ warnings.
+They are unchanged and unrelated to this Dart/Flutter input-presentation pass.
+
+## Boundary and decision status
+
+No ADR is required. This pass makes the Stage 12.36 Game-only input surface
+coherent; it does not select a permanent controller stack, glyph system,
+accessibility policy, focus engine, or input settings format. Settings remain
+version 3.
+
+## Honest limitations and next order
+
+- Prompt glyphs are the fixed X/B/A family. Controller make/model discovery
+  and Nintendo/PlayStation-specific glyph families are not implemented.
+- Analog-stick axes, dead zones, controller rebinding, hot-plug UI, and
+  controller rumble remain unimplemented.
+- Pointer/touch use returns to the keyboard-and-pointer prompt family; there is
+  no separate touch-only onboarding mode.
+- Automated key events prove routing and focus behavior, not physical
+  controller compatibility, latency, or menu feel.
+- Physical Android touch quality, sustained performance, battery/thermal,
+  direct-LAN, tactile response, and the 10-15 minute human encounter playtest
+  remain release gates.
+
+Next prioritize the packaged human encounter playtest and physical
+Android/controller acceptance. Use those measurements to decide whether an
+analog-input/rumble and controller-glyph POC is needed; do not select those
+dependencies speculatively.
+
+<!-- END AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md -->
+
+# AVARRA Stage 12.38 - Mission Completion Recap Validation
+
+**Status:** Implementation, full matrix, Windows release, and clean Android CI
+package gates passed
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+Finishing an authored AVARRA mission now has a real payoff. A newly earned
+completion opens a responsive cinematic recap containing the world and mission
+identity, authored epilogue, completion result, carried inventory, current
+champion vitality, session behavior, and clear Continue Exploring or Return to
+Title actions.
+
+This replaces the previous transition experience of only a small HUD card and
+temporary story toast. The compact HUD completion state remains after the
+player chooses to continue exploring.
+
+## Authority and transition policy
+
+The recap is downstream of the existing authored
+`AuthoredMissionNarrativePhase.complete` state. It cannot complete a mission,
+grant an item, change health, or invent a reward.
+
+`gameplayStoryTransitionPresentationFor` makes the replay policy explicit:
+
+- completion earned after initial story state is known opens the recap;
+- a restored completed save remains non-blocking;
+- the first replicated snapshot of an already-completed connected session
+  remains non-blocking; and
+- non-completion story transitions retain the existing toast.
+
+Offline accepted turn-in schedules and immediately flushes its existing
+authoritative save before the player leaves the recap. Connected completion
+continues to depend on host-replicated progress and host durability.
+
+## Player experience
+
+The recap:
+
+- uses the authored completion text rather than Game-owned mission prose;
+- animates once with a short fade/slide, or appears immediately with Reduced
+  Motion;
+- scrolls without overflow on a measured 390 x 700 compact viewport;
+- pauses local simulation/input offline and clears held movement;
+- leaves connected authority running and says so explicitly;
+- ducks ambience while open and retains the existing mission-complete cue and
+  haptic route;
+- autofocuses Continue Exploring;
+- supports pointer, keyboard, controller A/generic Button 1, Escape, and Start;
+  and
+- resumes focus/gameplay or enters the existing safe Return-to-Title flow.
+
+## Automated and package evidence
+
+- `dart analyze .`: no issues;
+- complete repository matrix: **355 tests across 18 suites**;
+- Game suite: **123 tests**;
+- presentation-policy tests distinguish newly earned completion from restored
+  or initial replicated state;
+- widget coverage validates compact layout, authored story/result/inventory/
+  vitality copy, accessibility live-region semantics, connected-session copy,
+  controller activation, scrolling, and both actions;
+- integration coverage confirms a restored completed save does not replay the
+  blocking recap;
+- Game Windows x64 release build passes;
+- `tool/build_android_ci.ps1 -SkipToolchainInstall -Clean` passes without the
+  legacy-KGP warning;
+- final debug APK: **176,229,605 bytes**, SHA-256
+  `57582F4E5C7C1A6BC0282298F24C96DF8C6F410F53E789FBCE11DCBCDF8B0435`;
+  and
+- Windows and APK retain all 17 WAV assets, while the APK retains the selected
+  Flutter/Thermion libraries for ARMv7, ARM64, and x64.
+
+The Windows build still reports the two known upstream Thermion C++ warnings.
+They are unchanged and unrelated to this Flutter presentation pass.
+
+## Boundary and decision status
+
+No ADR is required. Stage 12.38 consumes the existing content-v9 narrative,
+save, adventure-progress, audio, haptic, input, and world-transition contracts.
+It changes no content schema, save format, protocol, simulation, Server, Forge,
+or settings version.
+
+## Honest limitations and next order
+
+- The recap reports current authoritative results; it does not yet calculate
+  elapsed time, damage, deaths, grade, or per-player contribution statistics.
+- Continue Exploring does not create post-game encounters or a second mission.
+- Connected authority continues while the recap is open, matching the pause
+  menu's existing session behavior.
+- Automated compact-layout and input tests are not a substitute for human
+  readability, pacing, sound-mix, controller, or touch acceptance.
+- Physical Android sustained performance, battery/thermal, direct-LAN,
+  tactile response, and the 10-15 minute packaged playtest remain release
+  gates.
+
+Next run the packaged encounter end to end and tune recap dwell, copy, audio,
+and combat pacing from observed play. Only add mission statistics or
+post-completion content when that test identifies a concrete product need.
+
+<!-- END AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_39_OBJECTIVE_MILESTONE_PRESENTATION_VALIDATION.md -->
+
+# AVARRA Stage 12.39 - Objective Milestone Presentation Validation
+
+**Status:** Implementation, full matrix, Windows release, and clean Android CI
+package gates passed
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+Relay Zero's stabilizers no longer advance through status text alone. Every
+newly earned authored objective now produces a short Diablo-style progression
+banner. Ordinary steps announce **OBJECTIVE SECURED** with the authored
+interactable name and exact mission progress; the step that satisfies an
+authored gate instead announces **PATH OPENED** with the authored gate name.
+
+The banner is deliberately brief and non-blocking. It adds payoff and rhythm
+between the prologue and mission-complete recap without interrupting movement
+or combat.
+
+## Authority and replay policy
+
+`AuthoredObjectiveProgress` now exposes an immutable, stable-ID-sorted set of
+completed objective entity IDs in addition to its existing group counts and
+next-objective value. The set is derived from the same world definition and
+save/replication view; it is not a second quest state.
+
+`gameplayObjectiveMilestoneNoticeFor` compares two consecutive authoritative
+progress values:
+
+- a newly opened `ObjectiveGateDefinition` takes precedence over the objective
+  that satisfied it;
+- otherwise newly completed objective IDs resolve to their authored
+  `InteractableDefinition` labels;
+- unchanged states produce no notice;
+- restored offline progress produces no transition; and
+- the first connected gameplay snapshot establishes the baseline silently,
+  while later host-authoritative changes may present a notice.
+
+The Game client never marks an objective complete, opens a gate, or predicts a
+milestone locally in a connected session.
+
+## Player experience
+
+The milestone presentation:
+
+- uses a centered ember-and-gold quest banner with distinct secured/opened
+  iconography;
+- displays exact completed/total progress;
+- animates with a bounded fade, lift, and scale, while Reduced Motion removes
+  spatial movement;
+- expires after 3.9 seconds;
+- is pointer-transparent and uses live-region semantics;
+- reuses the existing objective audio cue and optional objective haptic; and
+- coexists with the quest tracker, boss warning, pickup toast, and completion
+  recap.
+
+## Automated and package evidence
+
+- `dart analyze .`: no issues;
+- focused world progress and Flutter presentation tests pass;
+- the Stage 12.39 Game checkpoint passed **125 tests**;
+- final combined repository matrix after Stage 12.40: **358 tests across 18
+  suites**;
+- final Game suite: **126 tests**;
+- Game Windows x64 release build passes;
+- `tool/build_android_ci.ps1 -SkipToolchainInstall -Clean` passes;
+- final debug APK: **176,244,485 bytes**, SHA-256
+  `E5870A1AA17B5CB423C7DAB2ECFA73B38981EDE7BF7B43F0B6FD26B73A40AC6B`;
+  and
+- Windows/APK retain all 17 WAV assets, while the APK retains the selected
+  Flutter/Thermion libraries for ARMv7, ARM64, and x64.
+
+The Windows build still reports the known upstream Thermion C4005 and C4251
+warnings. They are unchanged and unrelated to this Flutter presentation pass.
+
+## Boundary and decision status
+
+No ADR is required. The added completed-ID view is an immutable derivation of
+the existing authored objective flags. Stage 12.39 changes no world/content
+schema, save format, protocol, simulation command, Server behavior, Forge
+behavior, renderer contract, or settings version.
+
+## Honest limitations and next order
+
+- Multiple objective changes received in one snapshot collapse into one banner
+  whose title joins the authored labels, unless that snapshot opens a gate.
+- The banner is Flutter presentation rather than renderer-native world VFX.
+- Automated widget timing and semantics are not a substitute for human pacing,
+  readability, sound-mix, touch, controller, or tactile acceptance.
+- Initial connected snapshots are intentionally silent even if they contain
+  progress earned before this client joined.
+
+Continue with the full authored mission chronicle in the pause menu, then tune
+banner dwell, placement, cue level, and haptic strength during the packaged
+encounter playtest.
+
+<!-- END AVARRA_STAGE_12_39_OBJECTIVE_MILESTONE_PRESENTATION_VALIDATION.md -->
+
+---
+
+<!-- BEGIN AVARRA_STAGE_12_40_QUEST_CHRONICLE_VALIDATION.md -->
+
+# AVARRA Stage 12.40 - Quest Chronicle Validation
+
+**Status:** Implementation, full matrix, Windows release, and clean Android CI
+package gates passed
+
+**Date:** 2026-08-25
+
+## Product outcome
+
+The pause menu now works as a useful in-game quest journal. Its new **JOURNEY**
+chronicle shows the complete authored mission chain instead of only the current
+status sentence:
+
+1. each authored objective in stable order;
+2. recovery of every item actually required by an authored turn-in; and
+3. the authored final turn-in action.
+
+Each step is visibly marked completed, current, or pending, and a compact
+completed/total counter gives the player an immediate sense of campaign
+progress. Relay Zero therefore retains its storyline and prior accomplishments
+whenever the player pauses.
+
+## Derived mission-chain policy
+
+`gameplayQuestChronicleEntries` consumes the existing `WorldDefinition` and
+`AuthoredAdventureProgress`:
+
+- objective completion comes from
+  `AuthoredObjectiveProgress.completedObjectiveEntityIds`;
+- required-item recovery comes from the authored turn-in item ID and persisted
+  collectible entity state;
+- turn-in completion comes from the existing completed turn-in entity IDs;
+- labels come from authored interactables, collectible item labels, and
+  completion labels; and
+- the first incomplete step is current, later incomplete steps are pending.
+
+Unrelated optional drops are not presented as required mission steps. The
+chronicle is read-only presentation and cannot mutate any of these values.
+
+## Player experience
+
+The existing responsive pause menu now includes:
+
+- an ember-accented JOURNEY section;
+- green completed, gold current, and muted pending state language;
+- stable ordering and exact completed/total progress;
+- semantic completed/current/pending labels for assistive technology;
+- the existing authored mission title, current narrative, objective summary,
+  inventory, and connected-session warning; and
+- the existing pointer, keyboard, controller focus, settings, world-library,
+  resume, and return-to-title behavior.
+
+The panel remains scrollable on compact viewports and adds no new blocking
+screen or gameplay input mode.
+
+## Automated and package evidence
+
+- `dart analyze .`: no issues;
+- focused derivation coverage proves objective, required-relic, and turn-in
+  ordering plus exactly one current step;
+- pause-menu widget coverage verifies journey copy, progress, responsive
+  layout, existing actions, and connected-session warning;
+- complete repository matrix: **358 tests across 18 suites**;
+- Game suite: **126 tests**;
+- Game Windows x64 release build passes;
+- `tool/build_android_ci.ps1 -SkipToolchainInstall -Clean` passes;
+- final debug APK: **176,244,485 bytes**, SHA-256
+  `E5870A1AA17B5CB423C7DAB2ECFA73B38981EDE7BF7B43F0B6FD26B73A40AC6B`;
+  and
+- Windows/APK retain all 17 WAV assets, while the APK retains six selected
+  Flutter/Thermion native libraries across ARMv7, ARM64, and x64.
+
+The Windows build still reports the known upstream Thermion C4005 and C4251
+warnings.
+
+## Boundary and decision status
+
+No ADR is required. Stage 12.40 is Game-only derived presentation over existing
+authored data and authoritative progress. It changes no content schema, save
+format, network protocol, simulation, renderer, Server, Forge, audio/haptic
+policy, or settings version.
+
+## Honest limitations and next order
+
+- The content-v9 mission contract remains a linear objective/item/turn-in
+  chain; this is not a branching quest graph, dialogue log, lore codex, or
+  localization system.
+- A required guarded collectible represents the recovery goal but does not
+  synthesize a separate guardian-kill checklist entry without authored data.
+- Optional drops are intentionally excluded from the required journey.
+- Human packaged readability and controller/touch scrolling still need
+  acceptance on representative Windows and physical Android devices.
+
+Next run the complete packaged encounter with a player, tune milestone and
+chronicle wording from observed confusion, and only then choose whether the
+next product slice should add authored dialogue/lore, richer post-game
+statistics, or a second mission.
+
+<!-- END AVARRA_STAGE_12_40_QUEST_CHRONICLE_VALIDATION.md -->
+
+---
+
 <!-- BEGIN AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md -->
 
 # AVARRA Combat Feel Authoring Guide
@@ -10243,6 +10883,22 @@ the effect without changing the move.
 Stage 12.34 gives Ashen Vanguard a dedicated generated Dodge pose and puts its
 clip/VFX tuning behind one AVARRA profile. The same deterministic tool updates
 and verifies Game and Forge copies, making further iteration repeatable.
+
+Stage 12.38 gives the completed journey a deliberate ending. Newly transmitting
+the signal opens a responsive authored epilogue and result recap with carried
+inventory, champion vitality, session truth, Continue Exploring, and Return to
+Title. Restored completion does not replay the blocking moment, and accepted
+offline completion immediately flushes the existing durable save.
+
+Stage 12.39 gives the middle of that journey deliberate rhythm. Each newly
+secured stabilizer produces a short authored progress banner, and the final
+stabilizer announces the opened Core chamber path instead of leaving that
+consequence buried in HUD status text. Loading or joining never replays old
+milestones.
+
+Stage 12.40 preserves the whole journey in the pause menu. Stabilizers, Relay
+Core recovery, and signal transmission appear as completed/current/pending
+steps derived from the same save or host-replicated adventure state.
 
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle
@@ -15204,6 +15860,100 @@ Stage 12.35 status (Android Kotlin compatibility gate completed 2026-08-25):
 This is a temporary pinned-dependency build overlay, not a Thermion source fork
 or permanent renderer decision. See the Stage 12.35 validation and ADR-017.
 
+Stage 12.36 status (player-controls-and-haptics gate completed 2026-08-25):
+
+- Game experience settings v3 persist typed keyboard bindings for movement,
+  Basic Strike, Dodge, and Interact plus an optional haptic-feedback switch;
+- rebinding swaps conflicts automatically, keeps arrows/Escape as fixed safety
+  fallbacks, clears held state when settings change, and updates HUD keycaps;
+- fixed Flutter logical controller aliases provide strike, dodge, interact, and
+  pause without claiming analog-stick or device-discovery support;
+- an injected Game-only haptics boundary maps confirmed dodge, combat, hurt,
+  defeat, pickup, and objective transitions and fails safely to silence;
+- versions 1 and 2 migrate to safe defaults without touching world, save,
+  protocol, simulation, Server, or Forge state;
+- the Android CI wrapper no longer mistakes known native stderr warnings for a
+  failed Flutter process while retaining exit-code and legacy-KGP checks; and
+- root analysis, 349 tests across 18 suites, Game Windows release, clean Android
+  CI packaging, and source/Windows/APK asset inspection pass.
+
+This is a bounded Game presentation/input layer, not a permanent analog
+controller, rumble, arbitrary scan-code/chord, or haptic-device policy. See the
+Stage 12.36 validation.
+
+Stage 12.37 status (adaptive-input-UX gate completed 2026-08-25):
+
+- one Game-only latest-input prompt mode drives title onboarding, gameplay
+  movement labels, action-bar keycaps, fallback interaction, and pause copy;
+- keyboard/pointer prompts use the live version-3 remaps, while supported
+  controller events use direction-specific D-pad, X/B/A, and Start language;
+- enabled title Enter, mission Begin, and pause Resume actions autofocus;
+- existing Flutter directional focus traversal is retained and generic Button
+  1 gains focused-control activation;
+- prompt state remains ephemeral and changes no settings, simulation, world,
+  save, content, protocol, Server, or Forge contract; and
+- root analysis, 353 tests across 18 suites, Game Windows release, clean
+  Android CI packaging, and source/Windows/APK asset inspection pass.
+
+This is a truthful Game presentation layer, not controller discovery,
+controller-family glyph switching, analog-axis/dead-zone handling, controller
+rebinding, rumble, or a permanent input/accessibility policy. See the Stage
+12.37 validation.
+
+Stage 12.38 status (mission-completion-recap gate completed 2026-08-25):
+
+- a newly earned authored completion opens a responsive cinematic recap with
+  world/mission identity, epilogue, turn-in result, inventory, champion
+  vitality, and accurate connected-session behavior;
+- Continue Exploring autofocuses and supports pointer, keyboard,
+  Escape/Start, controller A, and generic Button 1; Return to Title reuses the
+  existing safe world-transition path;
+- local input/simulation suspends, held movement clears, ambience ducks, and
+  Reduced Motion removes the reveal animation;
+- restored completed saves and first completed replication snapshots remain
+  non-blocking, while later host-authoritative completion opens the recap;
+- accepted offline completion cancels the debounce timer and immediately
+  flushes the existing durable save; and
+- root analysis, 355 tests across 18 suites, Game Windows release, clean
+  Android CI packaging, and Windows/APK asset closure pass.
+
+This is authored mission payoff, not a post-game statistics/rating system,
+branching epilogue, new reward authority, global connected pause, or second
+mission. See the Stage 12.38 validation.
+
+Stage 12.39 status (objective-milestone-presentation gate completed
+2026-08-25):
+
+- `AuthoredObjectiveProgress` exposes immutable completed objective stable IDs
+  derived from existing flags;
+- consecutive local or replicated authority states produce at most one
+  non-blocking OBJECTIVE SECURED or higher-priority PATH OPENED notice;
+- restored progress and first connected snapshots establish a silent baseline;
+- authored labels, exact progress, objective audio/haptics, live semantics,
+  pointer transparency, and Reduced Motion are retained; and
+- the focused tests, root analysis, final 358-test matrix, Game Windows release,
+  clean Android CI package, and Windows/APK closure pass.
+
+This is derived Game presentation, not a new quest state, schema, protocol,
+renderer effect system, or connected prediction rule. See the Stage 12.39
+validation.
+
+Stage 12.40 status (quest-chronicle gate completed 2026-08-25):
+
+- the responsive pause menu presents the complete authored mission journey,
+  including stable objective order, required-item recovery, and turn-in;
+- existing authoritative adventure values mark steps completed, current, or
+  pending and drive an exact progress counter;
+- unrelated optional drops are excluded from required mission progression;
+- the chronicle keeps existing pause input/focus/session behavior and stores no
+  duplicate progress; and
+- root analysis, 358 tests across 18 suites, Game Windows release, clean
+  Android CI packaging, and Windows/APK asset/native-library closure pass.
+
+This is a readable linear mission chronicle, not branching quest graphs,
+dialogue, lore, localization, or a second mission. See the Stage 12.40
+validation.
+
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See
@@ -15242,6 +15992,7 @@ product playtest remain open. See
 `AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md`,
 `AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md`,
 `AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`,
+`AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`,
 `AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md`,
 `AVARRA_FORGE_GAME_MAKER_GUIDE.md`, and
 ADR-038.
@@ -15366,6 +16117,32 @@ localization representation, branching story/dialogue/cinematic schema,
 authoritative global-pause protocol, or physical Android performance policy.
 The preference representation is provisional app storage, not a world/save
 format, and closes none of those decisions.
+Stage 12.36 validates a bounded keyboard-remapping model, fixed Flutter logical
+controller action aliases, and an injectable platform-haptics boundary inside
+that same Game-only preference/presentation layer. It does not select analog
+axis/dead-zone handling, controller discovery/rebinding, glyph families,
+controller rumble, arbitrary scan-code/chord bindings, or a permanent haptic
+hardware/accessibility policy. Physical Android and controller evidence remains
+required, so those decisions stay open.
+Stage 12.37 improves presentation consistency without closing those decisions.
+Its latest-input prompt mode, focused primary menu actions, and generic Button
+1 activation use existing Flutter events and shortcuts. It does not select
+device discovery, hot-plug policy, analog axes/dead zones, controller
+rebinding, controller-family glyphs, controller rumble, a custom focus engine,
+or a permanent accessibility/input policy.
+Stage 12.38 consumes the existing authored completion beat and authoritative
+adventure results in a Game-only recap. It does not choose a permanent
+post-game statistics schema, mission-rating policy, branching epilogue,
+cinematic renderer, post-completion encounter model, or connected global-pause
+contract. Those remain product decisions requiring playtest evidence.
+Stage 12.39 exposes completed objective stable IDs and compares consecutive
+authoritative progress values only for Game presentation. It does not choose a
+permanent objective-event protocol, renderer quest VFX, multi-change queue,
+milestone timing, audio mix, or tactile policy.
+Stage 12.40 derives a linear pause-menu chronicle from the existing content-v9
+objective/item/turn-in contract. It does not choose a branching quest graph,
+dialogue or lore schema, localization representation, quest-event history, or
+multi-mission campaign model.
 Stage 12.26 adds a replaceable projected circular melee warning driven by a
 real server-safe wind-up phase. It closes the previous requirement for an
 explicit Guardian attack-warning contract, recorded in ADR-034, but does not

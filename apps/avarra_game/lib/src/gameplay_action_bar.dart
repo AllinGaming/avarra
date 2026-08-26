@@ -3,21 +3,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'game_controls.dart';
+
 enum GameplayHotkeyAction { primarySkill, dodge, interact }
 
-GameplayHotkeyAction? gameplayHotkeyActionFor(LogicalKeyboardKey key) {
-  if (key == LogicalKeyboardKey.space) {
-    return GameplayHotkeyAction.primarySkill;
-  }
-  if (key == LogicalKeyboardKey.keyE) {
-    return GameplayHotkeyAction.interact;
-  }
-  if (key == LogicalKeyboardKey.shiftLeft ||
-      key == LogicalKeyboardKey.shiftRight) {
-    return GameplayHotkeyAction.dodge;
-  }
-  return null;
-}
+GameplayHotkeyAction? gameplayHotkeyActionFor(
+  LogicalKeyboardKey key, {
+  GameControlBindings bindings = GameControlBindings.defaults,
+}) => switch (bindings.actionControlFor(key)) {
+  GameControl.primarySkill => GameplayHotkeyAction.primarySkill,
+  GameControl.dodge => GameplayHotkeyAction.dodge,
+  GameControl.interact => GameplayHotkeyAction.interact,
+  _ => null,
+};
 
 @immutable
 final class GameplaySkillCooldown {
@@ -91,6 +89,8 @@ final class GameplayActionBar extends StatelessWidget {
     required this.onPrimary,
     required this.onDodge,
     required this.onInteract,
+    this.controlBindings = GameControlBindings.defaults,
+    this.inputPromptMode = GameInputPromptMode.keyboard,
     this.compact = false,
     super.key,
   }) : assert(currentHealth >= 0),
@@ -104,6 +104,8 @@ final class GameplayActionBar extends StatelessWidget {
   final VoidCallback? onPrimary;
   final VoidCallback? onDodge;
   final VoidCallback? onInteract;
+  final GameControlBindings controlBindings;
+  final GameInputPromptMode inputPromptMode;
   final bool compact;
 
   @override
@@ -182,7 +184,10 @@ final class GameplayActionBar extends StatelessWidget {
                     semanticStatus: primaryCooldown.isReady
                         ? 'ready'
                         : '${primaryCooldown.remainingLabel} remaining',
-                    hotkey: 'SPACE',
+                    hotkey: controlBindings.promptLabelFor(
+                      GameControl.primarySkill,
+                      inputPromptMode,
+                    ),
                     icon: Icons.gavel_rounded,
                     size: primarySize,
                     accent: const Color(0xFFE8A946),
@@ -199,7 +204,10 @@ final class GameplayActionBar extends StatelessWidget {
                     semanticStatus: dodgeCooldown.isReady
                         ? 'ready'
                         : '${dodgeCooldown.remainingLabel} remaining',
-                    hotkey: 'SHIFT',
+                    hotkey: controlBindings.promptLabelFor(
+                      GameControl.dodge,
+                      inputPromptMode,
+                    ),
                     icon: Icons.double_arrow_rounded,
                     size: compact ? 52 : 58,
                     accent: const Color(0xFF7CE3C1),
@@ -214,7 +222,10 @@ final class GameplayActionBar extends StatelessWidget {
                     actionKey: const Key('interact'),
                     label: 'USE',
                     semanticStatus: onInteract == null ? 'no target' : 'ready',
-                    hotkey: 'E',
+                    hotkey: controlBindings.promptLabelFor(
+                      GameControl.interact,
+                      inputPromptMode,
+                    ),
                     icon: Icons.touch_app_rounded,
                     size: compact ? 52 : 58,
                     accent: const Color(0xFF65C9D4),

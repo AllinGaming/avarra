@@ -1,7 +1,7 @@
 {
   "architecture_version": "v8-reviewed",
   "date": "2026-08-25",
-  "current_direction": "Stage 12.35 closes the pinned Thermion Android Kotlin warning with a repository-owned AGP 9 build overlay: the immutable renderer source remains unchanged, clean APK builds no longer apply legacy KGP, and Android CI rejects warning regressions. Stage 12.34 keeps dodge-feel iteration reproducible through one Game profile and one deterministic Game/Forge animation generator/check. Next prioritize packaged human encounter tuning, a production skinned-animation and renderer-native VFX POC, physical Android touch/performance/direct-LAN validation, input remapping/controller/haptics support, and production signing/publication.",
+  "current_direction": "Stages 12.39-12.40 fill Relay Zero's mid-mission pacing and memory gaps: newly earned authoritative objectives produce non-blocking OBJECTIVE SECURED or PATH OPENED banners, while the pause menu derives a complete completed/current/pending JOURNEY from authored objectives, required relics, and turn-ins. Restored progress and initial replicated snapshots stay silent, no quest truth is duplicated, and no content, save, protocol, simulation, Server, Forge, renderer, or settings contract changes. Next prioritize packaged human encounter/readability/audio/tactile tuning and physical Android/controller touch-performance-direct-LAN acceptance, then use observed confusion to choose authored dialogue/lore, post-game statistics/content, or a second mission.",
   "entrypoint": "docs/AVARRA_CANONICAL_LLM_HANDOFF.md",
   "secondary_instructions": "AGENTS.md",
   "implementation_prompt": "docs/AVARRA_LLM_IMPLEMENTATION_PROMPT.md",
@@ -52,6 +52,11 @@
   "stage_12_33_validation": "docs/AVARRA_STAGE_12_33_DODGE_COMBAT_FEEL_VALIDATION.md",
   "stage_12_34_validation": "docs/AVARRA_STAGE_12_34_REPRODUCIBLE_DODGE_FEEL_AUTHORING_VALIDATION.md",
   "stage_12_35_validation": "docs/AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md",
+  "stage_12_36_validation": "docs/AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md",
+  "stage_12_37_validation": "docs/AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md",
+  "stage_12_38_validation": "docs/AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md",
+  "stage_12_39_validation": "docs/AVARRA_STAGE_12_39_OBJECTIVE_MILESTONE_PRESENTATION_VALIDATION.md",
+  "stage_12_40_validation": "docs/AVARRA_STAGE_12_40_QUEST_CHRONICLE_VALIDATION.md",
   "combat_feel_authoring_guide": "docs/AVARRA_COMBAT_FEEL_AUTHORING_GUIDE.md",
   "forge_game_maker_guide": "docs/AVARRA_FORGE_GAME_MAKER_GUIDE.md",
   "android_ci_cd": "docs/AVARRA_ANDROID_CI_CD.md",
@@ -95,7 +100,7 @@
     "docs/AVARRA_AI_AGENT_QUICKSTART.md",
     "docs/adr/ADR-011-ai-friendly-creator-api.md"
   ],
-  "review_status": "Consistency-reviewed through Stage 12.35: content-schema-v11 and protocol-v6 add an authored authority-owned Vharos fissure ring and collision-swept player dodge; Game adds correction-aware motion and projected effects; Ashen Vanguard packages a dedicated generated Dodge clip controlled with the effects by one Game profile. A deterministic Game/Forge generator, read-only check, CI gate, asset tests, and authoring guide make iteration reproducible. A Game-owned Gradle overlay preserves the immutable Thermion source pin while replacing its obsolete Android build instructions; clean APK builds no longer emit the legacy-KGP warning and CI rejects its return. The 18-suite matrix passes 340 tests; Game and Forge Windows releases, server executable, and Android debug APK build, with all 17 WAVs present in source/Windows/APK. Human packaged play/listen/balance and creator-usability acceptance, production skinned boss/dodge animation and renderer-native VFX, permanent audio/spatial/haptics/input-remapping policy, production signing/publication, and physical Android direct-LAN, touch, performance, battery/thermal validation remain open.",
+  "review_status": "Consistency-reviewed through Stage 12.40: content-schema-v11 and protocol-v6 retain the authored authority-owned Vharos fissure ring and collision-swept player dodge; Game adds correction-aware motion, generated Dodge presentation, remappable/adaptive controls, optional platform haptics, mission-completion recap, transition-only objective/path milestone banners, and a derived full-mission pause chronicle. Settings-v3 and all prompt/recap/milestone/chronicle state remain Game-only. Restored saves and initial replicated snapshots never replay earned milestones; connected transitions remain downstream of host authority. The immutable Thermion pin uses a repository Gradle overlay, and Android CI captures native warnings without weakening exit-code or legacy-KGP checks. The 18-suite matrix passes 358 tests; Game Windows release and clean Android debug APK build pass, with all 17 WAVs and six selected APK native libraries present. Human packaged play/readability/listen/balance and creator-usability acceptance, authored dialogue/lore or additional missions, post-game statistics/content, analog-controller/rumble and physical controller/tactile evidence, production skinned boss/dodge animation and renderer-native VFX, permanent audio/spatial/controller/haptic policy, production signing/publication, and physical Android direct-LAN, touch, performance, battery/thermal validation remain open.",
   "boundary_doc": "docs/AVARRA_GAME_FORGE_BOUNDARIES.md",
   "review_doc": "docs/AVARRA_DOCUMENTATION_REVIEW.md"
 }

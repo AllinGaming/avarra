@@ -296,8 +296,26 @@ gate. The final matrix passes 340 tests across
 with all 17 audio assets packaged. Stage 12.35 adds a repository-owned Thermion
 Android build overlay: clean APK builds no longer emit Flutter's legacy-KGP
 warning, and CI rejects its return without changing the immutable renderer
-source pin. See the Stage 12.29-12.35 validation reports, the combat-feel
-authoring guide, and ADR-037/ADR-038.
+source pin. Stage 12.36 adds conflict-safe keyboard remapping for movement,
+strike, dodge, and interaction; live HUD keycaps; fixed controller action/pause
+aliases; optional platform haptics; and v1/v2-to-v3 settings migration. Clean
+Android validation also hardens CI against known native stderr warnings without
+weakening its exit-code or legacy-KGP checks. The full matrix passes 349 tests
+across 18 suites. Stage 12.37 makes those controls coherent across the whole
+player journey: title onboarding, gameplay movement labels, action keycaps,
+fallback interaction, and pause automatically follow the latest
+keyboard/pointer or controller input. Primary menu actions autofocus, and
+generic Button 1 activates focused controls. The full matrix now passes 353
+tests across 18 suites. Stage 12.38 gives newly earned mission completion a
+cinematic authored epilogue/result/inventory/vitality recap with
+Continue Exploring and Return to Title. Restored and initially replicated
+completed sessions stay non-blocking. Stage 12.39 gives every newly earned
+stabilizer a short authoritative OBJECTIVE SECURED banner and promotes the
+gate-opening transition to PATH OPENED. Stage 12.40 turns the pause story panel
+into a complete derived JOURNEY chronicle with completed/current/pending
+objective, required-relic, and turn-in steps. The full matrix now passes 358
+tests across 18 suites. See the Stage 12.29-12.40 validation reports, the
+combat-feel authoring guide, and ADR-037/ADR-038.
 Physical
 Android direct-LAN, touch, performance, battery/thermal, and human playability
 remain the named release boundary.
@@ -454,6 +472,31 @@ metadata or checks them read-only in CI.
 Stage 12.35 redirects only Thermion's obsolete Android build file to a
 Game-owned AGP 9 compatibility overlay. Thermion source remains pinned, and
 clean Android packaging passes without the legacy Kotlin-plugin warning.
+Stage 12.36 makes the existing Game settings actionable for controls: players
+can remap movement and core actions with automatic conflict swaps, see those
+keys on the action bar, use controller action/Start aliases, and disable
+platform haptics. These preferences remain outside gameplay authority and
+versions 1–2 migrate safely to the version-3 defaults.
+Stage 12.37 carries the live bindings through title onboarding, movement
+tooltips, fallback interaction, and pause, then switches those surfaces to
+D-pad/X/B/A/Start prompts after controller input. Pointer or keyboard input
+returns to remap-aware keyboard prompts. Title, briefing, and pause primary
+actions autofocus for directional navigation and controller activation.
+Stage 12.38 replaces the anticlimactic completion-only HUD moment with a
+responsive authored victory recap. It reports the actual epilogue, turn-in
+result, remaining inventory, champion vitality, and connected-session behavior,
+then offers Continue Exploring or Return to Title. It appears only for newly
+earned completion, preserves Reduced Motion, and immediately flushes the
+existing offline save.
+Stage 12.39 fills the mid-mission pacing gap with a brief, non-blocking
+OBJECTIVE SECURED banner for newly completed authored objectives and a higher
+priority PATH OPENED banner when that completion satisfies an authored gate.
+Restored progress and the first connected snapshot establish a silent baseline;
+later connected banners remain downstream of host authority.
+Stage 12.40 upgrades the pause menu into an authored quest chronicle. It derives
+the stable objective sequence, mission-required collectible recovery, and
+turn-in from existing adventure truth, then marks each step completed, current,
+or pending without creating a second quest state.
 Stage 11.6 turns the prototype into `Relay
 Zero: Ashfall` with click/tap pursuit and repeated attacks, automatic approach
 for interactions, three Hollow Wardens with authored drops, basalt floors, and

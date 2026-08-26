@@ -1,3 +1,4 @@
+import 'package:avarra_game/src/game_controls.dart';
 import 'package:avarra_game/src/gameplay_action_bar.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:flutter/material.dart';
@@ -43,10 +44,41 @@ void main() {
     expect(gameplayHotkeyActionFor(LogicalKeyboardKey.keyQ), isNull);
   });
 
+  test('maps remapped actions while retaining controller aliases', () {
+    final bindings = GameControlBindings.defaults
+        .rebind(GameControl.primarySkill, GameInputKey.keyQ)
+        .rebind(GameControl.dodge, GameInputKey.keyR)
+        .rebind(GameControl.interact, GameInputKey.keyF);
+
+    expect(
+      gameplayHotkeyActionFor(LogicalKeyboardKey.keyQ, bindings: bindings),
+      GameplayHotkeyAction.primarySkill,
+    );
+    expect(
+      gameplayHotkeyActionFor(LogicalKeyboardKey.keyR, bindings: bindings),
+      GameplayHotkeyAction.dodge,
+    );
+    expect(
+      gameplayHotkeyActionFor(LogicalKeyboardKey.keyF, bindings: bindings),
+      GameplayHotkeyAction.interact,
+    );
+    expect(
+      gameplayHotkeyActionFor(
+        LogicalKeyboardKey.gameButtonX,
+        bindings: bindings,
+      ),
+      GameplayHotkeyAction.primarySkill,
+    );
+  });
+
   testWidgets('shows health and dispatches ready action slots', (tester) async {
     var primaryActivations = 0;
     var dodgeActivations = 0;
     var interactionActivations = 0;
+    final bindings = GameControlBindings.defaults
+        .rebind(GameControl.primarySkill, GameInputKey.keyQ)
+        .rebind(GameControl.dodge, GameInputKey.keyR)
+        .rebind(GameControl.interact, GameInputKey.keyF);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -66,6 +98,7 @@ void main() {
               onPrimary: () => primaryActivations++,
               onDodge: () => dodgeActivations++,
               onInteract: () => interactionActivations++,
+              controlBindings: bindings,
             ),
           ),
         ),
@@ -74,6 +107,9 @@ void main() {
 
     expect(find.byKey(const Key('gameplay_action_bar')), findsOneWidget);
     expect(find.text('75/100'), findsOneWidget);
+    expect(find.text('Q'), findsOneWidget);
+    expect(find.text('R'), findsOneWidget);
+    expect(find.text('F'), findsOneWidget);
     expect(find.text('BASIC STRIKE · READY'), findsOneWidget);
     expect(
       tester
@@ -132,5 +168,40 @@ void main() {
       tester.widget<InkWell>(find.byKey(const Key('interact'))).onTap,
       isNull,
     );
+  });
+
+  testWidgets('switches action keycaps to controller prompts', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: GameplayActionBar(
+              currentHealth: 100,
+              maximumHealth: 100,
+              primaryCooldown: GameplaySkillCooldown(
+                total: const Duration(milliseconds: 800),
+                remaining: Duration.zero,
+              ),
+              primaryEngaged: false,
+              dodgeCooldown: GameplaySkillCooldown(
+                total: playerDodgeCooldown,
+                remaining: Duration.zero,
+              ),
+              onPrimary: () {},
+              onDodge: () {},
+              onInteract: () {},
+              inputPromptMode: GameInputPromptMode.controller,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('X'), findsOneWidget);
+    expect(find.text('B'), findsOneWidget);
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('SPACE'), findsNothing);
+    expect(find.text('SHIFT'), findsNothing);
+    expect(find.text('E'), findsNothing);
   });
 }

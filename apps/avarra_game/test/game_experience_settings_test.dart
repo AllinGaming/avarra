@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:avarra_game/src/game_controls.dart';
 import 'package:avarra_game/src/game_experience_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,8 @@ void main() {
       masterVolume: 0.7,
       musicVolume: 0.45,
       effectsVolume: 0.9,
+      hapticsEnabled: false,
+      controlBindings: GameControlBindings(dodge: GameInputKey.keyR),
     );
 
     expect(GameExperienceSettings.decode(settings.encode()), settings);
@@ -36,7 +39,28 @@ void main() {
     expect(migrated.masterVolume, 0.8);
     expect(migrated.musicVolume, 0.55);
     expect(migrated.effectsVolume, 0.85);
+    expect(migrated.hapticsEnabled, isTrue);
+    expect(migrated.controlBindings, GameControlBindings.defaults);
   });
+
+  test(
+    'settings codec migrates version 2 with control and haptic defaults',
+    () {
+      const legacy =
+          '{"format":"avarra.game_experience_settings","version":2,'
+          '"reducedMotion":false,"cameraShakeStrength":0.6,'
+          '"showQuestGuidance":true,"showEnemyHealthBars":false,'
+          '"showCombatText":true,"audioEnabled":true,'
+          '"masterVolume":0.7,"musicVolume":0.4,"effectsVolume":0.9}';
+
+      final migrated = GameExperienceSettings.decode(legacy);
+
+      expect(migrated.cameraShakeStrength, 0.6);
+      expect(migrated.showEnemyHealthBars, isFalse);
+      expect(migrated.hapticsEnabled, isTrue);
+      expect(migrated.controlBindings, GameControlBindings.defaults);
+    },
+  );
 
   test('settings codec rejects malformed and out-of-range values', () {
     expect(
@@ -183,10 +207,42 @@ void main() {
     await tester.pump();
     expect(settings.reducedMotion, isTrue);
     expect(settings.effectiveCameraShakeStrength, 0);
+    await tester.ensureVisible(
+      find.byKey(const Key('setting_haptics_enabled')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('setting_haptics_enabled')));
+    await tester.pump();
+    expect(settings.hapticsEnabled, isFalse);
     await tester.ensureVisible(find.byKey(const Key('setting_enemy_health')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('setting_enemy_health')));
     await tester.pump();
     expect(settings.showEnemyHealthBars, isFalse);
+    await tester.ensureVisible(find.byKey(const Key('setting_control_dodge')));
+    await tester.pumpAndSettle();
+    final dodgeBinding = tester.widget<DropdownButton<GameInputKey>>(
+      find.byKey(const Key('setting_control_dodge')),
+    );
+    expect(
+      dodgeBinding.items!.map((item) => item.value),
+      contains(GameInputKey.keyR),
+    );
+    dodgeBinding.onChanged!(GameInputKey.keyR);
+    await tester.pump();
+    expect(settings.controlBindings.dodge, GameInputKey.keyR);
+    final resetControls = tester.widget<TextButton>(
+      find.byKey(const Key('setting_reset_controls')),
+    );
+    expect(resetControls.onPressed, isNotNull);
+    resetControls.onPressed!();
+    await tester.pump();
+    expect(settings.controlBindings, GameControlBindings.defaults);
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const Key('setting_reset_controls')))
+          .onPressed,
+      isNull,
+    );
   });
 }

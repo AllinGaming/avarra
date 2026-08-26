@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +11,301 @@ final class GameplayStoryNotice {
 
   final int sequence;
   final AuthoredMissionNarrative beat;
+}
+
+enum GameplayStoryTransitionPresentation { toast, missionCompleteRecap }
+
+/// Chooses a blocking recap only for completion earned after initial state is
+/// known. Restored saves and first replicated snapshots keep the non-blocking
+/// toast behavior.
+GameplayStoryTransitionPresentation gameplayStoryTransitionPresentationFor({
+  required AuthoredMissionNarrative beat,
+  required bool allowMissionCompleteRecap,
+}) {
+  if (allowMissionCompleteRecap &&
+      beat.phase == AuthoredMissionNarrativePhase.complete) {
+    return GameplayStoryTransitionPresentation.missionCompleteRecap;
+  }
+  return GameplayStoryTransitionPresentation.toast;
+}
+
+enum GameplayObjectiveMilestoneKind { objectiveSecured, pathOpened }
+
+/// One presentation-only milestone derived from a confirmed objective change.
+final class GameplayObjectiveMilestoneNotice {
+  const GameplayObjectiveMilestoneNotice({
+    required this.sequence,
+    required this.kind,
+    required this.title,
+    required this.detail,
+  }) : assert(sequence > 0);
+
+  final int sequence;
+  final GameplayObjectiveMilestoneKind kind;
+  final String title;
+  final String detail;
+
+  String get phaseLabel => switch (kind) {
+    GameplayObjectiveMilestoneKind.objectiveSecured => 'OBJECTIVE SECURED',
+    GameplayObjectiveMilestoneKind.pathOpened => 'PATH OPENED',
+  };
+}
+
+/// Derives at most one milestone from two consecutive authoritative states.
+///
+/// A newly opened gate takes precedence over its completing objective so the
+/// player sees the most consequential result of that interaction.
+GameplayObjectiveMilestoneNotice? gameplayObjectiveMilestoneNoticeFor({
+  required int sequence,
+  required WorldDefinition definition,
+  required AuthoredObjectiveProgress previous,
+  required AuthoredObjectiveProgress current,
+}) {
+  final newlyOpenedGateIds = current
+      .openedGateEntityIds(definition)
+      .difference(previous.openedGateEntityIds(definition));
+  if (newlyOpenedGateIds.isNotEmpty) {
+    final gateEntities =
+        definition.allEntities
+            .where((entity) => newlyOpenedGateIds.contains(entity.id))
+            .toList()
+          ..sort((left, right) => left.id.value.compareTo(right.id.value));
+    final gate = gateEntities.first.component<ObjectiveGateDefinition>()!;
+    return GameplayObjectiveMilestoneNotice(
+      sequence: sequence,
+      kind: GameplayObjectiveMilestoneKind.pathOpened,
+      title: gate.label,
+      detail:
+          'Threshold satisfied Â· '
+          '${current.completedCount}/${current.totalCount} objectives complete',
+    );
+  }
+
+  final newlyCompletedIds = current.completedObjectiveEntityIds.difference(
+    previous.completedObjectiveEntityIds,
+  );
+  if (newlyCompletedIds.isEmpty) return null;
+  final objectiveEntities =
+      definition.allEntities
+          .where((entity) => newlyCompletedIds.contains(entity.id))
+          .toList()
+        ..sort((left, right) => left.id.value.compareTo(right.id.value));
+  final labels = [
+    for (final entity in objectiveEntities)
+      entity.component<InteractableDefinition>()?.label ?? entity.id.value,
+  ];
+  return GameplayObjectiveMilestoneNotice(
+    sequence: sequence,
+    kind: GameplayObjectiveMilestoneKind.objectiveSecured,
+    title: labels.join(' + '),
+    detail:
+        'Mission progress Â· '
+        '${current.completedCount}/${current.totalCount} objectives complete',
+  );
+}
+
+/// A short, non-blocking objective banner for earned mission progress.
+final class GameplayObjectiveMilestoneToast extends StatefulWidget {
+  const GameplayObjectiveMilestoneToast({
+    required this.notice,
+    this.compact = false,
+    this.reducedMotion = false,
+    this.onFinished,
+    super.key,
+  });
+
+  final GameplayObjectiveMilestoneNotice? notice;
+  final bool compact;
+  final bool reducedMotion;
+  final ValueChanged<int>? onFinished;
+
+  @override
+  State<GameplayObjectiveMilestoneToast> createState() =>
+      _GameplayObjectiveMilestoneToastState();
+}
+
+final class _GameplayObjectiveMilestoneToastState
+    extends State<GameplayObjectiveMilestoneToast>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3900),
+    )..addStatusListener(_handleStatus);
+    if (widget.notice != null) _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(GameplayObjectiveMilestoneToast oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notice?.sequence != widget.notice?.sequence) {
+      if (widget.notice == null) {
+        _controller.reset();
+      } else {
+        _controller.forward(from: 0);
+      }
+    }
+  }
+
+  void _handleStatus(AnimationStatus status) {
+    final notice = widget.notice;
+    if (status == AnimationStatus.completed && notice != null) {
+      widget.onFinished?.call(notice.sequence);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeStatusListener(_handleStatus)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notice = widget.notice;
+    return IgnorePointer(
+      key: const Key('gameplay_objective_milestone'),
+      child: notice == null
+          ? const SizedBox.shrink()
+          : Semantics(
+              key: const Key('objective_milestone_semantics'),
+              liveRegion: true,
+              label: '${notice.phaseLabel}: ${notice.title}. ${notice.detail}',
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  final progress = _controller.value;
+                  final fadeIn = (progress / 0.11).clamp(0, 1).toDouble();
+                  final fadeOut = ((1 - progress) / 0.2).clamp(0, 1).toDouble();
+                  final opacity = math.min(fadeIn, fadeOut).toDouble();
+                  final easedIn = Curves.easeOutCubic.transform(fadeIn);
+                  final scale = widget.reducedMotion
+                      ? 1.0
+                      : 0.94 + (0.06 * easedIn);
+                  final slide = widget.reducedMotion ? 0.0 : 12 * (1 - easedIn);
+                  return Opacity(
+                    opacity: opacity,
+                    child: Transform.translate(
+                      offset: Offset(0, slide),
+                      child: Transform.scale(scale: scale, child: child),
+                    ),
+                  );
+                },
+                child: _ObjectiveMilestoneCard(
+                  notice: notice,
+                  compact: widget.compact,
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+final class _ObjectiveMilestoneCard extends StatelessWidget {
+  const _ObjectiveMilestoneCard({required this.notice, required this.compact});
+
+  final GameplayObjectiveMilestoneNotice notice;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (notice.kind) {
+      GameplayObjectiveMilestoneKind.objectiveSecured => const Color(
+        0xFFFFC66E,
+      ),
+      GameplayObjectiveMilestoneKind.pathOpened => const Color(0xFFFFE0A0),
+    };
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: compact ? 300 : 460),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xF21A1008), Color(0xE620160D), Color(0xF21A1008)],
+          ),
+          border: Border.symmetric(
+            horizontal: BorderSide(color: color.withValues(alpha: 0.75)),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.2),
+              blurRadius: 26,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 14 : 22,
+            compact ? 10 : 13,
+            compact ? 14 : 22,
+            compact ? 11 : 14,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Divider(color: color.withValues(alpha: 0.5))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 9),
+                    child: Icon(
+                      notice.kind == GameplayObjectiveMilestoneKind.pathOpened
+                          ? Icons.lock_open
+                          : Icons.diamond_outlined,
+                      size: compact ? 15 : 17,
+                      color: color,
+                    ),
+                  ),
+                  Expanded(child: Divider(color: color.withValues(alpha: 0.5))),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                notice.phaseLabel,
+                key: const Key('objective_milestone_phase'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                notice.title,
+                key: const Key('objective_milestone_title'),
+                maxLines: compact ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: const Color(0xFFFFF2D7),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                notice.detail,
+                key: const Key('objective_milestone_detail'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFFD7C7AF),
+                  letterSpacing: 0.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Diablo-style quest tracker backed by the currently derived authored beat.

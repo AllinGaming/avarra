@@ -78,6 +78,7 @@ void main() {
       var progress = authoredObjectiveProgress(world, persistence);
       expect(progress.totalCount, 2);
       expect(progress.completedCount, 1);
+      expect(progress.completedObjectiveEntityIds, {inactiveObjectiveId});
       expect(progress.nextObjectiveEntityId, activeObjectiveId);
       expect(progress.openedGateEntityIds(world), isEmpty);
       expect(
@@ -88,6 +89,10 @@ void main() {
       persistence.setFlag(activeObjectiveId, 'activated', true);
       progress = authoredObjectiveProgress(world, persistence);
       expect(progress.completedCount, 2);
+      expect(progress.completedObjectiveEntityIds, {
+        activeObjectiveId,
+        inactiveObjectiveId,
+      });
       expect(progress.nextObjectiveEntityId, isNull);
       expect(progress.openedGateEntityIds(world), {gateId});
       expect(

@@ -27,8 +27,10 @@ import 'src/authored_world_movement_bounds.dart';
 import 'src/fixed_step_frame_clock.dart';
 import 'src/game_audio.dart';
 import 'src/game_audio_audioplayers.dart';
+import 'src/game_controls.dart';
 import 'src/game_experience_settings.dart';
 import 'src/game_front_end.dart';
+import 'src/game_haptics.dart';
 import 'src/game_launch_configuration.dart';
 import 'src/gameplay_action_bar.dart';
 import 'src/gameplay_atmosphere_overlay.dart';
@@ -44,6 +46,7 @@ import 'src/gameplay_loot_presentation.dart';
 import 'src/gameplay_motion.dart';
 import 'src/gameplay_navigation_feedback.dart';
 import 'src/gameplay_player_danger_overlay.dart';
+import 'src/gameplay_quest_chronicle.dart';
 import 'src/gameplay_quest_guidance.dart';
 import 'src/gameplay_story_presentation.dart';
 import 'src/gameplay_target_frame.dart';
@@ -110,6 +113,7 @@ void main(List<String> arguments) {
     AvarraGameApp(
       launchConfiguration: GameLaunchConfiguration.parse(arguments),
       audioControllerLoader: loadDefaultGameAudioController,
+      hapticsController: const PlatformGameHapticsController(),
     ),
   );
 }
@@ -141,6 +145,7 @@ class AvarraGameApp extends StatelessWidget {
     this.saveStoreLoader,
     this.experienceSettingsStoreLoader,
     this.audioControllerLoader,
+    this.hapticsController = const SilentGameHapticsController(),
     this.multiplayerClientConnector,
     this.multiplayerHostStarter,
     this.launchConfiguration = const GameLaunchConfiguration(),
@@ -156,6 +161,7 @@ class AvarraGameApp extends StatelessWidget {
   final SaveStoreLoader? saveStoreLoader;
   final GameExperienceSettingsStoreLoader? experienceSettingsStoreLoader;
   final GameAudioControllerLoader? audioControllerLoader;
+  final GameHapticsController hapticsController;
   final MultiplayerClientConnector? multiplayerClientConnector;
   final MultiplayerHostStarter? multiplayerHostStarter;
   final GameLaunchConfiguration launchConfiguration;
@@ -195,6 +201,7 @@ class AvarraGameApp extends StatelessWidget {
                 !launchConfiguration.isForgeTestPlay,
             settings: settings,
             audioController: audioController,
+            hapticsController: hapticsController,
             onSettingsChanged: updateSettings,
             selectionLoader:
                 worldSelectionLoader ??
@@ -243,6 +250,7 @@ class _WorldBootstrapScreen extends StatefulWidget {
     required this.showFrontDoor,
     required this.settings,
     required this.audioController,
+    required this.hapticsController,
     required this.onSettingsChanged,
     required this.selectionLoader,
     required this.worldLibraryOpener,
@@ -256,6 +264,7 @@ class _WorldBootstrapScreen extends StatefulWidget {
   final bool showFrontDoor;
   final GameExperienceSettings settings;
   final GameAudioController audioController;
+  final GameHapticsController hapticsController;
   final GameExperienceSettingsUpdater onSettingsChanged;
   final RuntimeWorldSelectionLoader selectionLoader;
   final RuntimeWorldLibraryOpener worldLibraryOpener;
@@ -432,6 +441,7 @@ class _WorldBootstrapScreenState extends State<_WorldBootstrapScreen> {
           sourceLabel: loadedWorld.sourceLabel,
           settings: widget.settings,
           audioController: widget.audioController,
+          hapticsController: widget.hapticsController,
           onSettingsChanged: widget.onSettingsChanged,
           onOpenWorldLibrary: _openWorldLibrary,
           onReturnToTitle: _returnToTitle,
@@ -628,6 +638,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
     required this.sourceLabel,
     required this.settings,
     required this.audioController,
+    required this.hapticsController,
     required this.onSettingsChanged,
     required this.onOpenWorldLibrary,
     required this.onReturnToTitle,
@@ -646,6 +657,7 @@ class _PresentationBoundaryScreen extends StatefulWidget {
   final String sourceLabel;
   final GameExperienceSettings settings;
   final GameAudioController audioController;
+  final GameHapticsController hapticsController;
   final GameExperienceSettingsUpdater onSettingsChanged;
   final Future<void> Function() onOpenWorldLibrary;
   final Future<void> Function() onReturnToTitle;
@@ -679,6 +691,7 @@ class _PresentationBoundaryScreenState
   late final TransformComponent _playerSpawnTransform;
   final FocusNode _keyboardFocus = FocusNode(debugLabel: 'gameplay-input');
   final Set<LogicalKeyboardKey> _pressedKeys = {};
+  GameInputPromptMode _inputPromptMode = GameInputPromptMode.keyboard;
   final Map<int, Vector3> _touchMovementByPointer = {};
   final PendingMovementInputBuffer _pendingMovementInputs =
       PendingMovementInputBuffer();
@@ -722,6 +735,7 @@ class _PresentationBoundaryScreenState
   bool _showDiagnostics = false;
   bool _isPaused = false;
   bool _showMissionBriefing = false;
+  bool _showMissionCompleteRecap = false;
   bool _worldEdgeMovementBlocked = false;
   bool _preparedForWorldReplacement = false;
   Duration _simulationTime = Duration.zero;
@@ -731,6 +745,8 @@ class _PresentationBoundaryScreenState
   bool _hasPresentedReplicatedInventorySnapshot = false;
   PickupPresentationNotice? _pickupNotice;
   int _nextPickupNoticeSequence = 1;
+  GameplayObjectiveMilestoneNotice? _objectiveMilestoneNotice;
+  int _nextObjectiveMilestoneSequence = 1;
   GameplayStoryNotice? _storyNotice;
   GameplayBossNotice? _bossNotice;
   String? _presentedStoryBeatKey;
@@ -871,9 +887,14 @@ class _PresentationBoundaryScreenState
   @override
   void didUpdateWidget(_PresentationBoundaryScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.settings.controlBindings != widget.settings.controlBindings) {
+      _pressedKeys.clear();
+    }
     if (oldWidget.audioController != widget.audioController) {
       unawaited(
-        widget.audioController.setDucked(_isPaused || _showMissionBriefing),
+        widget.audioController.setDucked(
+          _isPaused || _showMissionBriefing || _showMissionCompleteRecap,
+        ),
       );
       unawaited(
         widget.audioController.setCombatIntensity(_audioCombatIntensity),
@@ -961,7 +982,8 @@ class _PresentationBoundaryScreenState
     }
   }
 
-  bool get _isGameplaySuspended => _isPaused || _showMissionBriefing;
+  bool get _isGameplaySuspended =>
+      _isPaused || _showMissionBriefing || _showMissionCompleteRecap;
 
   void _beginMission() {
     if (!_showMissionBriefing) return;
@@ -973,7 +995,11 @@ class _PresentationBoundaryScreenState
   }
 
   void _togglePause() {
-    if (_showMissionBriefing || _preparedForWorldReplacement) return;
+    if (_showMissionBriefing ||
+        _showMissionCompleteRecap ||
+        _preparedForWorldReplacement) {
+      return;
+    }
     final nextPaused = !_isPaused;
     setState(() {
       _isPaused = nextPaused;
@@ -1081,290 +1107,334 @@ class _PresentationBoundaryScreenState
         focusNode: _keyboardFocus,
         autofocus: true,
         onKeyEvent: _handleKeyEvent,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ValueListenableBuilder<Duration>(
-              valueListenable: _presentationMotionTime,
-              builder: (context, elapsed, _) {
-                final combatFrame = _combatPresentationFrame;
-                final bossFxStates = _bossFxStates;
-                final ambientSnapshot = widget.settings.reducedMotion
-                    ? _presentation
-                    : applyGameplayMotion(
-                        snapshot: _presentation,
-                        motionKinds: _presentationMotionKinds,
-                        elapsed: elapsed,
-                        priorityEntityIds: {
-                          _playerEntityId,
-                          ?_selectedEntityId,
-                          ...bossFxStates.map((state) => state.entityId),
-                        },
-                        activeCharacterEntityIds:
-                            _activePresentationCharacterEntityIds,
-                      );
-                final bossSnapshot = widget.settings.reducedMotion
-                    ? ambientSnapshot
-                    : applyGameplayBossMotion(
-                        snapshot: ambientSnapshot,
-                        bosses: bossFxStates,
-                        elapsed: elapsed,
-                      );
-                final animatedSnapshot = applyGameplayDodgeMotion(
-                  snapshot: bossSnapshot,
-                  dodge: _dodgePresentation,
-                  elapsed: elapsed,
-                  reducedMotion: widget.settings.reducedMotion,
-                );
-                final hitFlashIntensities = <EntityId, double>{
-                  for (final entity in animatedSnapshot.entities)
-                    if (combatFrame.hitFlashFor(entity.entityId)
-                        case final value when value > 0)
-                      entity.entityId: value,
-                };
-                final playerHealth = _healthFor(_playerEntityId);
-                final playerHitIntensity = combatFrame.hitFlashFor(
-                  _playerEntityId,
-                );
-                final playerShake = gameplayPlayerHitShakeOffset(
-                  frame: combatFrame,
-                  playerEntityId: _playerEntityId,
-                );
-                final bossShake = gameplayBossImpactShakeOffset(
-                  frame: combatFrame,
-                  bossEntityIds: {
-                    for (final state in bossFxStates) state.entityId,
-                  },
-                  phaseByBossId: {
-                    for (final state in bossFxStates)
-                      state.entityId: state.encounterPhase,
-                  },
-                );
-                final sceneShake =
-                    (playerShake + bossShake) *
-                    widget.settings.effectiveCameraShakeStrength;
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Transform.translate(
-                      key: const Key('gameplay_combat_scene_shake'),
-                      offset: sceneShake,
-                      transformHitTests: false,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          AvarraThermionViewport(
-                            snapshot: animatedSnapshot,
-                            assetUriResolver: _assetUriResolver,
-                            cameraRig: _cameraRig,
-                            occlusionTargetEntityId: _playerEntityId,
-                            occludedOpacity: 0.12,
-                            occluderEntityIds: {
-                              ...widget.runtimeWorld.isometricOccluderEntityIds,
-                              ...widget.streaming.activeOccluderEntityIds,
-                            },
-                            selectedEntityId: _selectedEntityId,
-                            animationRequests: _presentationAnimationRequests,
-                            hitFlashIntensities: hitFlashIntensities,
-                            onReady: _handleRendererReady,
-                            onPick: _handlePick,
-                            onZoom: (factor) =>
-                                _dispatchIntent(ZoomCameraIntent(factor)),
-                          ),
-                          GameplayDestinationOverlay(
-                            indicator: _destinationIndicator,
-                            cameraRig: _cameraRig,
-                          ),
-                          GameplayDodgeFxOverlay(
-                            snapshot: _presentation,
-                            cameraRig: _cameraRig,
-                            dodge: _dodgePresentation,
-                            elapsed: elapsed,
-                            reducedMotion: widget.settings.reducedMotion,
-                          ),
-                          GameplayBossFxOverlay(
-                            snapshot: animatedSnapshot,
-                            cameraRig: _cameraRig,
-                            bosses: bossFxStates,
-                            elapsed: elapsed,
-                            reducedMotion: widget.settings.reducedMotion,
-                          ),
-                          GameplayEnemyTelegraphOverlay(
-                            snapshot: animatedSnapshot,
-                            cameraRig: _cameraRig,
-                            telegraphs: _enemyTelegraphStates,
-                            reducedMotion: widget.settings.reducedMotion,
-                          ),
-                          GameplayLootBeamOverlay(
-                            snapshot: animatedSnapshot,
-                            cameraRig: _cameraRig,
-                            lootEntityIds: _availableLootEntityIds,
-                          ),
-                          if (widget.settings.showEnemyHealthBars)
-                            GameplayEnemyHealthOverlay(
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _handlePointerInput,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ValueListenableBuilder<Duration>(
+                valueListenable: _presentationMotionTime,
+                builder: (context, elapsed, _) {
+                  final combatFrame = _combatPresentationFrame;
+                  final bossFxStates = _bossFxStates;
+                  final ambientSnapshot = widget.settings.reducedMotion
+                      ? _presentation
+                      : applyGameplayMotion(
+                          snapshot: _presentation,
+                          motionKinds: _presentationMotionKinds,
+                          elapsed: elapsed,
+                          priorityEntityIds: {
+                            _playerEntityId,
+                            ?_selectedEntityId,
+                            ...bossFxStates.map((state) => state.entityId),
+                          },
+                          activeCharacterEntityIds:
+                              _activePresentationCharacterEntityIds,
+                        );
+                  final bossSnapshot = widget.settings.reducedMotion
+                      ? ambientSnapshot
+                      : applyGameplayBossMotion(
+                          snapshot: ambientSnapshot,
+                          bosses: bossFxStates,
+                          elapsed: elapsed,
+                        );
+                  final animatedSnapshot = applyGameplayDodgeMotion(
+                    snapshot: bossSnapshot,
+                    dodge: _dodgePresentation,
+                    elapsed: elapsed,
+                    reducedMotion: widget.settings.reducedMotion,
+                  );
+                  final hitFlashIntensities = <EntityId, double>{
+                    for (final entity in animatedSnapshot.entities)
+                      if (combatFrame.hitFlashFor(entity.entityId)
+                          case final value when value > 0)
+                        entity.entityId: value,
+                  };
+                  final playerHealth = _healthFor(_playerEntityId);
+                  final playerHitIntensity = combatFrame.hitFlashFor(
+                    _playerEntityId,
+                  );
+                  final playerShake = gameplayPlayerHitShakeOffset(
+                    frame: combatFrame,
+                    playerEntityId: _playerEntityId,
+                  );
+                  final bossShake = gameplayBossImpactShakeOffset(
+                    frame: combatFrame,
+                    bossEntityIds: {
+                      for (final state in bossFxStates) state.entityId,
+                    },
+                    phaseByBossId: {
+                      for (final state in bossFxStates)
+                        state.entityId: state.encounterPhase,
+                    },
+                  );
+                  final sceneShake =
+                      (playerShake + bossShake) *
+                      widget.settings.effectiveCameraShakeStrength;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Transform.translate(
+                        key: const Key('gameplay_combat_scene_shake'),
+                        offset: sceneShake,
+                        transformHitTests: false,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            AvarraThermionViewport(
+                              snapshot: animatedSnapshot,
+                              assetUriResolver: _assetUriResolver,
+                              cameraRig: _cameraRig,
+                              occlusionTargetEntityId: _playerEntityId,
+                              occludedOpacity: 0.12,
+                              occluderEntityIds: {
+                                ...widget
+                                    .runtimeWorld
+                                    .isometricOccluderEntityIds,
+                                ...widget.streaming.activeOccluderEntityIds,
+                              },
+                              selectedEntityId: _selectedEntityId,
+                              animationRequests: _presentationAnimationRequests,
+                              hitFlashIntensities: hitFlashIntensities,
+                              onReady: _handleRendererReady,
+                              onPick: _handlePick,
+                              onZoom: (factor) =>
+                                  _dispatchIntent(ZoomCameraIntent(factor)),
+                            ),
+                            GameplayDestinationOverlay(
+                              indicator: _destinationIndicator,
+                              cameraRig: _cameraRig,
+                            ),
+                            GameplayDodgeFxOverlay(
+                              snapshot: _presentation,
+                              cameraRig: _cameraRig,
+                              dodge: _dodgePresentation,
+                              elapsed: elapsed,
+                              reducedMotion: widget.settings.reducedMotion,
+                            ),
+                            GameplayBossFxOverlay(
                               snapshot: animatedSnapshot,
                               cameraRig: _cameraRig,
-                              enemies: _enemyHealthStates,
+                              bosses: bossFxStates,
+                              elapsed: elapsed,
+                              reducedMotion: widget.settings.reducedMotion,
                             ),
-                          GameplayQuestMarkerOverlay(
-                            marker: questMarker,
-                            cameraRig: _cameraRig,
-                          ),
-                          if (widget.settings.showCombatText)
-                            GameplayCombatFeedbackOverlay(
-                              frame: combatFrame,
+                            GameplayEnemyTelegraphOverlay(
                               snapshot: animatedSnapshot,
                               cameraRig: _cameraRig,
-                              playerEntityId: _playerEntityId,
+                              telegraphs: _enemyTelegraphStates,
+                              reducedMotion: widget.settings.reducedMotion,
                             ),
-                        ],
+                            GameplayLootBeamOverlay(
+                              snapshot: animatedSnapshot,
+                              cameraRig: _cameraRig,
+                              lootEntityIds: _availableLootEntityIds,
+                            ),
+                            if (widget.settings.showEnemyHealthBars)
+                              GameplayEnemyHealthOverlay(
+                                snapshot: animatedSnapshot,
+                                cameraRig: _cameraRig,
+                                enemies: _enemyHealthStates,
+                              ),
+                            GameplayQuestMarkerOverlay(
+                              marker: questMarker,
+                              cameraRig: _cameraRig,
+                            ),
+                            if (widget.settings.showCombatText)
+                              GameplayCombatFeedbackOverlay(
+                                frame: combatFrame,
+                                snapshot: animatedSnapshot,
+                                cameraRig: _cameraRig,
+                                playerEntityId: _playerEntityId,
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    GameplayPlayerDangerOverlay(
-                      currentHealth: playerHealth?.currentHealth ?? 1,
-                      maximumHealth: playerHealth?.maximumHealth ?? 1,
-                      confirmedHitIntensity: playerHitIntensity,
-                      elapsed: elapsed,
-                      defeated: playerHealth?.isDead ?? false,
-                    ),
-                  ],
-                );
-              },
-            ),
-            if (!widget.settings.reducedMotion)
-              GameplayAtmosphereOverlay(compact: compactLayout),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: _gameplayHud(
-                  diagnostics: status,
-                  compactLayout: compactLayout,
-                  questMarker: questMarker,
-                ),
+                      GameplayPlayerDangerOverlay(
+                        currentHealth: playerHealth?.currentHealth ?? 1,
+                        maximumHealth: playerHealth?.maximumHealth ?? 1,
+                        confirmedHitIntensity: playerHitIntensity,
+                        elapsed: elapsed,
+                        defeated: playerHealth?.isDead ?? false,
+                      ),
+                    ],
+                  );
+                },
               ),
-            ),
-            if (!compactLayout)
+              if (!widget.settings.reducedMotion)
+                GameplayAtmosphereOverlay(compact: compactLayout),
               SafeArea(
                 child: Align(
-                  alignment: Alignment.topRight,
+                  alignment: Alignment.topLeft,
+                  child: _gameplayHud(
+                    diagnostics: status,
+                    compactLayout: compactLayout,
+                    questMarker: questMarker,
+                  ),
+                ),
+              ),
+              if (!compactLayout)
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GameplayQuestJournal(
+                        beat: _missionNarrative,
+                        guidanceLabel: questMarker?.label,
+                        guidanceDistanceLabel: questMarker == null
+                            ? null
+                            : gameplayQuestDistanceLabel(
+                                questMarker.distanceMeters,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GameplayQuestJournal(
-                      beat: _missionNarrative,
-                      guidanceLabel: questMarker?.label,
-                      guidanceDistanceLabel: questMarker == null
-                          ? null
-                          : gameplayQuestDistanceLabel(
-                              questMarker.distanceMeters,
-                            ),
+                    padding: EdgeInsets.only(top: compactLayout ? 242 : 104),
+                    child: GameplayPickupToast(
+                      notice: _pickupNotice,
+                      onFinished: _handlePickupToastFinished,
                     ),
                   ),
                 ),
               ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(top: compactLayout ? 242 : 104),
-                  child: GameplayPickupToast(
-                    notice: _pickupNotice,
-                    onFinished: _handlePickupToastFinished,
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: compactLayout ? 10 : 24,
+                      left: compactLayout ? 10 : 0,
+                    ),
+                    child: GameplayStoryToast(
+                      notice: _storyNotice,
+                      compact: compactLayout,
+                      onFinished: _handleStoryNoticeFinished,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: compactLayout ? 10 : 24,
-                    left: compactLayout ? 10 : 0,
-                  ),
-                  child: GameplayStoryToast(
-                    notice: _storyNotice,
-                    compact: compactLayout,
-                    onFinished: _handleStoryNoticeFinished,
+              SafeArea(
+                child: Align(
+                  alignment: const Alignment(0, -0.32),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: GameplayObjectiveMilestoneToast(
+                      notice: _objectiveMilestoneNotice,
+                      compact: compactLayout,
+                      reducedMotion: widget.settings.reducedMotion,
+                      onFinished: _handleObjectiveMilestoneFinished,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: const Alignment(0, -0.55),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: GameplayBossToast(
-                    notice: _bossNotice,
-                    compact: compactLayout,
-                    onFinished: _handleBossNoticeFinished,
+              SafeArea(
+                child: Align(
+                  alignment: const Alignment(0, -0.55),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: GameplayBossToast(
+                      notice: _bossNotice,
+                      compact: compactLayout,
+                      onFinished: _handleBossNoticeFinished,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(top: compactLayout ? 150 : 12),
-                  child: _gameplayTargetFrame(compactLayout),
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomLeft,
-                child: _movementControls,
-              ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: compactLayout ? 128 : 12),
-                  child: ValueListenableBuilder<Duration>(
-                    valueListenable: _presentationMotionTime,
-                    builder: (context, _, _) => _actionControls,
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: compactLayout ? 150 : 12),
+                    child: _gameplayTargetFrame(compactLayout),
                   ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomRight,
-                child: _cameraControls,
-              ),
-            ),
-            if (_isPaused)
-              GameplayPauseOverlay(
-                worldName: widget.runtimeWorld.definition.name,
-                missionTitle: _missionNarrative?.title ?? 'The road ahead',
-                missionText:
-                    _missionNarrative?.text ??
-                    'No authored mission narrative is active in this world.',
-                objective: _adventureProgress.status(
-                  widget.runtimeWorld.definition,
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: _movementControls,
                 ),
-                inventory: _adventureProgress.inventoryStatus,
-                connectedSession:
-                    widget.multiplayerClient != null ||
-                    widget.multiplayerHost != null,
-                onResume: _togglePause,
-                onSettings: () => unawaited(_showSettings()),
-                onWorlds: () => unawaited(widget.onOpenWorldLibrary()),
-                onReturnToTitle: () => unawaited(widget.onReturnToTitle()),
               ),
-            if (_showMissionBriefing && missionNarrative != null)
-              GameMissionBriefingOverlay(
-                worldName: widget.runtimeWorld.definition.name,
-                missionTitle: missionNarrative.title,
-                missionText: missionNarrative.text,
-                objective: _adventureProgress.status(
-                  widget.runtimeWorld.definition,
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: compactLayout ? 128 : 12),
+                    child: ValueListenableBuilder<Duration>(
+                      valueListenable: _presentationMotionTime,
+                      builder: (context, _, _) => _actionControls,
+                    ),
+                  ),
                 ),
-                onBegin: _beginMission,
               ),
-          ],
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: _cameraControls,
+                ),
+              ),
+              if (_isPaused)
+                GameplayPauseOverlay(
+                  worldName: widget.runtimeWorld.definition.name,
+                  missionTitle: _missionNarrative?.title ?? 'The road ahead',
+                  missionText:
+                      _missionNarrative?.text ??
+                      'No authored mission narrative is active in this world.',
+                  objective: _adventureProgress.status(
+                    widget.runtimeWorld.definition,
+                  ),
+                  inventory: _adventureProgress.inventoryStatus,
+                  questEntries: gameplayQuestChronicleEntries(
+                    definition: widget.runtimeWorld.definition,
+                    progress: _adventureProgress,
+                  ),
+                  connectedSession:
+                      widget.multiplayerClient != null ||
+                      widget.multiplayerHost != null,
+                  inputPromptMode: _inputPromptMode,
+                  onResume: _togglePause,
+                  onSettings: () => unawaited(_showSettings()),
+                  onWorlds: () => unawaited(widget.onOpenWorldLibrary()),
+                  onReturnToTitle: () => unawaited(widget.onReturnToTitle()),
+                ),
+              if (_showMissionBriefing && missionNarrative != null)
+                GameMissionBriefingOverlay(
+                  worldName: widget.runtimeWorld.definition.name,
+                  missionTitle: missionNarrative.title,
+                  missionText: missionNarrative.text,
+                  objective: _adventureProgress.status(
+                    widget.runtimeWorld.definition,
+                  ),
+                  onBegin: _beginMission,
+                ),
+              if (_showMissionCompleteRecap &&
+                  missionNarrative?.phase ==
+                      AuthoredMissionNarrativePhase.complete)
+                GameMissionCompleteOverlay(
+                  worldName: widget.runtimeWorld.definition.name,
+                  missionTitle: missionNarrative!.title,
+                  missionText: missionNarrative.text,
+                  completionLabel:
+                      _adventureProgress.turnIns.last.completionLabel,
+                  inventory: _adventureProgress.inventoryStatus,
+                  playerStatus: _missionCompletePlayerStatus,
+                  connectedSession:
+                      widget.multiplayerClient != null ||
+                      widget.multiplayerHost != null,
+                  reducedMotion: widget.settings.reducedMotion,
+                  inputPromptMode: _inputPromptMode,
+                  onContinue: _continueAfterMissionComplete,
+                  onReturnToTitle: () => unawaited(widget.onReturnToTitle()),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1665,7 +1735,12 @@ class _PresentationBoundaryScreenState
             ? null
             : _interactSelected,
         icon: const Icon(Icons.touch_app),
-        label: Text(compactLayout ? 'Use' : 'Interact (E)'),
+        label: Text(
+          compactLayout
+              ? 'Use'
+              : 'Interact '
+                    '(${widget.settings.controlBindings.promptLabelFor(GameControl.interact, _inputPromptMode)})',
+        ),
       );
     }
     return GameplayActionBar(
@@ -1681,8 +1756,17 @@ class _PresentationBoundaryScreenState
       onInteract: !_rendererReady || interactionTargetId == null
           ? null
           : _interactSelected,
+      controlBindings: widget.settings.controlBindings,
+      inputPromptMode: _inputPromptMode,
       compact: compactLayout,
     );
+  }
+
+  String get _missionCompletePlayerStatus {
+    final health = _healthFor(_playerEntityId);
+    if (health == null) return 'Champion ready';
+    return 'Vitality ${_formatHealth(health.currentHealth)}/'
+        '${_formatHealth(health.maximumHealth)}';
   }
 
   Widget get _movementControls {
@@ -1692,7 +1776,10 @@ class _PresentationBoundaryScreenState
         ? 'PREPARING CONTROLS'
         : _isPlayerDead
         ? 'MOVEMENT LOCKED · RESTART'
+        : _inputPromptMode == GameInputPromptMode.controller
+        ? 'D-PAD OR TAP TO MOVE'
         : 'TAP OR HOLD TO MOVE';
+    final bindings = widget.settings.controlBindings;
     return Card(
       margin: EdgeInsets.all(compactLayout ? 10 : 16),
       color: Colors.black.withValues(alpha: 0.72),
@@ -1708,7 +1795,9 @@ class _PresentationBoundaryScreenState
             ),
             HoldDirectionButton(
               key: const Key('move_forward'),
-              label: 'Move forward (W)',
+              label:
+                  'Move forward '
+                  '(${bindings.promptLabelFor(GameControl.moveUp, _inputPromptMode)})',
               showTooltip: !compactLayout,
               enabled: movementEnabled,
               direction: Vector3(0, 0, -1),
@@ -1722,7 +1811,9 @@ class _PresentationBoundaryScreenState
               children: [
                 HoldDirectionButton(
                   key: const Key('move_left'),
-                  label: 'Move left (A)',
+                  label:
+                      'Move left '
+                      '(${bindings.promptLabelFor(GameControl.moveLeft, _inputPromptMode)})',
                   showTooltip: !compactLayout,
                   enabled: movementEnabled,
                   direction: Vector3(-1, 0, 0),
@@ -1733,7 +1824,9 @@ class _PresentationBoundaryScreenState
                 ),
                 HoldDirectionButton(
                   key: const Key('move_back'),
-                  label: 'Move back (S)',
+                  label:
+                      'Move back '
+                      '(${bindings.promptLabelFor(GameControl.moveDown, _inputPromptMode)})',
                   showTooltip: !compactLayout,
                   enabled: movementEnabled,
                   direction: Vector3(0, 0, 1),
@@ -1744,7 +1837,9 @@ class _PresentationBoundaryScreenState
                 ),
                 HoldDirectionButton(
                   key: const Key('move_right'),
-                  label: 'Move right (D)',
+                  label:
+                      'Move right '
+                      '(${bindings.promptLabelFor(GameControl.moveRight, _inputPromptMode)})',
                   showTooltip: !compactLayout,
                   enabled: movementEnabled,
                   direction: Vector3(1, 0, 0),
@@ -2514,6 +2609,22 @@ class _PresentationBoundaryScreenState
         ),
       ),
     );
+    _playHaptic(
+      combatDamageHapticCue(
+        targetIsPlayer: result.targetId == _playerEntityId,
+        defeated: result.targetKilled,
+      ),
+    );
+  }
+
+  void _playHaptic(GameHapticCue cue) {
+    unawaited(
+      playGameHapticSafely(
+        controller: widget.hapticsController,
+        enabled: widget.settings.hapticsEnabled,
+        cue: cue,
+      ),
+    );
   }
 
   void _recordDodgedBossAttack(CombatAttackResult result) {
@@ -2803,7 +2914,10 @@ class _PresentationBoundaryScreenState
     if (!result.accepted) {
       return;
     }
-    final openGatesBefore = _openObjectiveGateEntityIds;
+    final objectiveProgressBefore = _objectiveProgress;
+    final openGatesBefore = objectiveProgressBefore.openedGateEntityIds(
+      widget.runtimeWorld.definition,
+    );
     final inventoryItemsBefore = _adventureProgress.inventoryItemIds;
     final effect = _interactionEffects.apply(entityId);
     if (!effect.handled) {
@@ -2837,7 +2951,6 @@ class _PresentationBoundaryScreenState
     _presentation = _extractPresentation();
     switch (effect.kind!) {
       case AuthoredInteractionEffectKind.persistentFlag:
-        unawaited(widget.audioController.play(GameAudioCue.objective));
         if (newlyOpenedGateIds.isNotEmpty) {
           final gate = widget.runtimeWorld.definition.allEntities
               .firstWhere((entity) => newlyOpenedGateIds.contains(entity.id))
@@ -2850,6 +2963,7 @@ class _PresentationBoundaryScreenState
               '${result.label}: online · '
               '${progress.completedCount}/${progress.totalCount} complete';
         }
+        _recordObjectiveMilestone(objectiveProgressBefore);
       case AuthoredInteractionEffectKind.collectibleItem:
         if (!inventoryItemsBefore.contains(effect.itemId)) {
           _recordPickupPresentation(effect.itemLabel!);
@@ -2865,6 +2979,11 @@ class _PresentationBoundaryScreenState
     );
     _recordStoryPresentationIfChanged();
     _scheduleSave();
+    if (_showMissionCompleteRecap) {
+      _saveTimer?.cancel();
+      _saveTimer = null;
+      unawaited(Future<void>.microtask(_flushSave));
+    }
   }
 
   void _interactSelected() {
@@ -2880,6 +2999,7 @@ class _PresentationBoundaryScreenState
 
   void _recordPickupPresentation(String itemLabel) {
     unawaited(widget.audioController.play(GameAudioCue.pickup));
+    _playHaptic(GameHapticCue.pickup);
     _pickupNotice = PickupPresentationNotice(
       sequence: _nextPickupNoticeSequence++,
       itemLabel: itemLabel,
@@ -2911,16 +3031,49 @@ class _PresentationBoundaryScreenState
     setState(() => _pickupNotice = null);
   }
 
-  void _recordStoryPresentationIfChanged() {
+  void _recordObjectiveMilestone(AuthoredObjectiveProgress previous) {
+    final notice = gameplayObjectiveMilestoneNoticeFor(
+      sequence: _nextObjectiveMilestoneSequence,
+      definition: widget.runtimeWorld.definition,
+      previous: previous,
+      current: _objectiveProgress,
+    );
+    if (notice == null) return;
+    _nextObjectiveMilestoneSequence++;
+    _objectiveMilestoneNotice = notice;
+    unawaited(widget.audioController.play(GameAudioCue.objective));
+    _playHaptic(GameHapticCue.objective);
+  }
+
+  void _handleObjectiveMilestoneFinished(int sequence) {
+    if (!mounted || _objectiveMilestoneNotice?.sequence != sequence) return;
+    setState(() => _objectiveMilestoneNotice = null);
+  }
+
+  void _recordStoryPresentationIfChanged({bool allowCompletionRecap = true}) {
     final beat = _missionNarrative;
     if (beat == null || beat.stableKey == _presentedStoryBeatKey) {
       return;
     }
     _presentedStoryBeatKey = beat.stableKey;
-    _storyNotice = GameplayStoryNotice(
-      sequence: _nextStoryNoticeSequence++,
+    switch (gameplayStoryTransitionPresentationFor(
       beat: beat,
-    );
+      allowMissionCompleteRecap: allowCompletionRecap,
+    )) {
+      case GameplayStoryTransitionPresentation.missionCompleteRecap:
+        _storyNotice = null;
+        _showMissionCompleteRecap = true;
+        _pressedKeys.clear();
+        _touchMovementByPointer.clear();
+        _gameLoopTicker.stop();
+        _frameClock.reset();
+        unawaited(widget.audioController.setDucked(true));
+      case GameplayStoryTransitionPresentation.toast:
+        _storyNotice = GameplayStoryNotice(
+          sequence: _nextStoryNoticeSequence++,
+          beat: beat,
+        );
+    }
     unawaited(
       widget.audioController.play(
         beat.phase == AuthoredMissionNarrativePhase.complete
@@ -2928,6 +3081,20 @@ class _PresentationBoundaryScreenState
             : GameAudioCue.objective,
       ),
     );
+    _playHaptic(GameHapticCue.objective);
+  }
+
+  void _continueAfterMissionComplete() {
+    if (!_showMissionCompleteRecap) return;
+    setState(() {
+      _showMissionCompleteRecap = false;
+      _pressedKeys.clear();
+      _touchMovementByPointer.clear();
+    });
+    unawaited(widget.audioController.setDucked(false));
+    unawaited(widget.audioController.play(GameAudioCue.uiConfirm));
+    _keyboardFocus.requestFocus();
+    _startGameLoop();
   }
 
   void _handleStoryNoticeFinished(int sequence) {
@@ -3058,6 +3225,7 @@ class _PresentationBoundaryScreenState
         _interactionStatus = 'Dodge submitted to host';
       });
       unawaited(widget.audioController.play(GameAudioCue.playerDodge));
+      _playHaptic(GameHapticCue.dodge);
       return;
     }
 
@@ -3108,6 +3276,7 @@ class _PresentationBoundaryScreenState
           : 'Dodge slid past an obstacle';
     });
     unawaited(widget.audioController.play(GameAudioCue.playerDodge));
+    _playHaptic(GameHapticCue.dodge);
   }
 
   Vector3 _preferredDodgeDirection() {
@@ -3283,13 +3452,22 @@ class _PresentationBoundaryScreenState
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    if (event.logicalKey == LogicalKeyboardKey.escape &&
-        event is KeyDownEvent) {
-      _togglePause();
+    if (event is KeyDownEvent) {
+      _setInputPromptMode(gameInputPromptModeFor(event));
+    }
+    if (isGamePauseKey(event.logicalKey) && event is KeyDownEvent) {
+      if (_showMissionCompleteRecap) {
+        _continueAfterMissionComplete();
+      } else {
+        _togglePause();
+      }
       return;
     }
     if (_isGameplaySuspended) return;
-    final action = gameplayHotkeyActionFor(event.logicalKey);
+    final action = gameplayHotkeyActionFor(
+      event.logicalKey,
+      bindings: widget.settings.controlBindings,
+    );
     if (action != null) {
       if (event is KeyDownEvent) {
         switch (action) {
@@ -3303,7 +3481,8 @@ class _PresentationBoundaryScreenState
       }
       return;
     }
-    if (!_movementKeys.contains(event.logicalKey)) {
+    if (widget.settings.controlBindings.movementControlFor(event.logicalKey) ==
+        null) {
       return;
     }
     if (event is KeyUpEvent) {
@@ -3313,6 +3492,15 @@ class _PresentationBoundaryScreenState
       _groundTarget = null;
       _clearActionTargets();
     }
+  }
+
+  void _handlePointerInput(PointerDownEvent event) {
+    _setInputPromptMode(GameInputPromptMode.keyboard);
+  }
+
+  void _setInputPromptMode(GameInputPromptMode mode) {
+    if (_inputPromptMode == mode) return;
+    setState(() => _inputPromptMode = mode);
   }
 
   void _beginTouchMovement(int pointer, Vector3 direction) {
@@ -3771,10 +3959,17 @@ class _PresentationBoundaryScreenState
     setState(() {
       _applyReplicatedEntities(client);
       if (event is ReplicationGameplayStateApplied) {
+        final hadStoryPresentation = _storyPresentationReady;
+        final objectiveProgressBefore = _objectiveProgress;
         _applyAuthoritativeGameplayState(client, emitCombatFeedback: true);
         _recordReplicatedInventoryPresentation(client);
         _storyPresentationReady = true;
-        _recordStoryPresentationIfChanged();
+        if (hadStoryPresentation) {
+          _recordObjectiveMilestone(objectiveProgressBefore);
+        }
+        _recordStoryPresentationIfChanged(
+          allowCompletionRecap: hadStoryPresentation,
+        );
         _rebuildGameplayQueries();
       }
       if (event case ReplicationGameplayCommandResult(:final result)) {
@@ -3875,6 +4070,12 @@ class _PresentationBoundaryScreenState
               targetEntityId: state.entityId,
               defeated: state.current <= 0 && !previous.isDead,
             ),
+          ),
+        );
+        _playHaptic(
+          combatDamageHapticCue(
+            targetIsPlayer: state.entityId == _playerEntityId,
+            defeated: state.current <= 0 && !previous.isDead,
           ),
         );
       }
@@ -4323,22 +4524,19 @@ class _PresentationBoundaryScreenState
   }
 
   Vector3 get _keyboardDirection {
+    final bindings = widget.settings.controlBindings;
     var x = 0.0;
     var z = 0.0;
-    if (_pressedKeys.contains(LogicalKeyboardKey.keyA) ||
-        _pressedKeys.contains(LogicalKeyboardKey.arrowLeft)) {
+    if (bindings.isPressed(_pressedKeys, GameControl.moveLeft)) {
       x -= 1;
     }
-    if (_pressedKeys.contains(LogicalKeyboardKey.keyD) ||
-        _pressedKeys.contains(LogicalKeyboardKey.arrowRight)) {
+    if (bindings.isPressed(_pressedKeys, GameControl.moveRight)) {
       x += 1;
     }
-    if (_pressedKeys.contains(LogicalKeyboardKey.keyW) ||
-        _pressedKeys.contains(LogicalKeyboardKey.arrowUp)) {
+    if (bindings.isPressed(_pressedKeys, GameControl.moveUp)) {
       z -= 1;
     }
-    if (_pressedKeys.contains(LogicalKeyboardKey.keyS) ||
-        _pressedKeys.contains(LogicalKeyboardKey.arrowDown)) {
+    if (bindings.isPressed(_pressedKeys, GameControl.moveDown)) {
       z += 1;
     }
     return Vector3(x, 0, z);
@@ -4441,17 +4639,6 @@ final class _ReplicationAdventureStateView implements AdventureStateView {
   bool hasItem(PlayerId requestedPlayerId, String itemId) =>
       inventoryFor(requestedPlayerId).contains(itemId);
 }
-
-final _movementKeys = {
-  LogicalKeyboardKey.keyW,
-  LogicalKeyboardKey.keyA,
-  LogicalKeyboardKey.keyS,
-  LogicalKeyboardKey.keyD,
-  LogicalKeyboardKey.arrowUp,
-  LogicalKeyboardKey.arrowLeft,
-  LogicalKeyboardKey.arrowDown,
-  LogicalKeyboardKey.arrowRight,
-};
 
 Future<RuntimeWorldSelection> _loadDefaultWorldSelection() async {
   final selection = await loadDefaultRuntimeWorldSelection(
