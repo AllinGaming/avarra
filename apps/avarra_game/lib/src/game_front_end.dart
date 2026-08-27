@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'game_controls.dart';
 import 'game_experience_settings.dart';
 import 'gameplay_quest_chronicle.dart';
+import 'gameplay_story_archive.dart';
 
 @immutable
 final class GameFrontDoorPreview {
@@ -470,6 +472,7 @@ final class _ControlHint extends StatelessWidget {
 final class GameMissionBriefingOverlay extends StatelessWidget {
   const GameMissionBriefingOverlay({
     required this.worldName,
+    required this.chapterLabel,
     required this.missionTitle,
     required this.missionText,
     required this.objective,
@@ -478,6 +481,7 @@ final class GameMissionBriefingOverlay extends StatelessWidget {
   });
 
   final String worldName;
+  final String chapterLabel;
   final String missionTitle;
   final String missionText;
   final String objective;
@@ -497,7 +501,7 @@ final class GameMissionBriefingOverlay extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 660),
                 child: Semantics(
                   liveRegion: true,
-                  label: 'Prologue. $missionTitle. $missionText',
+                  label: '$chapterLabel. Prologue. $missionTitle. $missionText',
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -516,6 +520,17 @@ final class GameMissionBriefingOverlay extends StatelessWidget {
                         size: 42,
                       ),
                       const SizedBox(height: 10),
+                      Text(
+                        chapterLabel,
+                        key: const Key('mission_briefing_chapter'),
+                        style: const TextStyle(
+                          color: Color(0xFFB58C63),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
                       const Text(
                         'PROLOGUE',
                         style: TextStyle(
@@ -607,6 +622,7 @@ final class GameMissionBriefingOverlay extends StatelessWidget {
 final class GameMissionCompleteOverlay extends StatelessWidget {
   const GameMissionCompleteOverlay({
     required this.worldName,
+    required this.chapterLabel,
     required this.missionTitle,
     required this.missionText,
     required this.completionLabel,
@@ -621,6 +637,7 @@ final class GameMissionCompleteOverlay extends StatelessWidget {
   });
 
   final String worldName;
+  final String chapterLabel;
   final String missionTitle;
   final String missionText;
   final String completionLabel;
@@ -672,7 +689,8 @@ final class GameMissionCompleteOverlay extends StatelessWidget {
                       container: true,
                       liveRegion: true,
                       label:
-                          'Mission complete. $missionTitle. $missionText. '
+                          '$chapterLabel. Mission complete. '
+                          '$missionTitle. $missionText. '
                           '$completionLabel.',
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -712,6 +730,17 @@ final class GameMissionCompleteOverlay extends StatelessWidget {
                                 size: 44,
                               ),
                               const SizedBox(height: 8),
+                              Text(
+                                chapterLabel,
+                                key: const Key('mission_complete_chapter'),
+                                style: const TextStyle(
+                                  color: Color(0xFFBDA27C),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
                               const Text(
                                 'MISSION COMPLETE',
                                 style: TextStyle(
@@ -903,6 +932,8 @@ final class _MissionCompleteResult extends StatelessWidget {
   );
 }
 
+enum GameplayPauseStorySection { journey, lore }
+
 /// Blocking in-game menu with current authored story and progression context.
 final class GameplayPauseOverlay extends StatelessWidget {
   const GameplayPauseOverlay({
@@ -912,7 +943,12 @@ final class GameplayPauseOverlay extends StatelessWidget {
     required this.objective,
     required this.inventory,
     required this.connectedSession,
-    this.questEntries = const [],
+    this.questChapters = const [],
+    this.storyArchiveChapters = const [],
+    this.initialStorySection = GameplayPauseStorySection.journey,
+    this.highlightedStoryEntryKeys = const [],
+    this.onStoryDiscoveriesReviewed,
+    this.reducedMotion = false,
     this.inputPromptMode = GameInputPromptMode.keyboard,
     required this.onResume,
     required this.onSettings,
@@ -927,7 +963,12 @@ final class GameplayPauseOverlay extends StatelessWidget {
   final String objective;
   final String inventory;
   final bool connectedSession;
-  final List<GameQuestChronicleEntry> questEntries;
+  final List<GameQuestChronicleChapter> questChapters;
+  final List<GameStoryArchiveChapter> storyArchiveChapters;
+  final GameplayPauseStorySection initialStorySection;
+  final List<String> highlightedStoryEntryKeys;
+  final VoidCallback? onStoryDiscoveriesReviewed;
+  final bool reducedMotion;
   final GameInputPromptMode inputPromptMode;
   final VoidCallback onResume;
   final VoidCallback onSettings;
@@ -973,7 +1014,13 @@ final class GameplayPauseOverlay extends StatelessWidget {
                           objective: objective,
                           inventory: inventory,
                           connectedSession: connectedSession,
-                          questEntries: questEntries,
+                          questChapters: questChapters,
+                          storyArchiveChapters: storyArchiveChapters,
+                          initialStorySection: initialStorySection,
+                          highlightedStoryEntryKeys: highlightedStoryEntryKeys,
+                          onStoryDiscoveriesReviewed:
+                              onStoryDiscoveriesReviewed,
+                          reducedMotion: reducedMotion,
                         );
                         return wide
                             ? Row(
@@ -1098,7 +1145,12 @@ final class _PauseStory extends StatelessWidget {
     required this.objective,
     required this.inventory,
     required this.connectedSession,
-    required this.questEntries,
+    required this.questChapters,
+    required this.storyArchiveChapters,
+    required this.initialStorySection,
+    required this.highlightedStoryEntryKeys,
+    required this.onStoryDiscoveriesReviewed,
+    required this.reducedMotion,
   });
 
   final String worldName;
@@ -1107,41 +1159,365 @@ final class _PauseStory extends StatelessWidget {
   final String objective;
   final String inventory;
   final bool connectedSession;
-  final List<GameQuestChronicleEntry> questEntries;
+  final List<GameQuestChronicleChapter> questChapters;
+  final List<GameStoryArchiveChapter> storyArchiveChapters;
+  final GameplayPauseStorySection initialStorySection;
+  final List<String> highlightedStoryEntryKeys;
+  final VoidCallback? onStoryDiscoveriesReviewed;
+  final bool reducedMotion;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        worldName.toUpperCase(),
-        style: const TextStyle(
-          color: Color(0xFFAE8260),
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          worldName.toUpperCase(),
+          style: const TextStyle(
+            color: Color(0xFFAE8260),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        missionTitle,
-        key: const Key('pause_mission_title'),
-        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-          color: const Color(0xFFFFDDA8),
-          fontWeight: FontWeight.w900,
+        const SizedBox(height: 8),
+        Text(
+          missionTitle,
+          key: const Key('pause_mission_title'),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: const Color(0xFFFFDDA8),
+            fontWeight: FontWeight.w900,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        missionText,
-        key: const Key('pause_mission_text'),
-        style: const TextStyle(color: Color(0xFFCABDAC), height: 1.4),
-      ),
-      if (questEntries.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Text(
+          missionText,
+          key: const Key('pause_mission_text'),
+          style: const TextStyle(color: Color(0xFFCABDAC), height: 1.4),
+        ),
+        if (questChapters.isNotEmpty || storyArchiveChapters.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _PauseStoryPanels(
+            questChapters: questChapters,
+            archiveChapters: storyArchiveChapters,
+            initialSection: initialStorySection,
+            highlightedEntryKeys: highlightedStoryEntryKeys,
+            onDiscoveriesReviewed: onStoryDiscoveriesReviewed,
+            reducedMotion: reducedMotion,
+          ),
+        ],
         const SizedBox(height: 16),
+        _PauseFact(icon: Icons.outlined_flag, label: objective),
+        const SizedBox(height: 8),
+        _PauseFact(icon: Icons.inventory_2_outlined, label: inventory),
+        if (connectedSession) ...[
+          const SizedBox(height: 14),
+          const Text(
+            'ONLINE SESSION CONTINUES WHILE THIS MENU IS OPEN',
+            style: TextStyle(
+              color: Color(0xFFFF9368),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+final class _PauseStoryPanels extends StatefulWidget {
+  const _PauseStoryPanels({
+    required this.questChapters,
+    required this.archiveChapters,
+    required this.initialSection,
+    required this.highlightedEntryKeys,
+    required this.onDiscoveriesReviewed,
+    required this.reducedMotion,
+  });
+
+  final List<GameQuestChronicleChapter> questChapters;
+  final List<GameStoryArchiveChapter> archiveChapters;
+  final GameplayPauseStorySection initialSection;
+  final List<String> highlightedEntryKeys;
+  final VoidCallback? onDiscoveriesReviewed;
+  final bool reducedMotion;
+
+  @override
+  State<_PauseStoryPanels> createState() => _PauseStoryPanelsState();
+}
+
+final class _PauseStoryPanelsState extends State<_PauseStoryPanels> {
+  late GameplayPauseStorySection _section;
+
+  @override
+  void initState() {
+    super.initState();
+    _section = _availableSection(widget.initialSection);
+  }
+
+  @override
+  void didUpdateWidget(_PauseStoryPanels oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSection != widget.initialSection) {
+      _section = _availableSection(widget.initialSection);
+    } else if (_section == GameplayPauseStorySection.lore &&
+        widget.archiveChapters.isEmpty &&
+        widget.questChapters.isNotEmpty) {
+      _section = GameplayPauseStorySection.journey;
+    } else if (_section == GameplayPauseStorySection.journey &&
+        widget.questChapters.isEmpty &&
+        widget.archiveChapters.isNotEmpty) {
+      _section = GameplayPauseStorySection.lore;
+    }
+  }
+
+  GameplayPauseStorySection _availableSection(
+    GameplayPauseStorySection requested,
+  ) {
+    if (requested == GameplayPauseStorySection.lore &&
+        widget.archiveChapters.isNotEmpty) {
+      return GameplayPauseStorySection.lore;
+    }
+    if (requested == GameplayPauseStorySection.journey &&
+        widget.questChapters.isNotEmpty) {
+      return GameplayPauseStorySection.journey;
+    }
+    return widget.archiveChapters.isNotEmpty
+        ? GameplayPauseStorySection.lore
+        : GameplayPauseStorySection.journey;
+  }
+
+  void _show(GameplayPauseStorySection section) {
+    if (_section == section) return;
+    setState(() => _section = section);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final discoveryEntryKeys = _validStoryDiscoveryEntryKeys(
+      chapters: widget.archiveChapters,
+      highlightedEntryKeys: widget.highlightedEntryKeys,
+    );
+    final duration = widget.reducedMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 180);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _PauseStoryTabs(
+          section: _section,
+          journeyEnabled: widget.questChapters.isNotEmpty,
+          loreEnabled: widget.archiveChapters.isNotEmpty,
+          pendingLoreCount: discoveryEntryKeys.length,
+          onSelected: _show,
+        ),
+        const SizedBox(height: 9),
+        AnimatedSwitcher(
+          duration: duration,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.025, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
+          child: _section == GameplayPauseStorySection.journey
+              ? _PauseJourneyPanel(
+                  key: const ValueKey('pause_journey_panel'),
+                  chapters: widget.questChapters,
+                )
+              : _PauseLorePanel(
+                  key: const ValueKey('pause_lore_panel'),
+                  chapters: widget.archiveChapters,
+                  highlightedEntryKeys: discoveryEntryKeys,
+                  onDiscoveriesReviewed: widget.onDiscoveriesReviewed,
+                  reducedMotion: widget.reducedMotion,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _PauseStoryTabs extends StatelessWidget {
+  const _PauseStoryTabs({
+    required this.section,
+    required this.journeyEnabled,
+    required this.loreEnabled,
+    required this.pendingLoreCount,
+    required this.onSelected,
+  });
+
+  final GameplayPauseStorySection section;
+  final bool journeyEnabled;
+  final bool loreEnabled;
+  final int pendingLoreCount;
+  final ValueChanged<GameplayPauseStorySection> onSelected;
+
+  String? get _pendingLoreLabel =>
+      pendingLoreCount > 0 ? '$pendingLoreCount NEW' : null;
+
+  String get _loreSemanticsLabel => switch (pendingLoreCount) {
+    0 => 'Lore tab',
+    1 => 'Lore tab. 1 new memory awaiting review.',
+    _ => 'Lore tab. $pendingLoreCount new memories awaiting review.',
+  };
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: _PauseStoryTab(
+          key: const Key('pause_journey_tab'),
+          icon: Icons.route_outlined,
+          label: 'JOURNEY',
+          selected: section == GameplayPauseStorySection.journey,
+          onPressed: journeyEnabled
+              ? () => onSelected(GameplayPauseStorySection.journey)
+              : null,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: _PauseStoryTab(
+          key: const Key('pause_lore_tab'),
+          icon: Icons.menu_book_outlined,
+          label: 'LORE',
+          badgeLabel: _pendingLoreLabel,
+          semanticsLabel: _loreSemanticsLabel,
+          selected: section == GameplayPauseStorySection.lore,
+          onPressed: loreEnabled
+              ? () => onSelected(GameplayPauseStorySection.lore)
+              : null,
+        ),
+      ),
+    ],
+  );
+}
+
+final class _PauseStoryTab extends StatelessWidget {
+  const _PauseStoryTab({
+    required this.icon,
+    required this.label,
+    this.badgeLabel,
+    this.semanticsLabel,
+    required this.selected,
+    required this.onPressed,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? badgeLabel;
+  final String? semanticsLabel;
+  final bool selected;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? const Color(0xFFFFB55D) : const Color(0xFF9F8D78);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsLabel ?? '$label tab',
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: color,
+          backgroundColor: selected
+              ? const Color(0x332F1D0E)
+              : const Color(0x44100C0A),
+          side: BorderSide(
+            color: selected ? const Color(0xFF9B6332) : const Color(0x5576573D),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        ),
+        icon: Icon(icon, size: 16),
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              if (badgeLabel case final badge?) ...[
+                const SizedBox(width: 6),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(0x332F1D0E),
+                    border: Border.all(color: const Color(0xAAAE6F32)),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      badge,
+                      key: const Key('pause_lore_pending_badge'),
+                      style: const TextStyle(
+                        color: Color(0xFFFFC46B),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+List<String> _validStoryDiscoveryEntryKeys({
+  required List<GameStoryArchiveChapter> chapters,
+  required List<String> highlightedEntryKeys,
+}) {
+  final revealedEntryKeys = {
+    for (final chapter in chapters)
+      for (final entry in chapter.entries)
+        if (entry.isRevealed) entry.stableKey,
+  };
+  final addedEntryKeys = <String>{};
+  return [
+    for (final entryKey in highlightedEntryKeys)
+      if (revealedEntryKeys.contains(entryKey) && addedEntryKeys.add(entryKey))
+        entryKey,
+  ];
+}
+
+final class _PauseJourneyPanel extends StatelessWidget {
+  const _PauseJourneyPanel({required this.chapters, super.key});
+
+  final List<GameQuestChronicleChapter> chapters;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = [for (final chapter in chapters) ...chapter.entries];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Row(
           children: [
             const Text(
-              'JOURNEY',
+              'REQUIRED PATH',
               style: TextStyle(
                 color: Color(0xFFFFB55D),
                 fontSize: 10,
@@ -1151,8 +1527,8 @@ final class _PauseStory extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              '${questEntries.where((entry) => entry.state == GameQuestChronicleEntryState.completed).length}'
-              '/${questEntries.length}',
+              '${entries.where((entry) => entry.state == GameQuestChronicleEntryState.completed).length}'
+              '/${entries.length}',
               key: const Key('quest_chronicle_progress'),
               style: const TextStyle(
                 color: Color(0xFF9F8D78),
@@ -1172,36 +1548,645 @@ final class _PauseStory extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Column(
               children: [
-                for (var index = 0; index < questEntries.length; index++)
-                  _QuestChronicleRow(index: index, entry: questEntries[index]),
+                for (
+                  var chapterIndex = 0;
+                  chapterIndex < chapters.length;
+                  chapterIndex++
+                ) ...[
+                  if (chapterIndex > 0)
+                    const Divider(height: 16, color: Color(0x4476573D)),
+                  _QuestChronicleChapterHeader(chapter: chapters[chapterIndex]),
+                  for (
+                    var entryIndex = 0;
+                    entryIndex < chapters[chapterIndex].entries.length;
+                    entryIndex++
+                  )
+                    _QuestChronicleRow(
+                      chapterNumber: chapters[chapterIndex].chapterNumber,
+                      index: entryIndex,
+                      entry: chapters[chapterIndex].entries[entryIndex],
+                    ),
+                ],
               ],
             ),
           ),
         ),
       ],
-      const SizedBox(height: 16),
-      _PauseFact(icon: Icons.outlined_flag, label: objective),
-      const SizedBox(height: 8),
-      _PauseFact(icon: Icons.inventory_2_outlined, label: inventory),
-      if (connectedSession) ...[
-        const SizedBox(height: 14),
-        const Text(
-          'ONLINE SESSION CONTINUES WHILE THIS MENU IS OPEN',
-          style: TextStyle(
-            color: Color(0xFFFF9368),
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
+    );
+  }
+}
+
+final class _PauseLorePanel extends StatefulWidget {
+  const _PauseLorePanel({
+    required this.chapters,
+    required this.highlightedEntryKeys,
+    required this.onDiscoveriesReviewed,
+    required this.reducedMotion,
+    super.key,
+  });
+
+  final List<GameStoryArchiveChapter> chapters;
+  final List<String> highlightedEntryKeys;
+  final VoidCallback? onDiscoveriesReviewed;
+  final bool reducedMotion;
+
+  @override
+  State<_PauseLorePanel> createState() => _PauseLorePanelState();
+}
+
+final class _PauseLorePanelState extends State<_PauseLorePanel> {
+  final GlobalKey _highlightedRowKey = GlobalKey(
+    debugLabel: 'latest_story_archive_entry',
+  );
+  int? _selectedDiscoveryIndex;
+  String? _scheduledEntryKey;
+
+  @override
+  void didUpdateWidget(_PauseLorePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_sameEntryKeys(
+      oldWidget.highlightedEntryKeys,
+      widget.highlightedEntryKeys,
+    )) {
+      _selectedDiscoveryIndex = null;
+      _scheduledEntryKey = null;
+    }
+  }
+
+  bool _sameEntryKeys(List<String> first, List<String> second) {
+    if (first.length != second.length) return false;
+    for (var index = 0; index < first.length; index++) {
+      if (first[index] != second[index]) return false;
+    }
+    return true;
+  }
+
+  void _showDiscovery(int index) {
+    if (_selectedDiscoveryIndex == index) return;
+    setState(() {
+      _selectedDiscoveryIndex = index;
+      _scheduledEntryKey = null;
+    });
+  }
+
+  void _scheduleHighlightedEntryScroll(String entryKey) {
+    if (_scheduledEntryKey == entryKey) return;
+    _scheduledEntryKey = entryKey;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _scheduledEntryKey != entryKey) return;
+      final targetContext = _highlightedRowKey.currentContext;
+      if (targetContext == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          targetContext,
+          alignment: 0.2,
+          duration: widget.reducedMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = [for (final chapter in widget.chapters) ...chapter.entries];
+    final revealedCount = entries.where((entry) => entry.isRevealed).length;
+    final discoveryEntryKeys = _validStoryDiscoveryEntryKeys(
+      chapters: widget.chapters,
+      highlightedEntryKeys: widget.highlightedEntryKeys,
+    );
+    final selectedDiscoveryIndex = discoveryEntryKeys.isEmpty
+        ? null
+        : switch (_selectedDiscoveryIndex) {
+            final index
+                when index != null && index < discoveryEntryKeys.length =>
+              index,
+            _ => discoveryEntryKeys.length - 1,
+          };
+    final highlightedEntryKey = selectedDiscoveryIndex == null
+        ? null
+        : discoveryEntryKeys[selectedDiscoveryIndex];
+    if (highlightedEntryKey != null) {
+      _scheduleHighlightedEntryScroll(highlightedEntryKey);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'STORY ARCHIVE',
+              style: TextStyle(
+                color: Color(0xFFD7A76C),
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.8,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$revealedCount/${entries.length} MEMORIES',
+              key: const Key('story_archive_progress'),
+              style: const TextStyle(
+                color: Color(0xFF9F8D78),
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xCC160F0B), Color(0xCC0D0A09)],
+            ),
+            border: Border.all(color: const Color(0x6676573D)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Column(
+              children: [
+                for (
+                  var chapterIndex = 0;
+                  chapterIndex < widget.chapters.length;
+                  chapterIndex++
+                ) ...[
+                  if (chapterIndex > 0)
+                    const Divider(height: 18, color: Color(0x5576573D)),
+                  _StoryArchiveChapterHeader(
+                    chapter: widget.chapters[chapterIndex],
+                  ),
+                  for (final entry
+                      in widget.chapters[chapterIndex].entries) ...[
+                    if (entry.stableKey == highlightedEntryKey &&
+                        selectedDiscoveryIndex != null &&
+                        discoveryEntryKeys.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 3, 10, 5),
+                        child: _StoryDiscoveryNavigator(
+                          selectedIndex: selectedDiscoveryIndex,
+                          count: discoveryEntryKeys.length,
+                          onPrevious: selectedDiscoveryIndex > 0
+                              ? () => _showDiscovery(selectedDiscoveryIndex - 1)
+                              : null,
+                          onNext:
+                              selectedDiscoveryIndex <
+                                  discoveryEntryKeys.length - 1
+                              ? () => _showDiscovery(selectedDiscoveryIndex + 1)
+                              : null,
+                          onReviewed: widget.onDiscoveriesReviewed,
+                        ),
+                      ),
+                    _StoryArchiveEntryRow(
+                      key: entry.stableKey == highlightedEntryKey
+                          ? _highlightedRowKey
+                          : null,
+                      entry: entry,
+                      discoveryIndex: entry.stableKey == highlightedEntryKey
+                          ? selectedDiscoveryIndex
+                          : null,
+                      discoveryCount: discoveryEntryKeys.length,
+                      onReviewed: discoveryEntryKeys.length == 1
+                          ? widget.onDiscoveriesReviewed
+                          : null,
+                    ),
+                  ],
+                ],
+              ],
+            ),
           ),
         ),
       ],
-    ],
-  );
+    );
+  }
+}
+
+final class _StoryDiscoveryNavigator extends StatelessWidget {
+  const _StoryDiscoveryNavigator({
+    required this.selectedIndex,
+    required this.count,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onReviewed,
+  }) : assert(selectedIndex >= 0),
+       assert(selectedIndex < count);
+
+  final int selectedIndex;
+  final int count;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final VoidCallback? onReviewed;
+
+  @override
+  Widget build(BuildContext context) {
+    final position = selectedIndex + 1;
+    return Semantics(
+      key: const Key('story_archive_discovery_navigator'),
+      container: true,
+      label: 'New story discoveries. Showing $position of $count.',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xAA2A190C),
+          border: Border.all(color: const Color(0x99D7A76C)),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              key: const Key('previous_story_discovery'),
+              tooltip: 'Previous new memory',
+              onPressed: onPrevious,
+              icon: const Icon(Icons.chevron_left),
+              color: const Color(0xFFFFD68F),
+              disabledColor: const Color(0xFF625A54),
+              visualDensity: VisualDensity.compact,
+            ),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'NEW DISCOVERIES',
+                    style: TextStyle(
+                      color: Color(0xFFD7A76C),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$position OF $count',
+                    key: const Key('story_archive_discovery_position'),
+                    style: const TextStyle(
+                      color: Color(0xFFFFE8C6),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              key: const Key('next_story_discovery'),
+              tooltip: 'Next new memory',
+              onPressed: onNext,
+              icon: const Icon(Icons.chevron_right),
+              color: const Color(0xFFFFD68F),
+              disabledColor: const Color(0xFF625A54),
+              visualDensity: VisualDensity.compact,
+            ),
+            if (onReviewed != null)
+              IconButton(
+                key: const Key('mark_story_discoveries_reviewed'),
+                tooltip: 'Mark new memories reviewed',
+                onPressed: onReviewed,
+                icon: const Icon(Icons.done_all),
+                color: const Color(0xFF80BF7D),
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _StoryArchiveChapterHeader extends StatelessWidget {
+  const _StoryArchiveChapterHeader({required this.chapter});
+
+  final GameStoryArchiveChapter chapter;
+
+  @override
+  Widget build(BuildContext context) {
+    final (stateLabel, color, icon) = switch (chapter.state) {
+      GameStoryArchiveChapterState.completed => (
+        'COMPLETE',
+        const Color(0xFF80BF7D),
+        Icons.auto_stories,
+      ),
+      GameStoryArchiveChapterState.active => (
+        'OPEN',
+        const Color(0xFFFFB55D),
+        Icons.book_outlined,
+      ),
+      GameStoryArchiveChapterState.locked => (
+        'SEALED',
+        const Color(0xFF756A61),
+        Icons.lock_outline,
+      ),
+    };
+    return Semantics(
+      key: ValueKey('story_archive_chapter_${chapter.chapterNumber}'),
+      header: true,
+      label:
+          '${chapter.chapterLabel}. ${chapter.title}. $stateLabel. '
+          '${chapter.revealedCount} of ${chapter.entries.length} memories discovered.',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+        child: Row(
+          children: [
+            Icon(icon, size: 17, color: color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    chapter.chapterLabel,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    chapter.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFFFDDA8),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              stateLabel,
+              style: TextStyle(
+                color: color,
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class _StoryArchiveEntryRow extends StatelessWidget {
+  const _StoryArchiveEntryRow({
+    required this.entry,
+    required this.discoveryIndex,
+    required this.discoveryCount,
+    required this.onReviewed,
+    super.key,
+  });
+
+  final GameStoryArchiveEntry entry;
+  final int? discoveryIndex;
+  final int discoveryCount;
+  final VoidCallback? onReviewed;
+
+  @override
+  Widget build(BuildContext context) {
+    final revealed = entry.isRevealed;
+    final highlighted = discoveryIndex != null;
+    final discoveryPosition = highlighted ? discoveryIndex! + 1 : null;
+    final discoverySemantic = !highlighted
+        ? ''
+        : discoveryCount > 1
+        ? 'Newly discovered memory $discoveryPosition of $discoveryCount. '
+        : 'Latest discovered memory. ';
+    final discoveryLabel = discoveryCount > 1
+        ? 'NEW MEMORY $discoveryPosition OF $discoveryCount'
+        : 'LATEST MEMORY';
+    final color = highlighted
+        ? const Color(0xFFFFD68F)
+        : revealed
+        ? const Color(0xFFD7A76C)
+        : const Color(0xFF625A54);
+    final text = entry.text;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(10, 3, 10, 5),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? const Color(0xAA33200F)
+            : revealed
+            ? const Color(0x661B130E)
+            : const Color(0x44100D0B),
+        border: highlighted
+            ? Border.all(color: color, width: 1.5)
+            : Border(
+                left: BorderSide(color: color, width: revealed ? 2 : 1),
+              ),
+        boxShadow: highlighted
+            ? const [
+                BoxShadow(
+                  color: Color(0x44FFB957),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            highlighted
+                ? Icons.auto_awesome
+                : revealed
+                ? Icons.menu_book
+                : Icons.lock_outline,
+            color: color,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Semantics(
+              key: ValueKey('story_archive_entry_${entry.stableKey}'),
+              container: true,
+              excludeSemantics: true,
+              label: revealed
+                  ? '$discoverySemantic'
+                        '${entry.kindLabel}. ${entry.label}. $text'
+                  : '${entry.kindLabel}. ${entry.label}. Undiscovered.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (highlighted) ...[
+                    Text(
+                      discoveryLabel,
+                      key: ValueKey('story_archive_latest_${entry.stableKey}'),
+                      style: const TextStyle(
+                        color: Color(0xFFFFD68F),
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                  ],
+                  Text(
+                    entry.kindLabel,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    entry.label,
+                    style: TextStyle(
+                      color: revealed
+                          ? highlighted
+                                ? const Color(0xFFFFE8C6)
+                                : const Color(0xFFE8D8C3)
+                          : const Color(0xFF82766C),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  if (text != null)
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Color(0xFFCDBFAE),
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        height: 1.3,
+                      ),
+                    )
+                  else
+                    const Text(
+                      'UNDISCOVERED MEMORY',
+                      style: TextStyle(
+                        color: Color(0xFF625A54),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (highlighted && onReviewed != null) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              key: const Key('mark_story_discoveries_reviewed'),
+              tooltip: 'Mark new memory reviewed',
+              onPressed: onReviewed,
+              icon: const Icon(Icons.done),
+              color: const Color(0xFF80BF7D),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+final class _QuestChronicleChapterHeader extends StatelessWidget {
+  const _QuestChronicleChapterHeader({required this.chapter});
+
+  final GameQuestChronicleChapter chapter;
+
+  @override
+  Widget build(BuildContext context) {
+    final (stateLabel, color) = switch (chapter.state) {
+      GameQuestChronicleChapterState.completed => (
+        'COMPLETE',
+        const Color(0xFF80BF7D),
+      ),
+      GameQuestChronicleChapterState.current => (
+        'ACTIVE',
+        const Color(0xFFFFB55D),
+      ),
+      GameQuestChronicleChapterState.pending => (
+        'UP NEXT',
+        const Color(0xFF8A7E72),
+      ),
+    };
+    return Semantics(
+      key: ValueKey('quest_chronicle_chapter_${chapter.chapterNumber}'),
+      header: true,
+      label: '${chapter.chapterLabel}. ${chapter.title}. $stateLabel',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 7, 10, 5),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    chapter.chapterLabel,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    chapter.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFFFDDA8),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                border: Border.all(color: color.withValues(alpha: 0.55)),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                child: Text(
+                  stateLabel,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 final class _QuestChronicleRow extends StatelessWidget {
-  const _QuestChronicleRow({required this.index, required this.entry});
+  const _QuestChronicleRow({
+    required this.chapterNumber,
+    required this.index,
+    required this.entry,
+  });
 
+  final int chapterNumber;
   final int index;
   final GameQuestChronicleEntry entry;
 
@@ -1227,7 +2212,7 @@ final class _QuestChronicleRow extends StatelessWidget {
     return Semantics(
       label: '$stateLabel: ${entry.label}',
       child: Padding(
-        key: ValueKey('quest_chronicle_entry_$index'),
+        key: ValueKey('quest_chronicle_entry_${chapterNumber}_$index'),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         child: Row(
           children: [

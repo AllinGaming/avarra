@@ -184,6 +184,21 @@ void main() {
     expect(find.textContaining('5 entities'), findsNothing);
     expect(find.textContaining('4 entities'), findsOneWidget);
 
+    await tester.drag(find.byType(SchemaInspectorPanel), const Offset(0, -900));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Objective Story Beat'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('objective_milestone_completionText')),
+      'The Forge-authored relay answers from beneath the ash.',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    expect(
+      find.textContaining('Set objective_milestone.completionText'),
+      findsOneWidget,
+    );
+
     final objectiveGate = find.byKey(const Key('palette_objective_gate'));
     await tester.scrollUntilVisible(
       objectiveGate,
@@ -216,6 +231,16 @@ void main() {
     expect(
       objective.component<ObjectiveDefinition>()!.group,
       forgeDefaultObjectiveGroup,
+    );
+    expect(
+      objective.component<ObjectiveMilestoneNarrativeDefinition>(),
+      isNotNull,
+    );
+    expect(
+      objective
+          .component<ObjectiveMilestoneNarrativeDefinition>()!
+          .completionText,
+      'The Forge-authored relay answers from beneath the ash.',
     );
     final gate = gateEntity.component<ObjectiveGateDefinition>()!;
     expect(gate.group, forgeDefaultObjectiveGroup);

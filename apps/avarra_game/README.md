@@ -274,6 +274,105 @@ with an exact progress count. Optional loot stays outside the required journey,
 and no parallel quest state is stored. See
 `docs/AVARRA_STAGE_12_40_QUEST_CHRONICLE_VALIDATION.md`.
 
+Stage 12.41 upgrades the milestone banner from generic progress to portable
+authored story. Content-schema-v12 objective switches may carry one bounded
+completion beat; Relay Zero ships unique Alpha, Beta, and Gamma prose. Game
+resolves that text only from newly completed authoritative objective IDs,
+retains PATH OPENED precedence, and keeps restored/initial connected state
+silent. Older worlds fall back to generic progress. See
+`docs/AVARRA_STAGE_12_41_AUTHORED_OBJECTIVE_STORY_BEATS_VALIDATION.md` and
+ADR-033.
+
+Stage 12.42 expands the bundled adventure to two authored chapters. Completing
+Ashfall's Last Signal begins The Answering Dark, guides the player into a new
+streamed vault, presents Nhal as a second named three-phase boss, unlocks the
+Echo Shard recovery/return loop, and reserves the blocking completion recap for
+the final listening-shrine turn-in. The intermediate transition preserves
+Chapter I's completion epilogue before Chapter II's opening. HUD status and
+missing-item feedback use
+the active turn-in's authored destination. The slice reuses content schema v12,
+save v2, protocol v6, and ADR-033's stable-ID mission ordering. See
+`docs/AVARRA_STAGE_12_42_RELAY_ZERO_SECOND_CHAPTER_VALIDATION.md`.
+
+Stage 12.43 makes the two-chapter structure legible across the player
+experience. Stable-ordered mission narratives derive `CHAPTER N OF M` identity
+for the prologue, HUD journal, story notices, and final recap. The pause
+`JOURNEY` panel groups the same authoritative objective/item/turn-in projection
+under mission titles with `COMPLETE`, `ACTIVE`, and `UP NEXT` states. The
+projection is read-only and adds no content, save, protocol, or campaign state.
+See `docs/AVARRA_STAGE_12_43_CHAPTERED_JOURNEY_UX_VALIDATION.md`.
+
+Stage 12.44 adds a second, interactive `LORE` view to that pause story surface.
+The spoiler-safe `STORY ARCHIVE` groups the two briefings, three objective
+memories, two relic-return beats, and two epilogues already authored in Relay
+Zero. Entries reveal only from authoritative objective, collection/inventory,
+and turn-in progress; later chapters remain `SEALED` and locked entries carry
+no prose. The focusable tabs retain the existing controller Button 1 activation
+path, the panel remains scrollable at compact widths, and Reduced Motion makes
+its short transition immediate. No transcript, acknowledgement, campaign state,
+schema, save, or protocol field is added. See
+`docs/AVARRA_STAGE_12_44_STORY_ARCHIVE_VALIDATION.md`.
+
+Stage 12.45 makes the archive discoverable during active play. A live
+`LORE · N/M` HUD control uses the same derived archive passed to Pause, reacts
+to a newly revealed memory with a bounded gold `NEW MEMORY` pulse and accessible
+announcement, and opens the menu directly on `LORE`. Reduced Motion updates the
+count without animation, while initial/restored/first-replicated progress never
+replays a false discovery. Normal Escape/Start pause still opens `JOURNEY`. The
+shortcut adds no unread acknowledgement, save field, protocol message, content
+schema, or permanent input binding. See
+`docs/AVARRA_STAGE_12_45_LIVE_LORE_DISCOVERY_VALIDATION.md`.
+
+Stage 12.46 makes that route exact. Game compares consecutive authoritative
+archive projections by stable key and retains only the latest current-session
+discovery for presentation. LORE marks the matching revealed row as
+`LATEST MEMORY`, announces it to assistive technology, and scrolls it into view
+with a bounded transition or immediately under Reduced Motion. Chapter handoff
+selects the next briefing when the same turn-in also reveals the prior
+epilogue. No unread acknowledgement, discovery queue, save field, content
+schema, protocol message, or campaign state is added. See
+`docs/AVARRA_STAGE_12_46_EXACT_MEMORY_DEEP_LINK_VALIDATION.md`.
+
+Stage 12.47 preserves every stable key revealed by the latest non-empty
+authoritative transition. A single reveal keeps `LATEST MEMORY`. A multi-reveal
+handoff starts on the final story beat, labels it `NEW MEMORY X OF Y`, and places
+focusable previous/next `NEW DISCOVERIES` controls directly beside the selected
+row. Moving through the batch updates positional semantics and repeats the
+bounded or Reduced-Motion-immediate exact-row scroll. Locked, duplicate, and
+unknown keys are filtered. This remains session-only presentation, not a
+cumulative inbox or durable unread model. See
+`docs/AVARRA_STAGE_12_47_ORDERED_DISCOVERY_BATCH_VALIDATION.md`.
+
+Stage 12.48 lets the player mark that current discovery batch reviewed. A
+single highlighted row exposes one accessible review action; a multi-memory
+navigator exposes one whole-batch action. Review immediately clears the
+transient highlight and navigator without changing the archive count or hiding
+revealed prose. A later discovery batch appears normally. This remains
+session-only Game presentation, not persisted unread state. See
+`docs/AVARRA_STAGE_12_48_TRANSIENT_MEMORY_REVIEW_VALIDATION.md`.
+
+Stage 12.49 makes the live Lore shortcut report the exact size of a discovery
+transition. Single reveals retain `NEW MEMORY · N/M`; multi-reveal handoffs show
+`2 NEW MEMORIES · N/M` and announce the same quantity accessibly before
+returning to `LORE · N/M`. Restored state and Reduced Motion remain quiet, and
+the shortcut still opens the exact Lore batch. See
+`docs/AVARRA_STAGE_12_49_QUANTIFIED_LORE_DISCOVERY_VALIDATION.md`.
+
+Stage 12.50 keeps the current session's exact pending batch visible after that
+pulse. The shortcut settles to `LORE · N/M · X NEW` until the existing Lore
+review action clears the whole batch. Restored progress remains unbadged;
+Reduced Motion skips the pulse but receives the persistent badge immediately.
+This reuses the Game-owned stable-key batch and adds no durable unread, save,
+protocol, content, or campaign state. See
+`docs/AVARRA_STAGE_12_50_PENDING_LORE_BADGE_VALIDATION.md`.
+
+Stage 12.51 carries the same valid pending count into the Pause LORE tab. A
+compact amber `1 NEW` or `X NEW` pill remains visible while JOURNEY is selected,
+so Start-menu keyboard/controller users can find the batch without a new input
+binding. Locked, unknown, and duplicate keys do not inflate it. Whole-batch
+review clears both Lore treatment and tab badge, and later batches return. See
+`docs/AVARRA_STAGE_12_51_PAUSE_LORE_BADGE_VALIDATION.md`.
+
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
 GitHub Actions now gives Android native compilation a dedicated Windows job

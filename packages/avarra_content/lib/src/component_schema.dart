@@ -664,6 +664,26 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.objectiveMilestoneNarrative,
+          version: 1,
+          introducedInContentSchemaVersion: 12,
+          editorLabel: 'Objective Story Beat',
+          editorOrder: 66,
+          help:
+              'Story text shown when this authored objective is newly completed.',
+          requiredComponentTypes: const {AvarraComponentType.objective},
+          fields: const [
+            ComponentFieldSchema(
+              name: 'completionText',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Completion story',
+              defaultValue:
+                  'The objective answers with a pulse from somewhere deeper.',
+              maximumLength: 200,
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.objectiveGate,
           version: 1,
           introducedInContentSchemaVersion: 7,
@@ -973,6 +993,8 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.setPersistentFlagOnInteract =>
         _decodeSetPersistentFlagOnInteract(data),
       AvarraComponentType.objective => _decodeObjective(data),
+      AvarraComponentType.objectiveMilestoneNarrative =>
+        _decodeObjectiveMilestoneNarrative(data),
       AvarraComponentType.objectiveGate => _decodeObjectiveGate(data),
       AvarraComponentType.collectibleItem => _decodeCollectibleItem(data),
       AvarraComponentType.playerPowerReward => _decodePlayerPowerReward(data),
@@ -1163,6 +1185,21 @@ final class ComponentSchemaRegistry {
     final group = data['group']! as String;
     _validateObjectiveGroup(group, AvarraComponentType.objective);
     return ObjectiveDefinition(group: group);
+  }
+
+  ObjectiveMilestoneNarrativeDefinition _decodeObjectiveMilestoneNarrative(
+    Map<String, Object?> data,
+  ) {
+    final completionText = data['completionText']! as String;
+    if (completionText.trim().isEmpty || completionText.length > 200) {
+      _invalidComponent(
+        AvarraComponentType.objectiveMilestoneNarrative,
+        'Objective milestone narrative text is invalid.',
+      );
+    }
+    return ObjectiveMilestoneNarrativeDefinition(
+      completionText: completionText,
+    );
   }
 
   ObjectiveGateDefinition _decodeObjectiveGate(Map<String, Object?> data) {

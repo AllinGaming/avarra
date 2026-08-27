@@ -105,6 +105,51 @@ Stage 12.40 derives a linear pause-menu chronicle from the existing content-v9
 objective/item/turn-in contract. It does not choose a branching quest graph,
 dialogue or lore schema, localization representation, quest-event history, or
 multi-mission campaign model.
+Stage 12.41 chooses one narrow content-schema-v12 completion-text component for
+authored objectives under ADR-033. It does not choose speaker identity,
+portraits, dialogue exchanges or choices, branching state, localization keys,
+voice-over, a persisted story transcript, or a general QuestDefinition.
+Stage 12.42 authors a second bundled mission through ADR-033's existing
+stable-ordered turn-in chain and fixes the HUD to follow the same first
+incomplete rule as narrative and guidance. It does not choose a permanent
+campaign/chapter schema, prerequisite/unlock component, sequence-break policy,
+dialogue graph, world-travel structure, or general QuestDefinition. Nhal's
+vault is spatially reachable early; human playtest evidence must justify any
+future gating decision.
+Stage 12.43 derives chapter numbering and grouped Game UI from that same stable
+order. It does not choose a portable campaign/chapter component, authored
+objective-to-chapter link, prerequisite/unlock graph, branching journal,
+transcript, localization format, or sequence-break policy. Under the current
+linear convention, authored objectives precede and appear within Chapter I;
+future per-chapter objective authoring requires a narrow content decision.
+Stage 12.44 derives a spoiler-safe Game archive from the same authored prose and
+authoritative progress. It does not choose read/unread persistence, a permanent
+codex taxonomy, speaker/portrait identity, dialogue exchanges or choices,
+localization keys, voice-over, branching consequences, an objective-to-chapter
+component, prerequisite gating, or a portable transcript. Locked rows carry no
+text, and the current three objective memories remain in Chapter I.
+Stage 12.45 exposes that archive through a reactive HUD count and transient
+direct-to-LORE pause route. Stage 12.46 adds one current-session,
+stable-key-specific row highlight and compact auto-scroll. Stage 12.47 retains
+the complete latest non-empty transition batch and adds adjacent previous/next
+navigation when that batch has multiple entries. It starts at the final entry,
+filters invalid keys, replaces the prior batch after a later discovery, and
+keeps the current batch for the session. It does not choose durable unread/read
+acknowledgement or a cumulative inbox. Stage 12.48 adds only a session-local,
+whole-batch review action that clears temporary emphasis without changing
+archive truth; a later batch can still appear. It does not choose per-entry or
+cross-session read state, a rebindable lore action, controller button, permanent
+HUD layout, external deep-link contract, or cross-session menu selection. Those
+need hands-on player and physical-device evidence. Stage 12.49 only exposes the
+existing positive archive-count delta during the bounded HUD pulse; it does not
+choose notification duration, title previews, a cumulative queue, or different
+Reduced Motion feedback. Stage 12.50 keeps the existing latest session batch's
+quantity visible as `LORE · N/M · X NEW` until whole-batch review. It does not
+choose durable/per-entry unread state, cumulative history, cross-session
+persistence, title previews, or a controller binding. Stage 12.51 mirrors that
+filtered quantity on the existing Pause LORE tab so Start-menu users retain
+discoverability. It does not choose direct Lore input, focus policy beyond the
+existing traversal, durable state, or a permanent menu layout contract.
 Stage 12.26 adds a replaceable projected circular melee warning driven by a
 real server-safe wind-up phase. It closes the previous requirement for an
 explicit Guardian attack-warning contract, recorded in ADR-034, but does not

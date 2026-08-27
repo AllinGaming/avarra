@@ -64,7 +64,7 @@ void main() {
     expect(find.text('Relay Zero: Ashfall'), findsOneWidget);
     expect(find.byKey(const Key('world_source_status')), findsOneWidget);
     expect(find.byKey(const Key('open_world_library')), findsOneWidget);
-    expect(find.text('10 ECS entities bound to the scene'), findsOneWidget);
+    expect(find.text('11 ECS entities bound to the scene'), findsOneWidget);
     expect(
       find.text(
         'Tap ground or use the movement pad · WASD/arrow keys supported',
@@ -81,7 +81,7 @@ void main() {
     expect(find.text('Guardian: beyond locked gate'), findsOneWidget);
     expect(find.byKey(const Key('camera_status')), findsOneWidget);
     expect(find.byKey(const Key('world_version_status')), findsOneWidget);
-    expect(find.text('Chunk 0,0 · 1/3 active'), findsOneWidget);
+    expect(find.text('Chunk 0,0 · 1/4 active'), findsOneWidget);
     expect(find.byKey(const Key('streaming_status')), findsOneWidget);
     expect(find.text('Save r0 · No save yet'), findsOneWidget);
     expect(
@@ -268,7 +268,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('9 ECS entities bound to the scene'),
+      find.text('10 ECS entities bound to the scene'),
       findsOneWidget,
       reason: 'The opened gate must be removed from presentation on restore.',
     );
@@ -330,7 +330,7 @@ void main() {
     await _pumpUntilSaveReady(tester);
 
     expect(
-      find.text('Objective · Return Relay Core to the control console'),
+      find.text('Objective · Return Relay Core to the relay transmitter'),
       findsOneWidget,
     );
     expect(find.text('Inventory · Relay Core, Ashen Heart'), findsOneWidget);
@@ -365,6 +365,14 @@ void main() {
             entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000014'),
             flags: const {'signal.transmitted': true},
           ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000027'),
+            flags: const {'collected': true},
+          ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000024'),
+            flags: const {'echo.bound': true},
+          ),
         ],
         players: const [],
       ),
@@ -379,9 +387,9 @@ void main() {
     );
     await _pumpUntilSaveReady(tester);
 
-    expect(find.text('Mission complete · Signal transmitted'), findsOneWidget);
+    expect(find.text('Mission complete · Echo Shard bound'), findsOneWidget);
     expect(find.text('Inventory · Empty'), findsOneWidget);
-    expect(find.text('9 ECS entities bound to the scene'), findsOneWidget);
+    expect(find.text('10 ECS entities bound to the scene'), findsOneWidget);
     expect(find.byKey(const Key('mission_complete_overlay')), findsNothing);
   });
 
@@ -474,7 +482,7 @@ void main() {
     );
     await _pumpUntilSaveReady(tester);
 
-    expect(find.text('Chunk 0,0 · 1/3 active'), findsOneWidget);
+    expect(find.text('Chunk 0,0 · 1/4 active'), findsOneWidget);
     expect(find.text('Save r4 · Restored revision 4'), findsOneWidget);
   });
 

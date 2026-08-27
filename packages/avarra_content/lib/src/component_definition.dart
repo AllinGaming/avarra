@@ -439,6 +439,29 @@ final class ObjectiveDefinition extends ContentComponentDefinition {
   };
 }
 
+/// Authored story delivered when this objective is newly completed.
+///
+/// Completion remains derived from the objective's persistent interaction
+/// flag. This definition contains no mutable or acknowledged story state.
+final class ObjectiveMilestoneNarrativeDefinition
+    extends ContentComponentDefinition {
+  const ObjectiveMilestoneNarrativeDefinition({required this.completionText});
+
+  final String completionText;
+
+  @override
+  String get type => AvarraComponentType.objectiveMilestoneNarrative;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'completionText': completionText,
+  };
+}
+
 /// A solid authored barrier opened by completed objectives in one group.
 final class ObjectiveGateDefinition extends ContentComponentDefinition {
   const ObjectiveGateDefinition({

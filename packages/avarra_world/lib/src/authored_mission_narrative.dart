@@ -11,17 +11,25 @@ enum AuthoredMissionNarrativePhase { opening, returnToTurnIn, complete }
 final class AuthoredMissionNarrative {
   const AuthoredMissionNarrative({
     required this.turnInEntityId,
+    required this.chapterNumber,
+    required this.chapterCount,
     required this.phase,
     required this.title,
     required this.text,
-  });
+  }) : assert(chapterNumber > 0),
+       assert(chapterCount > 0),
+       assert(chapterNumber <= chapterCount);
 
   final EntityId turnInEntityId;
+  final int chapterNumber;
+  final int chapterCount;
   final AuthoredMissionNarrativePhase phase;
   final String title;
   final String text;
 
   String get stableKey => '${turnInEntityId.value}:${phase.name}';
+
+  String get chapterLabel => 'CHAPTER $chapterNumber OF $chapterCount';
 }
 
 AuthoredMissionNarrative? authoredMissionNarrative(
@@ -38,10 +46,13 @@ AuthoredMissionNarrative? authoredMissionNarrative(
   if (candidates.isEmpty) {
     return null;
   }
-  final candidate = candidates.firstWhere(
+  var candidateIndex = candidates.indexWhere(
     (entry) => !progress.completedTurnInEntityIds.contains(entry.entityId),
-    orElse: () => candidates.last,
   );
+  if (candidateIndex < 0) {
+    candidateIndex = candidates.length - 1;
+  }
+  final candidate = candidates[candidateIndex];
   final phase = progress.completedTurnInEntityIds.contains(candidate.entityId)
       ? AuthoredMissionNarrativePhase.complete
       : progress.inventoryItemIds.contains(candidate.turnIn.requiredItemId)
@@ -56,6 +67,8 @@ AuthoredMissionNarrative? authoredMissionNarrative(
   };
   return AuthoredMissionNarrative(
     turnInEntityId: candidate.entityId,
+    chapterNumber: candidateIndex + 1,
+    chapterCount: candidates.length,
     phase: phase,
     title: candidate.narrative.title,
     text: text,

@@ -13,6 +13,8 @@ void main() {
     String text,
   ) => AuthoredMissionNarrative(
     turnInEntityId: turnInEntityId,
+    chapterNumber: 2,
+    chapterCount: 2,
     phase: phase,
     title: 'Emberfall Oath',
     text: text,
@@ -30,6 +32,7 @@ void main() {
         home: Scaffold(
           body: GameplayQuestJournal(
             beat: current,
+            compact: true,
             guidanceLabel: 'Return Ember Shard to the relay shrine',
             guidanceDistanceLabel: '12 m',
           ),
@@ -38,6 +41,7 @@ void main() {
     );
 
     expect(find.text('RELIC RECOVERED'), findsOneWidget);
+    expect(find.text('CHAPTER 2 OF 2'), findsOneWidget);
     expect(find.text('Emberfall Oath'), findsOneWidget);
     expect(
       find.text('Carry the Ember Shard to the relay shrine.'),
@@ -51,6 +55,7 @@ void main() {
       find.byKey(const Key('quest_journal_semantics')),
     );
     expect(semantics.properties.label, contains('RELIC RECOVERED'));
+    expect(semantics.properties.label, contains('CHAPTER 2 OF 2'));
     expect(
       tester
           .widget<IgnorePointer>(
@@ -74,6 +79,7 @@ void main() {
         home: Scaffold(
           body: GameplayStoryToast(
             notice: GameplayStoryNotice(sequence: 7, beat: completed),
+            compact: true,
             onFinished: (sequence) => completedSequence = sequence,
           ),
         ),
@@ -81,6 +87,7 @@ void main() {
     );
 
     expect(find.text('QUEST COMPLETE'), findsOneWidget);
+    expect(find.text('CHAPTER 2 OF 2'), findsOneWidget);
     expect(find.text('Emberfall Oath'), findsOneWidget);
     expect(
       find.text('The relay burns again and the ash road opens.'),
@@ -91,6 +98,7 @@ void main() {
     );
     expect(semantics.properties.liveRegion, isTrue);
     expect(semantics.properties.label, contains('QUEST COMPLETE'));
+    expect(semantics.properties.label, contains('CHAPTER 2 OF 2'));
     expect(
       tester
           .widget<IgnorePointer>(find.byKey(const Key('gameplay_story_notice')))
@@ -135,6 +143,107 @@ void main() {
     );
   });
 
+  test('intermediate completion bridges its epilogue into the next quest', () {
+    final firstTurnInId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000906',
+    );
+    final secondTurnInId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000907',
+    );
+    const firstTurnIn = ItemTurnInDefinition(
+      requiredItemId: 'relay.core',
+      completionFlagKey: 'signal.sent',
+      completionLabel: 'Signal sent',
+    );
+    const secondTurnIn = ItemTurnInDefinition(
+      requiredItemId: 'relay.echo',
+      completionFlagKey: 'echo.bound',
+      completionLabel: 'Echo bound',
+    );
+    final world = WorldDefinition(
+      id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000908'),
+      name: 'Story transition test',
+      worldFormatVersion: 2,
+      contentSchemaVersion: currentContentSchemaVersion,
+      chunkSize: 8,
+      assets: const [],
+      chunks: const [],
+      entities: [
+        WorldEntityDefinition(
+          id: firstTurnInId,
+          components: const [
+            firstTurnIn,
+            MissionNarrativeDefinition(
+              title: "Ashfall's Last Signal",
+              openingText: 'Wake the relay.',
+              returnText: 'Return the Relay Core.',
+              completionText: 'The first signal cuts through the ash.',
+            ),
+          ],
+        ),
+        WorldEntityDefinition(
+          id: secondTurnInId,
+          components: const [
+            secondTurnIn,
+            MissionNarrativeDefinition(
+              title: 'The Answering Dark',
+              openingText: 'A hunter answers beneath the eastern vault.',
+              returnText: 'Bind the recovered Echo Shard.',
+              completionText: 'The road to Kharos is revealed.',
+            ),
+          ],
+        ),
+      ],
+    );
+    AuthoredAdventureProgress progress(Iterable<EntityId> completed) =>
+        AuthoredAdventureProgress(
+          objectives: AuthoredObjectiveProgress(const {}),
+          inventoryItemIds: const {},
+          itemLabels: const {
+            'relay.core': 'Relay Core',
+            'relay.echo': 'Echo Shard',
+          },
+          collectedItemEntityIds: const {},
+          completedTurnInEntityIds: completed,
+          turnIns: const [firstTurnIn, secondTurnIn],
+        );
+
+    final transition = gameplayStoryBeatForTransition(
+      definition: world,
+      previous: progress(const []),
+      current: progress([firstTurnInId]),
+    )!;
+
+    expect(transition.turnInEntityId, secondTurnInId);
+    expect(transition.chapterNumber, 2);
+    expect(transition.chapterCount, 2);
+    expect(transition.phase, AuthoredMissionNarrativePhase.opening);
+    expect(transition.title, 'The Answering Dark');
+    expect(transition.text, contains("Ashfall's Last Signal"));
+    expect(transition.text, contains('first signal cuts through the ash'));
+    expect(transition.text, contains('hunter answers beneath'));
+
+    final finalTransition = gameplayStoryBeatForTransition(
+      definition: world,
+      previous: progress([firstTurnInId]),
+      current: progress([firstTurnInId, secondTurnInId]),
+    )!;
+    expect(finalTransition.phase, AuthoredMissionNarrativePhase.complete);
+    expect(finalTransition.chapterLabel, 'CHAPTER 2 OF 2');
+    expect(finalTransition.text, 'The road to Kharos is revealed.');
+
+    final batchedFinalTransition = gameplayStoryBeatForTransition(
+      definition: world,
+      previous: progress(const []),
+      current: progress([firstTurnInId, secondTurnInId]),
+    )!;
+    expect(
+      batchedFinalTransition.text,
+      contains('first signal cuts through the ash'),
+    );
+    expect(batchedFinalTransition.text, contains('road to Kharos'));
+  });
+
   test(
     'objective milestones prefer an opened path and ignore unchanged state',
     () {
@@ -149,7 +258,7 @@ void main() {
         id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000914'),
         name: 'Milestone test',
         worldFormatVersion: 2,
-        contentSchemaVersion: 7,
+        contentSchemaVersion: currentContentSchemaVersion,
         chunkSize: 8,
         assets: const [],
         chunks: const [],
@@ -158,12 +267,18 @@ void main() {
             id: firstObjectiveId,
             components: const [
               InteractableDefinition(label: 'Stabilize Ember', range: 2),
+              ObjectiveMilestoneNarrativeDefinition(
+                completionText: 'A first ember wakes beneath the ash.',
+              ),
             ],
           ),
           WorldEntityDefinition(
             id: secondObjectiveId,
             components: const [
               InteractableDefinition(label: 'Stabilize Ash', range: 2),
+              ObjectiveMilestoneNarrativeDefinition(
+                completionText: 'Ancient seals withdraw from the sanctum.',
+              ),
             ],
           ),
           WorldEntityDefinition(
@@ -204,6 +319,10 @@ void main() {
         GameplayObjectiveMilestoneKind.objectiveSecured,
       );
       expect(objectiveNotice?.title, 'Stabilize Ember');
+      expect(
+        objectiveNotice?.storyText,
+        'A first ember wakes beneath the ash.',
+      );
       expect(objectiveNotice?.detail, contains('1/2'));
 
       final gateNotice = gameplayObjectiveMilestoneNoticeFor(
@@ -214,6 +333,7 @@ void main() {
       );
       expect(gateNotice?.kind, GameplayObjectiveMilestoneKind.pathOpened);
       expect(gateNotice?.title, 'Ashen Sanctum');
+      expect(gateNotice?.storyText, 'Ancient seals withdraw from the sanctum.');
       expect(gateNotice?.detail, contains('2/2'));
 
       expect(
@@ -236,6 +356,7 @@ void main() {
       sequence: 9,
       kind: GameplayObjectiveMilestoneKind.pathOpened,
       title: 'Inner Chamber',
+      storyText: 'The buried seals withdraw before the returning flame.',
       detail: 'Threshold satisfied Â· 3/3 objectives complete',
     );
     await tester.pumpWidget(
@@ -252,11 +373,16 @@ void main() {
 
     expect(find.text('PATH OPENED'), findsOneWidget);
     expect(find.text('Inner Chamber'), findsOneWidget);
+    expect(
+      find.text('The buried seals withdraw before the returning flame.'),
+      findsOneWidget,
+    );
     final semantics = tester.widget<Semantics>(
       find.byKey(const Key('objective_milestone_semantics')),
     );
     expect(semantics.properties.liveRegion, isTrue);
     expect(semantics.properties.label, contains('3/3 objectives complete'));
+    expect(semantics.properties.label, contains('buried seals withdraw'));
     expect(
       tester
           .widget<IgnorePointer>(

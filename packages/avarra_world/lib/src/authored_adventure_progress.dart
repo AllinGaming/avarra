@@ -54,10 +54,25 @@ final class AuthoredAdventureProgress {
     if (turnIns.isEmpty) {
       return objectives.status(definition);
     }
-    final turnIn = turnIns.first;
+    final orderedTurnIns =
+        [
+          for (final entity in definition.allEntities)
+            if (entity.component<ItemTurnInDefinition>() case final turnIn?)
+              (entity: entity, entityId: entity.id, turnIn: turnIn),
+        ]..sort(
+          (left, right) => left.entityId.value.compareTo(right.entityId.value),
+        );
+    final activeTurnIn = orderedTurnIns.firstWhere(
+      (entry) => !completedTurnInEntityIds.contains(entry.entityId),
+      orElse: () => orderedTurnIns.last,
+    );
+    final turnIn = activeTurnIn.turnIn;
     final itemLabel = _itemLabel(turnIn.requiredItemId);
     if (inventoryItemIds.contains(turnIn.requiredItemId)) {
-      return 'Objective · Return $itemLabel to the control console';
+      final destination =
+          activeTurnIn.entity.component<InteractableDefinition>()?.label ??
+          'the control console';
+      return 'Objective · Return $itemLabel to $destination';
     }
     return 'Objective · Defeat the guardian and recover $itemLabel';
   }

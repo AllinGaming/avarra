@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 11,
+  "contentSchemaVersion": 12,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero: Ashfall",
@@ -216,6 +216,10 @@
               "schemaVersion": 1,
               "group": "relay.stabilizers"
             },
+            "avarra.story.objective_milestone": {
+              "schemaVersion": 1,
+              "completionText": "A first ember wakes beneath the ash. The dead relay remembers its name."
+            },
             "avarra.persistence.flags": {
               "schemaVersion": 1,
               "flags": {"activated": false}
@@ -254,6 +258,10 @@
             "avarra.objective": {
               "schemaVersion": 1,
               "group": "relay.stabilizers"
+            },
+            "avarra.story.objective_milestone": {
+              "schemaVersion": 1,
+              "completionText": "A second pulse joins the first. Something below the chamber begins to listen."
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,
@@ -309,7 +317,7 @@
             },
             "avarra.interactable": {
               "schemaVersion": 1,
-              "label": "Transmit recovered core",
+              "label": "the relay transmitter",
               "range": 2.8
             },
             "avarra.objective.item_turn_in": {
@@ -328,6 +336,49 @@
             "avarra.persistence.flags": {
               "schemaVersion": 1,
               "flags": {"signal.transmitted": false}
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000024",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [1.35, 0.35, 1.45],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.38, 0.38, 0.38]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000005"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.38, 0.38, 0.38],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "the listening shrine",
+              "range": 2.8
+            },
+            "avarra.objective.item_turn_in": {
+              "schemaVersion": 1,
+              "requiredItemId": "relay.echo_shard",
+              "completionFlagKey": "echo.bound",
+              "completionLabel": "Echo Shard bound"
+            },
+            "avarra.story.mission_narrative": {
+              "schemaVersion": 1,
+              "title": "The Answering Dark",
+              "openingText": "Relay Zero's signal has drawn a hunter from beneath the eastern vault. Destroy Nhal, the Signal-Eater, and recover the Echo Shard it swallowed.",
+              "returnText": "Nhal is dead. The Echo Shard repeats a voice from beyond Ashfall. Carry it to the listening shrine before the signal fades.",
+              "completionText": "The shrine translates the echo into a path: Kharos, drowned beneath black water. The Vanguard leaves Relay Zero with a destination, and something ancient now knows their name."
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"echo.bound": false}
             }
           }
         }
@@ -384,6 +435,10 @@
             "avarra.objective": {
               "schemaVersion": 1,
               "group": "relay.stabilizers"
+            },
+            "avarra.story.objective_milestone": {
+              "schemaVersion": 1,
+              "completionText": "The three stabilizers harmonize. Ancient seals withdraw from the Core chamber."
             },
             "avarra.persistence.flags": {
               "schemaVersion": 1,
@@ -764,6 +819,168 @@
             "avarra.persistence.flags": {
               "schemaVersion": 1,
               "flags": {"collected": false}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000104",
+      "coordinate": [1, -1],
+      "entities": [
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000025",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4, -0.1, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [4, 0.08, 4]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000026",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4.5, 0.55, 4.8],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.55, 0.55, 0.55]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000003"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.45, 0.5, 0.45],
+              "bodyKind": "character",
+              "isSensor": false
+            },
+            "avarra.character_controller": {
+              "schemaVersion": 1,
+              "moveSpeed": 1.05,
+              "skinWidth": 0.03,
+              "arrivalTolerance": 0.08
+            },
+            "avarra.health": {
+              "schemaVersion": 1,
+              "maximumHealth": 95
+            },
+            "avarra.combat.basic_attack": {
+              "schemaVersion": 1,
+              "damage": 10,
+              "range": 2.8,
+              "cooldownSeconds": 1.1
+            },
+            "avarra.ai.guardian_behavior": {
+              "schemaVersion": 1,
+              "perceptionRange": 4.2,
+              "leashRange": 5.2
+            },
+            "avarra.ai.guardian_boss": {
+              "schemaVersion": 1,
+              "displayName": "Nhal, the Signal-Eater",
+              "phaseTwoHealthFraction": 0.62,
+              "phaseThreeHealthFraction": 0.28,
+              "meleeRange": 1.2,
+              "sweepRange": 2.3,
+              "sweepHalfAngleDegrees": 50,
+              "eruptionRadius": 0.75,
+              "engageText": "Nhal unfolds from the static. Your signal ends in its hunger.",
+              "phaseTwoText": "The Signal-Eater fractures the echo. Break through the circling sweep.",
+              "phaseThreeText": "Nhal tears open the vault floor. Move before the dead signal erupts.",
+              "defeatText": "The Signal-Eater collapses into silence. Tear the Echo Shard from its hollow chest."
+            },
+            "avarra.ai.guardian_arena_hazard": {
+              "schemaVersion": 1,
+              "innerSafeRadius": 0.8,
+              "outerRadius": 2.8
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000027",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [4.5, 0.32, 3.7],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.32, 0.32, 0.32]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000007"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.3, 0.3, 0.3],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.interactable": {
+              "schemaVersion": 1,
+              "label": "Recover Echo Shard",
+              "range": 2.4
+            },
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "relay.echo_shard",
+              "itemLabel": "Echo Shard",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000026"
+            },
+            "avarra.persistence.flags": {
+              "schemaVersion": 1,
+              "flags": {"collected": false}
+            }
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000028",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [0.35, 0.7, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.35, 0.7, 2.1]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.35, 0.7, 2.1],
+              "bodyKind": "static",
+              "isSensor": false
+            },
+            "avarra.isometric.occluder": {"schemaVersion": 1}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000029",
+          "components": {
+            "avarra.transform": {
+              "schemaVersion": 1,
+              "position": [7.65, 0.7, 4],
+              "rotation": [0, 0, 0, 1],
+              "scale": [0.35, 0.7, 2.1]
+            },
+            "avarra.renderable_reference": {
+              "schemaVersion": 1,
+              "assetId": "01890f47-e8b8-7a68-9000-000000000004"
+            },
+            "avarra.physics.collider": {
+              "schemaVersion": 1,
+              "halfExtents": [0.35, 0.7, 2.1],
+              "bodyKind": "static",
+              "isSensor": false
             }
           }
         }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
 import 'package:avarra_ecs/avarra_ecs.dart';
+import 'package:avarra_game/src/gameplay_story_archive.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_network/avarra_network.dart';
 import 'package:avarra_physics/avarra_physics.dart';
@@ -47,11 +48,11 @@ void main() {
 
       expect(definition.name, 'Relay Zero: Ashfall');
       expect(definition.worldFormatVersion, 2);
-      expect(definition.contentSchemaVersion, 11);
+      expect(definition.contentSchemaVersion, 12);
       expect(definition.chunkSize, 8);
-      expect(definition.chunks, hasLength(3));
-      expect(definition.allEntities, hasLength(23));
-      expect(runtime.ecs.entityCount, 10);
+      expect(definition.chunks, hasLength(4));
+      expect(definition.allEntities, hasLength(29));
+      expect(runtime.ecs.entityCount, 11);
       expect(runtime.isometricOcclusionTargetEntityIds, hasLength(1));
       expect(runtime.isometricOccluderEntityIds, isEmpty);
       expect(streaming.activeOccluderEntityIds, hasLength(1));
@@ -86,31 +87,61 @@ void main() {
         ),
         everyElement('relay.stabilizers'),
       );
+      final objectiveStory = objectives
+          .map(
+            (entity) =>
+                entity.component<ObjectiveMilestoneNarrativeDefinition>()!,
+          )
+          .map((narrative) => narrative.completionText)
+          .toList();
+      expect(objectiveStory, hasLength(3));
+      expect(objectiveStory, contains(contains('dead relay remembers')));
+      expect(objectiveStory, contains(contains('begins to listen')));
+      expect(objectiveStory, contains(contains('Ancient seals withdraw')));
       final gate = definition.allEntities
           .map((entity) => entity.component<ObjectiveGateDefinition>())
           .whereType<ObjectiveGateDefinition>()
           .single;
       expect(gate.label, 'Core chamber gate');
       expect(gate.requiredCount, 3);
-      final turnIn = definition.allEntities
+      final turnIns = definition.allEntities
           .map((entity) => entity.component<ItemTurnInDefinition>())
           .whereType<ItemTurnInDefinition>()
-          .single;
+          .toList();
+      expect(turnIns, hasLength(2));
+      final turnIn = turnIns.singleWhere(
+        (candidate) => candidate.requiredItemId == 'relay.core',
+      );
       expect(turnIn.requiredItemId, 'relay.core');
       expect(turnIn.completionFlagKey, 'signal.transmitted');
-      final narrative = definition.allEntities
+      final echoTurnIn = turnIns.singleWhere(
+        (candidate) => candidate.requiredItemId == 'relay.echo_shard',
+      );
+      expect(echoTurnIn.completionFlagKey, 'echo.bound');
+      expect(echoTurnIn.completionLabel, 'Echo Shard bound');
+      final narratives = definition.allEntities
           .map((entity) => entity.component<MissionNarrativeDefinition>())
           .whereType<MissionNarrativeDefinition>()
-          .single;
+          .toList();
+      expect(narratives, hasLength(2));
+      final narrative = narratives.singleWhere(
+        (candidate) => candidate.title == "Ashfall's Last Signal",
+      );
       expect(narrative.title, "Ashfall's Last Signal");
       expect(narrative.openingText, contains('Vharos'));
       expect(narrative.returnText, contains('Ashen Heart'));
       expect(narrative.completionText, contains('answers in return'));
+      final echoNarrative = narratives.singleWhere(
+        (candidate) => candidate.title == 'The Answering Dark',
+      );
+      expect(echoNarrative.openingText, contains('Nhal'));
+      expect(echoNarrative.returnText, contains('listening shrine'));
+      expect(echoNarrative.completionText, contains('Kharos'));
       final collectibles = definition.allEntities
           .map((entity) => entity.component<CollectibleItemDefinition>())
           .whereType<CollectibleItemDefinition>()
           .toList();
-      expect(collectibles, hasLength(4));
+      expect(collectibles, hasLength(5));
       expect(
         collectibles.map((item) => item.itemId),
         containsAll([
@@ -118,7 +149,36 @@ void main() {
           'loot.ash_sigil',
           'loot.warden_iron',
           'relic.ashen_heart',
+          'relay.echo_shard',
         ]),
+      );
+      final initialArchive = gameplayStoryArchiveChapters(
+        definition: definition,
+        progress: AuthoredAdventureProgress(
+          objectives: AuthoredObjectiveProgress(const {}),
+          inventoryItemIds: const [],
+          itemLabels: {
+            for (final item in collectibles) item.itemId: item.itemLabel,
+          },
+          collectedItemEntityIds: const [],
+          completedTurnInEntityIds: const [],
+          turnIns: turnIns,
+        ),
+      );
+      expect(initialArchive, hasLength(2));
+      expect(initialArchive.first.title, "Ashfall's Last Signal");
+      expect(initialArchive.last.title, 'The Answering Dark');
+      expect(initialArchive.expand((chapter) => chapter.entries), hasLength(9));
+      expect(
+        initialArchive
+            .expand((chapter) => chapter.entries)
+            .where((entry) => entry.isRevealed),
+        hasLength(1),
+      );
+      expect(initialArchive.last.state, GameStoryArchiveChapterState.locked);
+      expect(
+        initialArchive.last.entries.every((entry) => entry.text == null),
+        isTrue,
       );
       expect(
         definition.allEntities
@@ -127,7 +187,39 @@ void main() {
                   entity.component<GuardianBehaviorDefinition>() != null,
             )
             .length,
-        3,
+        4,
+      );
+      final chapterTwoProgress = AuthoredAdventureProgress(
+        objectives: AuthoredObjectiveProgress(const {}),
+        inventoryItemIds: const {},
+        itemLabels: {
+          for (final collectible in collectibles)
+            collectible.itemId: collectible.itemLabel,
+        },
+        collectedItemEntityIds: const {},
+        completedTurnInEntityIds: {
+          EntityId.parse('01890f47-e8b8-7a68-8000-000000000014'),
+        },
+        turnIns: turnIns,
+      );
+      final chapterTwoNarrative = authoredMissionNarrative(
+        definition,
+        chapterTwoProgress,
+      )!;
+      expect(chapterTwoNarrative.title, 'The Answering Dark');
+      expect(chapterTwoNarrative.phase, AuthoredMissionNarrativePhase.opening);
+      final chapterTwoGuidance = authoredQuestGuidance(
+        definition,
+        chapterTwoProgress,
+      )!;
+      expect(
+        chapterTwoGuidance.entityId,
+        EntityId.parse('01890f47-e8b8-7a68-8000-000000000026'),
+      );
+      expect(chapterTwoGuidance.kind, AuthoredQuestGuidanceKind.guardian);
+      expect(
+        chapterTwoGuidance.worldPosition,
+        const ContentVector3(12.5, 0.55, -3.2),
       );
 
       streaming.reconcile([
@@ -208,6 +300,44 @@ void main() {
         runtime.ecs.component<HealthComponent>(playerHandle).currentHealth,
         88,
       );
+
+      streaming.reconcile([
+        ChunkStreamingRequest(
+          coordinate: const WorldChunkCoordinate(1, -1),
+          source: ChunkInterestSource.localPlayer,
+        ),
+      ]);
+      await streaming.pumpUntilStable();
+      final signalEaterId = EntityId.parse(
+        '01890f47-e8b8-7a68-8000-000000000026',
+      );
+      final signalEaterHandle = runtime.ecs.handleFor(signalEaterId)!;
+      expect(
+        runtime.ecs.component<HealthComponent>(signalEaterHandle).currentHealth,
+        95,
+      );
+      final signalEaterBoss = runtime.ecs.component<GuardianBossComponent>(
+        signalEaterHandle,
+      );
+      final signalEaterDefinition = definition.allEntities
+          .singleWhere((entity) => entity.id == signalEaterId)
+          .component<GuardianBossDefinition>()!;
+      expect(signalEaterDefinition.displayName, 'Nhal, the Signal-Eater');
+      expect(signalEaterBoss.sweepRange, 2.3);
+      expect(
+        runtime.ecs
+            .component<GuardianArenaHazardComponent>(signalEaterHandle)
+            .outerRadius,
+        2.8,
+      );
+      final echoShardId = EntityId.parse(
+        '01890f47-e8b8-7a68-8000-000000000027',
+      );
+      final echoShard = runtime.ecs.component<CollectibleItemComponent>(
+        runtime.ecs.handleFor(echoShardId)!,
+      );
+      expect(echoShard.itemId, 'relay.echo_shard');
+      expect(echoShard.guardedByEntityId, signalEaterId);
       for (final entry in runtime.assetPaths.entries) {
         expect(entry.key, isA<AssetId>());
         final assetFile = File.fromUri(packageRoot.uri.resolve(entry.value));

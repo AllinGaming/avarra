@@ -11,10 +11,22 @@ void main() {
       '01890f47-e8b8-7a68-8000-000000000a03',
     );
     final turnInId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000a04');
+    final echoGuardianId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000a05',
+    );
+    final echoCollectibleId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000a06',
+    );
+    final echoTurnInId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000a07');
     const turnIn = ItemTurnInDefinition(
       requiredItemId: 'relay.core',
       completionFlagKey: 'signal.sent',
       completionLabel: 'Signal sent',
+    );
+    const echoTurnIn = ItemTurnInDefinition(
+      requiredItemId: 'relay.echo_shard',
+      completionFlagKey: 'echo.bound',
+      completionLabel: 'Echo bound',
     );
     final world = WorldDefinition(
       id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000a10'),
@@ -63,6 +75,44 @@ void main() {
             turnIn,
           ],
         ),
+        WorldEntityDefinition(
+          id: echoGuardianId,
+          components: const [
+            TransformDefinition(
+              position: ContentVector3(7, 0.75, 6),
+              rotation: ContentQuaternion(0, 0, 0, 1),
+              scale: ContentVector3(1, 1, 1),
+            ),
+          ],
+        ),
+        WorldEntityDefinition(
+          id: echoCollectibleId,
+          components: [
+            const TransformDefinition(
+              position: ContentVector3(6, 0.3, 5),
+              rotation: ContentQuaternion(0, 0, 0, 1),
+              scale: ContentVector3(1, 1, 1),
+            ),
+            CollectibleItemDefinition(
+              itemId: 'relay.echo_shard',
+              itemLabel: 'Echo Shard',
+              collectedFlagKey: 'collected',
+              guardedByEntityId: echoGuardianId,
+            ),
+          ],
+        ),
+        WorldEntityDefinition(
+          id: echoTurnInId,
+          components: const [
+            TransformDefinition(
+              position: ContentVector3(1.5, 0.5, 1.5),
+              rotation: ContentQuaternion(0, 0, 0, 1),
+              scale: ContentVector3(1, 1, 1),
+            ),
+            InteractableDefinition(label: 'listening shrine', range: 2),
+            echoTurnIn,
+          ],
+        ),
       ],
       chunks: [
         WorldChunkDefinition(
@@ -94,10 +144,13 @@ void main() {
         nextObjectiveEntityId: nextObjectiveEntityId,
       ),
       inventoryItemIds: inventory,
-      itemLabels: const {'relay.core': 'Relay Core'},
+      itemLabels: const {
+        'relay.core': 'Relay Core',
+        'relay.echo_shard': 'Echo Shard',
+      },
       collectedItemEntityIds: const {},
       completedTurnInEntityIds: completedTurnIns,
-      turnIns: const [turnIn],
+      turnIns: const [turnIn, echoTurnIn],
     );
 
     var target = authoredQuestGuidance(
@@ -127,8 +180,27 @@ void main() {
     expect(target.kind, AuthoredQuestGuidanceKind.turnIn);
     expect(target.label, 'Return Relay Core to transmitter');
 
+    target = authoredQuestGuidance(
+      world,
+      progress(completedTurnIns: {turnInId}),
+    )!;
+    expect(target.entityId, echoGuardianId);
+    expect(target.kind, AuthoredQuestGuidanceKind.guardian);
+    expect(target.label, 'Defeat the guardian of Echo Shard');
+
+    target = authoredQuestGuidance(
+      world,
+      progress(inventory: {'relay.echo_shard'}, completedTurnIns: {turnInId}),
+    )!;
+    expect(target.entityId, echoTurnInId);
+    expect(target.kind, AuthoredQuestGuidanceKind.turnIn);
+    expect(target.label, 'Return Echo Shard to listening shrine');
+
     expect(
-      authoredQuestGuidance(world, progress(completedTurnIns: {turnInId})),
+      authoredQuestGuidance(
+        world,
+        progress(completedTurnIns: {turnInId, echoTurnInId}),
+      ),
       isNull,
     );
   });

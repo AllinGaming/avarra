@@ -314,8 +314,52 @@ stabilizer a short authoritative OBJECTIVE SECURED banner and promotes the
 gate-opening transition to PATH OPENED. Stage 12.40 turns the pause story panel
 into a complete derived JOURNEY chronicle with completed/current/pending
 objective, required-relic, and turn-in steps. The full matrix now passes 358
-tests across 18 suites. See the Stage 12.29-12.40 validation reports, the
-combat-feel authoring guide, and ADR-037/ADR-038.
+tests across 18 suites. Stage 12.41 adds portable content-schema-v12 objective
+story beats: Forge objective switches create and edit bounded completion prose,
+and authoritative Game milestone banners deliver Relay Zero's three distinct
+stabilizer beats. Older v1-v11 worlds retain generic copy. The full matrix now
+passes 359 tests across 18 suites. Stage 12.42 expands Relay Zero into two
+chapters using the accepted stable-ordered mission contract. The first
+transmission now opens The Answering Dark, a fourth streamed vault, the named
+three-phase Nhal encounter, an Echo Shard recovery, and a final listening-shrine
+return. HUD status, quest guidance, the pause chronicle, saves, and the
+  completion recap advance through the first incomplete turn-in; only both
+  completed chapters produce final mission completion, while the intermediate
+  notice preserves Chapter I's epilogue before Chapter II's opening. The full
+  matrix now passes 360 tests across 18 suites. Stage 12.43 makes that campaign
+  structure explicit throughout Game: briefing, HUD journal, transition toast,
+  pause JOURNEY, and final recap now show derived CHAPTER N OF M identity. The
+  pause chronicle groups mission titles and steps into COMPLETE, ACTIVE, and UP
+  NEXT sections without storing campaign state. Stage 12.44 turns the same
+  pause surface into an interactive JOURNEY/LORE menu. Its spoiler-safe STORY
+  ARCHIVE preserves all nine already-authored briefing, objective-memory,
+  relic-return, and epilogue beats, revealing them only from authoritative
+  progress and sealing later chapters without exposing hidden prose. Stage
+  12.45 integrates that archive into live play with a reactive `LORE · N/9`
+  HUD control. Newly earned memories produce a bounded, Reduced-Motion-aware
+  discovery pulse and the control opens Pause directly on LORE; restored state
+  shows the correct count without replaying an unlock. The full matrix now
+  passes 369 tests across 18 suites. Stage 12.46 carries the newest
+  current-session discovery's stable key into LORE, marks the exact revealed
+  row as `LATEST MEMORY`, announces it accessibly, and scrolls it into view on
+  compact layouts; Reduced Motion makes that scroll immediate. This adds no
+  unread/save/protocol/campaign state. Stage 12.47 preserves the whole latest
+  discovery batch: multi-reveal handoffs open on the final beat and expose an
+  adjacent, accessible `NEW DISCOVERIES` previous/next navigator so the player
+  can review every revealed memory without searching the archive. Stage 12.48
+  adds a session-only review action for single or multi-memory batches. It
+  clears temporary gold emphasis and navigation after reading while preserving
+  unlocked prose and allowing later batches to appear normally. Stage 12.49
+  makes the live discovery pulse quantity-aware: multi-reveal transitions now
+  show and announce `2 NEW MEMORIES` instead of a generic plural label. Stage
+  12.50 keeps that exact current-session batch visible after the pulse as
+  `LORE · N/M · 2 NEW` until the existing Lore review action clears it. Restored
+  progress remains quiet and Reduced Motion receives the persistent badge
+  without a pulse. Stage 12.51 carries the same filtered count into an amber
+  `X NEW` pill on the Pause LORE tab, keeping discoveries findable when
+  keyboard/controller players enter through the existing Start menu. See the
+  Stage 12.29-12.51 validation
+  reports, the combat-feel authoring guide, and ADR-037/ADR-038.
 Physical
 Android direct-LAN, touch, performance, battery/thermal, and human playability
 remain the named release boundary.
@@ -497,6 +541,18 @@ Stage 12.40 upgrades the pause menu into an authored quest chronicle. It derives
 the stable objective sequence, mission-required collectible recovery, and
 turn-in from existing adventure truth, then marks each step completed, current,
 or pending without creating a second quest state.
+Stage 12.41 makes those mid-mission milestones portable story delivery.
+Content schema v12 adds one bounded definition-only objective completion beat;
+Forge presets expose it through the normal Inspector and typed command path.
+Relay Zero authors distinct Alpha, Beta, and Gamma lore, and Game presents the
+newly completed objective's prose without save, protocol, or runtime-ECS state.
+Stage 12.42 adds actual adventure length: the first transmission advances into
+The Answering Dark, guides the player into a fourth streamed vault, escalates
+through Nhal's three-phase encounter, and returns the Echo Shard to an authored
+listening shrine. This validates ADR-033's existing multiple-mission ordering
+without adding a quest graph, schema, protocol, or duplicate progress state.
+See
+`docs/AVARRA_STAGE_12_42_RELAY_ZERO_SECOND_CHAPTER_VALIDATION.md`.
 Stage 11.6 turns the prototype into `Relay
 Zero: Ashfall` with click/tap pursuit and repeated attacks, automatic approach
 for interactions, three Hollow Wardens with authored drops, basalt floors, and

@@ -13,6 +13,11 @@ void main() {
     final guardianId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000703');
     final coreId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000704');
     final consoleId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000705');
+    final echoGuardianId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000706',
+    );
+    final echoShardId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000707');
+    final echoShrineId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000708');
     final world = WorldDefinition(
       id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000710'),
       name: 'Adventure progress test',
@@ -60,6 +65,39 @@ void main() {
             PersistentFlagsDefinition(const {'signal.transmitted': false}),
           ],
         ),
+        WorldEntityDefinition(
+          id: echoShardId,
+          components: [
+            CollectibleItemDefinition(
+              itemId: 'relay.echo_shard',
+              itemLabel: 'Echo Shard',
+              collectedFlagKey: 'collected',
+              guardedByEntityId: echoGuardianId,
+            ),
+            PersistentFlagsDefinition(const {'collected': false}),
+          ],
+        ),
+        WorldEntityDefinition(
+          id: echoShrineId,
+          components: [
+            const InteractableDefinition(
+              label: 'the listening shrine',
+              range: 2,
+            ),
+            const ItemTurnInDefinition(
+              requiredItemId: 'relay.echo_shard',
+              completionFlagKey: 'echo.bound',
+              completionLabel: 'Echo Shard bound',
+            ),
+            const MissionNarrativeDefinition(
+              title: 'The Answering Dark',
+              openingText: 'Destroy Nhal and recover the Echo Shard.',
+              returnText: 'Carry the Echo Shard to the listening shrine.',
+              completionText: 'The echo reveals a road beyond Ashfall.',
+            ),
+            PersistentFlagsDefinition(const {'echo.bound': false}),
+          ],
+        ),
       ],
       chunks: const [],
     );
@@ -73,7 +111,7 @@ void main() {
       sourceWorldFormatVersion: 2,
       chunkSize: 8,
       players: {playerId: playerEntityId},
-      knownPersistentEntityIds: {coreId, consoleId},
+      knownPersistentEntityIds: {coreId, consoleId, echoShardId, echoShrineId},
     );
 
     var progress = authoredAdventureProgress(world, persistence, playerId);
@@ -85,6 +123,9 @@ void main() {
     expect(progress.isMissionComplete, isFalse);
     var narrative = authoredMissionNarrative(world, progress)!;
     expect(narrative.turnInEntityId, consoleId);
+    expect(narrative.chapterNumber, 1);
+    expect(narrative.chapterCount, 2);
+    expect(narrative.chapterLabel, 'CHAPTER 1 OF 2');
     expect(narrative.phase, AuthoredMissionNarrativePhase.opening);
     expect(narrative.text, 'Defeat the guardian and recover the Relay Core.');
 
@@ -105,15 +146,43 @@ void main() {
     persistence.setFlag(consoleId, 'signal.transmitted', true);
     persistence.removeItem(playerId, 'relay.core');
     progress = authoredAdventureProgress(world, persistence, playerId);
+    expect(progress.isMissionComplete, isFalse);
+    narrative = authoredMissionNarrative(world, progress)!;
+    expect(narrative.turnInEntityId, echoShrineId);
+    expect(narrative.chapterNumber, 2);
+    expect(narrative.chapterCount, 2);
+    expect(narrative.chapterLabel, 'CHAPTER 2 OF 2');
+    expect(narrative.phase, AuthoredMissionNarrativePhase.opening);
+    expect(narrative.text, 'Destroy Nhal and recover the Echo Shard.');
+    expect(
+      progress.status(world),
+      'Objective · Defeat the guardian and recover Echo Shard',
+    );
+
+    persistence.setFlag(echoShardId, 'collected', true);
+    persistence.addItem(playerId, 'relay.echo_shard');
+    progress = authoredAdventureProgress(world, persistence, playerId);
+    expect(
+      progress.status(world),
+      'Objective · Return Echo Shard to the listening shrine',
+    );
+    narrative = authoredMissionNarrative(world, progress)!;
+    expect(narrative.phase, AuthoredMissionNarrativePhase.returnToTurnIn);
+    expect(narrative.text, 'Carry the Echo Shard to the listening shrine.');
+
+    persistence.setFlag(echoShrineId, 'echo.bound', true);
+    persistence.removeItem(playerId, 'relay.echo_shard');
+    progress = authoredAdventureProgress(world, persistence, playerId);
     expect(progress.isMissionComplete, isTrue);
     narrative = authoredMissionNarrative(world, progress)!;
     expect(narrative.phase, AuthoredMissionNarrativePhase.complete);
-    expect(narrative.text, 'The signal crosses the ash at last.');
+    expect(narrative.chapterLabel, 'CHAPTER 2 OF 2');
+    expect(narrative.text, 'The echo reveals a road beyond Ashfall.');
     expect(
       narrative.stableKey,
-      '01890f47-e8b8-7a68-8000-000000000705:complete',
+      '01890f47-e8b8-7a68-8000-000000000708:complete',
     );
-    expect(progress.status(world), 'Mission complete · Signal transmitted');
+    expect(progress.status(world), 'Mission complete · Echo Shard bound');
     expect(progress.inventoryStatus, 'Inventory · Empty');
   });
 }

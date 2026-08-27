@@ -18,7 +18,9 @@ version, playable solo or with one friend on Windows and Android.
 The player enters an abandoned relay station whose power network has failed.
 They explore the site, restore its stabilizers, survive the awakened guardian,
 recover the relay core, and return it to the control console to transmit the
-first signal.
+first signal. That answer wakes a second threat beneath the eastern vault:
+Nhal, the Signal-Eater. The Vanguard must destroy it, recover the Echo Shard,
+and bind the echo at the listening shrine to reveal the road toward Kharos.
 
 ## Complete loop
 
@@ -30,7 +32,12 @@ enter the relay
   → defeat the guardian
   → collect the relay core
   → return to the control console
-  → complete the signal and persist the result
+  → transmit the signal and begin The Answering Dark
+  → cross into the eastern vault
+  → defeat Nhal, the Signal-Eater
+  → recover the Echo Shard
+  → bind it at the listening shrine
+  → reveal the road to Kharos and persist the completed journey
 ```
 
 ## Required playable systems
@@ -172,6 +179,79 @@ milestones.
 Stage 12.40 preserves the whole journey in the pause menu. Stabilizers, Relay
 Core recovery, and signal transmission appear as completed/current/pending
 steps derived from the same save or host-replicated adventure state.
+
+Stage 12.41 gives the three stabilizer moments their own portable lore. Alpha
+wakes the first remembered ember, Beta reveals that something below is
+listening, and Gamma withdraws the ancient Core chamber seals. Forge authors
+the same content-schema-v12 field for community objective switches, while Game
+delivers it only on newly confirmed progress.
+
+Stage 12.42 turns that hint into a second playable chapter. The first
+transmission advances the existing stable-ordered mission chain into The
+Answering Dark. A fourth streamed vault holds Nhal's named three-phase
+fissure-ring encounter and guarded Echo Shard; the authored listening shrine
+closes the chapter and points toward Kharos. HUD status, world guidance, pause
+chronicle, save restore, and final recap all follow the first incomplete
+turn-in, so Chapter I no longer masquerades as full completion.
+
+Stage 12.43 makes that structure visible to the player instead of leaving it
+implicit. The opening briefing, HUD story card, transition toast, and final
+recap identify the current chapter. Pause now groups Ashfall's Last Signal and
+The Answering Dark into separate COMPLETE, ACTIVE, or UP NEXT sections with
+their required steps and overall progress. All labels derive from the same
+stable turn-ins and progress flags used by saves and hosts.
+
+Stage 12.44 lets the player revisit what that journey has revealed. Pause keeps
+the required JOURNEY path and adds a LORE tab whose STORY ARCHIVE holds nine
+already-authored memories: both briefings, all three relay-stabilizer beats, two
+relic returns, and both epilogues. Chapter II stays sealed until Chapter I is
+complete, and undiscovered rows do not carry hidden copy. Reveals follow
+objective, item, and turn-in authority rather than a second story-state model.
+
+Stage 12.45 brings that discovery back into the action loop. The HUD carries a
+live `LORE · N/9` control; a newly earned beat briefly becomes `NEW MEMORY`,
+updates accessibly, and opens Pause directly on the archive. Loading a save
+shows the correct total without pretending an old memory was just earned.
+Reduced Motion keeps the information and removes the pulse.
+
+Stage 12.46 preserves the exact newest current-session stable key. Entering LORE
+marks that revealed row `LATEST MEMORY` and scrolls it into the compact viewport
+without adding a separate scroll surface. Completing Chapter I targets Chapter
+II's newly opened briefing after the epilogue, keeping the player oriented
+toward the next playable objective. This highlight is transient presentation,
+not saved unread state.
+
+Stage 12.47 keeps both memories produced by that Chapter I handoff. LORE still
+opens on Chapter II's briefing, but an adjacent `NEW DISCOVERIES 2 OF 2`
+navigator can move back to the Chapter I epilogue and then forward again. Each
+selection carries positional semantics and stays visible with its controls on
+the compact pause surface. The batch is replaced by the next non-empty
+discovery and is not a persisted inbox.
+
+Stage 12.48 lets the player close that temporary discovery loop. A single
+memory or the whole two-memory handoff batch can be marked reviewed, removing
+gold emphasis and batch controls without sealing the prose again. When the
+next objective or chapter reveals another memory, its new highlight still
+appears. Review is session-only and does not create campaign or unread state.
+
+Stage 12.49 makes the live handoff legible before LORE opens. Completing
+Chapter I now briefly shows `2 NEW MEMORIES` and announces the same quantity,
+so the epilogue-plus-next-briefing navigator is expected rather than
+surprising. The label returns to the normal archive count after the bounded
+pulse and remains quiet for restored progress or Reduced Motion.
+
+Stage 12.50 preserves that handoff after the bounded pulse. The shortcut settles
+to `LORE · 7/9 · 2 NEW` until the player uses the existing whole-batch review
+action in Lore. Review clears the badge and temporary gold treatment together
+without changing either revealed prose or `7/9` progress. Reduced Motion sees
+the pending badge immediately without replaying novelty animation.
+
+Stage 12.51 keeps that signal inside Pause when the player enters with Start or
+Escape. JOURNEY can remain selected while the LORE tab displays an amber
+`2 NEW` pill. Selecting it reaches the existing two-memory navigator; reviewing
+the batch removes both the tab pill and live-HUD suffix without changing
+`7/9`. This improves controller-safe discoverability without selecting a new
+binding.
 
 The complete solo loop, authoritative connected loop, and durable co-op
 adventure save now exist. Final physical-Android input/performance/lifecycle

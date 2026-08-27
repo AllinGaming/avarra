@@ -106,21 +106,24 @@ editing is required.
 5. Scroll to **GAMEPLAY RULES**.
 6. Select **Objective switch**, then click the viewport.
 7. Select **Objective gate**, then click where the barrier should stand.
-8. Select either entity and use the schema Inspector to edit its authored
+8. Select the switch, expand **Objective Story Beat**, and edit **Completion
+   story**. This bounded prose appears when Game confirms that objective.
+9. Select either entity and use the schema Inspector to edit its other authored
    fields.
-9. Make sure the switch and gate use the same lowercase objective group.
-10. Set **Required objectives** on the gate no higher than the number of
+10. Make sure the switch and gate use the same lowercase objective group.
+11. Set **Required objectives** on the gate no higher than the number of
     objective switches in that group.
-11. Select **Validate**.
-12. Select **Test Play** to launch the current unsaved map in Game.
-13. Interact with the objective switch. Its persistent flag completes the
-    objective and the matching gate opens.
-14. Return to Forge, continue editing, then Save the project and Export the
+12. Select **Validate**.
+13. Select **Test Play** to launch the current unsaved map in Game.
+14. Interact with the objective switch. Its persistent flag completes the
+    objective, presents the authored story beat, and opens the matching gate.
+15. Return to Forge, continue editing, then Save the project and Export the
     playable world.
 
 New objective presets use the `primary` group and require one completion by
 default. These are starting values, not hard-coded runtime rules. Inspector
-edits are typed, validated, undoable creator commands.
+edits are typed, validated, undoable creator commands. Objective story beats
+use content schema v12 and require no direct package editing.
 
 ## Make a combat, loot, and turn-in mission
 
@@ -145,7 +148,16 @@ scripts or direct JSON editing.
 9. Move or tune the three entities with the normal viewport and Inspector.
 10. One Undo removes the entire stamp; Redo restores the same stable links.
 11. Leave the tool active and click again to create another independent chain
-   with the current settings.
+    with the current settings.
+
+Multiple stamped chains form the currently supported linear multi-mission
+journey. Game orders their turn-in entities by stable ID and selects the first
+incomplete chain for story, guidance, HUD status, and pause chronology. A
+non-final turn-in begins the next chain; the final recap waits until every
+turn-in is complete. Keep each collectible item ID unique. Forge does not yet
+author prerequisite gates between missions, so use spatial layout and packaged
+playtests to establish pacing rather than assuming an inaccessible next
+encounter.
 
 The template is a fast composition of the same runtime components described
 below. Use the individual presets when you want to position each dependency

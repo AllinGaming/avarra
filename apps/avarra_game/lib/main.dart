@@ -43,11 +43,13 @@ import 'src/gameplay_dodge_presentation.dart';
 import 'src/gameplay_enemy_health_overlay.dart';
 import 'src/gameplay_enemy_telegraph_overlay.dart';
 import 'src/gameplay_loot_presentation.dart';
+import 'src/gameplay_lore_discovery.dart';
 import 'src/gameplay_motion.dart';
 import 'src/gameplay_navigation_feedback.dart';
 import 'src/gameplay_player_danger_overlay.dart';
 import 'src/gameplay_quest_chronicle.dart';
 import 'src/gameplay_quest_guidance.dart';
+import 'src/gameplay_story_archive.dart';
 import 'src/gameplay_story_presentation.dart';
 import 'src/gameplay_target_frame.dart';
 import 'src/hold_direction_button.dart';
@@ -734,6 +736,8 @@ class _PresentationBoundaryScreenState
   bool _cameraFramingInitialized = false;
   bool _showDiagnostics = false;
   bool _isPaused = false;
+  GameplayPauseStorySection _pauseStorySection =
+      GameplayPauseStorySection.journey;
   bool _showMissionBriefing = false;
   bool _showMissionCompleteRecap = false;
   bool _worldEdgeMovementBlocked = false;
@@ -755,6 +759,7 @@ class _PresentationBoundaryScreenState
   GameAudioCombatIntensity _audioCombatIntensity =
       GameAudioCombatIntensity.exploration;
   bool _storyPresentationReady = false;
+  List<String> _latestRevealedStoryEntryKeys = const [];
   WorldChunkCoordinate? _lastRequestedPlayerChunk;
   String _interactionStatus = 'Select a world object, then interact';
 
@@ -995,14 +1000,33 @@ class _PresentationBoundaryScreenState
   }
 
   void _togglePause() {
+    _setPaused(!_isPaused, openingSection: GameplayPauseStorySection.journey);
+  }
+
+  void _openStoryArchive() {
+    _setPaused(true, openingSection: GameplayPauseStorySection.lore);
+  }
+
+  void _setPaused(
+    bool nextPaused, {
+    required GameplayPauseStorySection openingSection,
+  }) {
     if (_showMissionBriefing ||
         _showMissionCompleteRecap ||
         _preparedForWorldReplacement) {
       return;
     }
-    final nextPaused = !_isPaused;
+    if (_isPaused == nextPaused) {
+      if (nextPaused && _pauseStorySection != openingSection) {
+        setState(() => _pauseStorySection = openingSection);
+      }
+      return;
+    }
     setState(() {
       _isPaused = nextPaused;
+      if (nextPaused) {
+        _pauseStorySection = openingSection;
+      }
       _pressedKeys.clear();
       _touchMovementByPointer.clear();
     });
@@ -1032,6 +1056,11 @@ class _PresentationBoundaryScreenState
     final compactLayout = MediaQuery.sizeOf(context).width < 700;
     final missionNarrative = _missionNarrative;
     final questMarker = widget.settings.showQuestGuidance ? _questMarker : null;
+    final storyArchiveChapters = gameplayStoryArchiveChapters(
+      definition: widget.runtimeWorld.definition,
+      progress: _adventureProgress,
+    );
+    final storyArchiveProgress = gameStoryArchiveProgress(storyArchiveChapters);
     final status = !widget.enableRenderer || _showDiagnostics
         ? Column(
             mainAxisSize: MainAxisSize.min,
@@ -1271,6 +1300,7 @@ class _PresentationBoundaryScreenState
                     diagnostics: status,
                     compactLayout: compactLayout,
                     questMarker: questMarker,
+                    storyArchiveProgress: storyArchiveProgress,
                   ),
                 ),
               ),
@@ -1391,10 +1421,15 @@ class _PresentationBoundaryScreenState
                     widget.runtimeWorld.definition,
                   ),
                   inventory: _adventureProgress.inventoryStatus,
-                  questEntries: gameplayQuestChronicleEntries(
+                  questChapters: gameplayQuestChronicleChapters(
                     definition: widget.runtimeWorld.definition,
                     progress: _adventureProgress,
                   ),
+                  storyArchiveChapters: storyArchiveChapters,
+                  initialStorySection: _pauseStorySection,
+                  highlightedStoryEntryKeys: _latestRevealedStoryEntryKeys,
+                  onStoryDiscoveriesReviewed: _markStoryDiscoveriesReviewed,
+                  reducedMotion: widget.settings.reducedMotion,
                   connectedSession:
                       widget.multiplayerClient != null ||
                       widget.multiplayerHost != null,
@@ -1407,6 +1442,7 @@ class _PresentationBoundaryScreenState
               if (_showMissionBriefing && missionNarrative != null)
                 GameMissionBriefingOverlay(
                   worldName: widget.runtimeWorld.definition.name,
+                  chapterLabel: missionNarrative.chapterLabel,
                   missionTitle: missionNarrative.title,
                   missionText: missionNarrative.text,
                   objective: _adventureProgress.status(
@@ -1419,7 +1455,8 @@ class _PresentationBoundaryScreenState
                       AuthoredMissionNarrativePhase.complete)
                 GameMissionCompleteOverlay(
                   worldName: widget.runtimeWorld.definition.name,
-                  missionTitle: missionNarrative!.title,
+                  chapterLabel: missionNarrative!.chapterLabel,
+                  missionTitle: missionNarrative.title,
                   missionText: missionNarrative.text,
                   completionLabel:
                       _adventureProgress.turnIns.last.completionLabel,
@@ -1444,6 +1481,7 @@ class _PresentationBoundaryScreenState
     required Widget diagnostics,
     required bool compactLayout,
     required GameplayQuestMarker? questMarker,
+    required GameStoryArchiveProgress storyArchiveProgress,
   }) {
     final health = _healthFor(_playerEntityId);
     final healthText = health == null
@@ -1570,6 +1608,14 @@ class _PresentationBoundaryScreenState
                                     )
                                     .join(', '),
                         ),
+                        if (storyArchiveProgress.hasMemories)
+                          GameplayLoreShortcut(
+                            progress: storyArchiveProgress,
+                            pendingDiscoveryCount:
+                                _latestRevealedStoryEntryKeys.length,
+                            reducedMotion: widget.settings.reducedMotion,
+                            onPressed: _openStoryArchive,
+                          ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -2914,11 +2960,13 @@ class _PresentationBoundaryScreenState
     if (!result.accepted) {
       return;
     }
-    final objectiveProgressBefore = _objectiveProgress;
+    final interactionLabel = result.label ?? 'the interaction';
+    final adventureProgressBefore = _adventureProgress;
+    final objectiveProgressBefore = adventureProgressBefore.objectives;
     final openGatesBefore = objectiveProgressBefore.openedGateEntityIds(
       widget.runtimeWorld.definition,
     );
-    final inventoryItemsBefore = _adventureProgress.inventoryItemIds;
+    final inventoryItemsBefore = adventureProgressBefore.inventoryItemIds;
     final effect = _interactionEffects.apply(entityId);
     if (!effect.handled) {
       return;
@@ -2928,7 +2976,8 @@ class _PresentationBoundaryScreenState
         AuthoredInteractionEffectRejection.guardianNotDefeated =>
           'Defeat the hostile before taking ${effect.itemLabel}',
         AuthoredInteractionEffectRejection.requiredItemMissing =>
-          'The control console requires '
+          '${interactionLabel.substring(0, 1).toUpperCase()}'
+              '${interactionLabel.substring(1)} requires '
               '${_adventureProgress.itemLabels[effect.itemId] ?? effect.itemId}',
       };
       return;
@@ -2972,12 +3021,15 @@ class _PresentationBoundaryScreenState
         _interactionStatus =
             '${effect.itemLabel} recovered · added to inventory';
       case AuthoredInteractionEffectKind.itemTurnIn:
-        _interactionStatus = '${effect.completionLabel} · mission complete';
+        _interactionStatus = _adventureProgress.isMissionComplete
+            ? '${effect.completionLabel} · mission complete'
+            : '${effect.completionLabel} · next chapter begun';
     }
     _presentedInventoryItemIds = Set.unmodifiable(
       _adventureProgress.inventoryItemIds,
     );
-    _recordStoryPresentationIfChanged();
+    _recordLoreDiscovery(adventureProgressBefore);
+    _recordStoryPresentationIfChanged(previous: adventureProgressBefore);
     _scheduleSave();
     if (_showMissionCompleteRecap) {
       _saveTimer?.cancel();
@@ -3050,8 +3102,34 @@ class _PresentationBoundaryScreenState
     setState(() => _objectiveMilestoneNotice = null);
   }
 
-  void _recordStoryPresentationIfChanged({bool allowCompletionRecap = true}) {
-    final beat = _missionNarrative;
+  void _recordLoreDiscovery(AuthoredAdventureProgress previous) {
+    final newlyRevealed = gameplayNewlyRevealedStoryArchiveEntries(
+      definition: widget.runtimeWorld.definition,
+      previous: previous,
+      current: _adventureProgress,
+    );
+    if (newlyRevealed.isEmpty) return;
+    _latestRevealedStoryEntryKeys = List.unmodifiable(
+      newlyRevealed.map((entry) => entry.stableKey),
+    );
+  }
+
+  void _markStoryDiscoveriesReviewed() {
+    if (_latestRevealedStoryEntryKeys.isEmpty) return;
+    setState(() => _latestRevealedStoryEntryKeys = const []);
+  }
+
+  void _recordStoryPresentationIfChanged({
+    AuthoredAdventureProgress? previous,
+    bool allowCompletionRecap = true,
+  }) {
+    final beat = previous == null
+        ? _missionNarrative
+        : gameplayStoryBeatForTransition(
+            definition: widget.runtimeWorld.definition,
+            previous: previous,
+            current: _adventureProgress,
+          );
     if (beat == null || beat.stableKey == _presentedStoryBeatKey) {
       return;
     }
@@ -3960,14 +4038,17 @@ class _PresentationBoundaryScreenState
       _applyReplicatedEntities(client);
       if (event is ReplicationGameplayStateApplied) {
         final hadStoryPresentation = _storyPresentationReady;
+        final adventureProgressBefore = _adventureProgress;
         final objectiveProgressBefore = _objectiveProgress;
         _applyAuthoritativeGameplayState(client, emitCombatFeedback: true);
         _recordReplicatedInventoryPresentation(client);
         _storyPresentationReady = true;
         if (hadStoryPresentation) {
           _recordObjectiveMilestone(objectiveProgressBefore);
+          _recordLoreDiscovery(adventureProgressBefore);
         }
         _recordStoryPresentationIfChanged(
+          previous: hadStoryPresentation ? adventureProgressBefore : null,
           allowCompletionRecap: hadStoryPresentation,
         );
         _rebuildGameplayQueries();

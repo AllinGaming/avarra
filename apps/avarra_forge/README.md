@@ -58,6 +58,13 @@ role assets are validated before the same atomic mission factory runs. See
 `docs/AVARRA_STAGE_12_30_FORGE_BOSS_MISSION_AUTHORING_VALIDATION.md` and
 `docs/AVARRA_STAGE_12_31_AUTHORITATIVE_FISSURE_RING_VALIDATION.md`.
 
+Stage 12.41 makes individual objective switches story-authorable. New presets
+include the content-schema-v12 **Objective Story Beat** component; select the
+switch, expand that component in the schema Inspector, and edit **Completion
+story**. The field is validated, undoable, exported with the world, and shown
+by Game only when authority confirms that objective. See
+`docs/AVARRA_STAGE_12_41_AUTHORED_OBJECTIVE_STORY_BEATS_VALIDATION.md`.
+
 New projects declare Forge's built-in AVARRA Gothic catalog: Ashen Vanguard,
 Hollow Warden, Basalt, Relay Shrine, Core Gate, and Ember Shard. These are the
 same Game-compatible paths and stable IDs supplied by Avarra Game. The starter

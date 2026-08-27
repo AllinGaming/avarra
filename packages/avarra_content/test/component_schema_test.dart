@@ -32,6 +32,7 @@ void main() {
           AvarraComponentType.playerControlled,
           AvarraComponentType.renderableReference,
           AvarraComponentType.missionNarrative,
+          AvarraComponentType.objectiveMilestoneNarrative,
           AvarraComponentType.transform,
         ]),
       );
@@ -307,6 +308,34 @@ void main() {
         'openingText': '   ',
         'returnText': 'Return to the shrine.',
         'completionText': 'The relay burns again.',
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+  });
+
+  test('decodes objective milestone narrative only in content v12', () {
+    final narrative = registry
+        .decode(AvarraComponentType.objectiveMilestoneNarrative, {
+          'schemaVersion': 1,
+          'completionText': 'A buried ember answers beneath the ash.',
+        });
+
+    expect(narrative, isA<ObjectiveMilestoneNarrativeDefinition>());
+    expect(
+      (narrative as ObjectiveMilestoneNarrativeDefinition).completionText,
+      'A buried ember answers beneath the ash.',
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.objectiveMilestoneNarrative, {
+        'schemaVersion': 1,
+        'completionText': 'A buried ember answers beneath the ash.',
+      }, contentSchemaVersion: 11),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.objectiveMilestoneNarrative, {
+        'schemaVersion': 1,
+        'completionText': '   ',
       }),
       _throwsCode(ContentErrorCodes.invalidComponentData),
     );

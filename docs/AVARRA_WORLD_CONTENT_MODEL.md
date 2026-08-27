@@ -204,7 +204,8 @@ next incomplete authored objective
   -> living Guardian referenced by the required collectible
   -> revealed collectible
   -> item-turn-in entity
-  -> no target after mission completion
+  -> repeat at the next stable-ordered incomplete turn-in
+  -> no target after every authored turn-in is complete
 ```
 
 Target identity remains an `EntityId`. Root transforms are already global;
@@ -229,6 +230,15 @@ requires strictly ordered positive radii, the Guardian-boss/behavior/attack
 composition, and Basic Attack range that covers the outer radius. Runtime
 materialization is server safe. Existing content v1-v10 remains readable;
 component-absent bosses keep their previous attack sequence.
+
+Content schema v12 adds
+`ObjectiveMilestoneNarrativeDefinition(completionText)`. It augments an
+existing authored objective with bounded prose shown only when authoritative
+progress newly completes that stable entity. The definition never materializes
+into runtime ECS and introduces no save, replication, or acknowledgement state.
+Forge objective-switch presets create it and the schema Inspector edits it
+through normal typed commands. Existing content v1-v11 remains readable;
+component-absent objectives keep generic progress copy.
 
 ---
 
@@ -290,7 +300,7 @@ Players do not need the creator's source project.
 
 ---
 
-# 14. Current Stage 4-12.32 Implementation
+# 14. Current Stage 4-12.41 Implementation
 
 The initial vertical slice now provides:
 
@@ -298,11 +308,12 @@ The initial vertical slice now provides:
 avarra_content
   machine-readable component schemas
   typed component definitions
-  content schema version 11, with versions 1 through 10 still readable
+  content schema version 12, with versions 1 through 11 still readable
   typed persistent-flag interaction effect
   typed health and deterministic basic-attack definitions
   typed guardian perception and leash policy
   typed boss, player-power reward, and Guardian arena-hazard definitions
+  typed mission and objective-milestone narrative definitions
   collider, character-controller, player-control, and interactable definitions
   bounded persistent boolean-flag definitions
 
@@ -335,6 +346,13 @@ entity construction. It declares asset, entity, transform, renderable,
 isometric occlusion, physics collider, character-controller, player-control,
 health, basic-attack, guardian behavior, interactable, and persistent-flag semantics in
 `isometric_proof.avarra`.
+
+Stage 12.42's bundled reference uses the already accepted multiple-narrative
+rule in practice. Two `MissionNarrativeDefinition` plus item-turn-in pairs are
+ordered by their stable turn-in entity IDs. The second pair references the
+Echo Shard and listening shrine in a fourth streamed chunk, while campaign
+completion remains the derived condition that every authored turn-in flag is
+complete. No `QuestDefinition` or chapter-state component is introduced.
 
 The current `.avarra` file is a single JSON prototype whose asset paths resolve
 inside the Game bundle. It does not finalize the portable archive, cooked

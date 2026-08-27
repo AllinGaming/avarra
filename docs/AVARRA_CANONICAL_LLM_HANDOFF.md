@@ -847,6 +847,136 @@ and no quest state is duplicated. No content, save, protocol, simulation,
 renderer, Server, Forge, audio/haptic, or settings contract changes. Workspace
 analysis and 358 tests across 18 suites pass, along with Game Windows release
 and clean Android CI packaging.
+Stage 12.41 extends ADR-033 with
+`avarra.story.objective_milestone` in content schema v12. The definition-only,
+bounded completion beat requires an authored objective and never materializes
+into runtime ECS or progress state. Forge objective-switch presets include it;
+the existing schema Inspector edits it through typed, validated, undoable
+commands. Relay Zero authors three distinct stabilizer beats, and Game adds the
+newly completed objective prose to OBJECTIVE SECURED or PATH OPENED without
+replaying restored/initial connected state. Existing v1-v11 worlds remain
+readable and retain generic copy. Workspace analysis and 359 tests across 18
+suites, Forge-to-Game import/restart, Game/Forge Windows releases, and clean
+Android CI packaging pass.
+Stage 12.42 uses ADR-033's existing stable-ordered multiple-mission contract to
+expand Relay Zero. Ashfall's Last Signal now hands off to The Answering Dark:
+a fourth streamed vault, Nhal's authority-owned three-phase/fissure encounter,
+an Echo Shard recovery, and a listening-shrine return. HUD status, guidance,
+pause chronology, save restore, and the final recap consistently select the
+first incomplete turn-in, while an intermediate completion starts the next
+chapter, preserving the completed epilogue before its opening, instead of
+declaring the campaign complete. No schema, world/save
+format, protocol, runtime-ECS identity, renderer, settings, or Forge/Game
+boundary changes. Workspace analysis and 360 tests across 18 suites, Game
+Windows release, clean Android CI packaging, and Windows/APK two-mission
+closure pass.
+Stage 12.43 makes the existing two-mission chain readable as a campaign without
+creating campaign state. `AuthoredMissionNarrative` derives one-based chapter
+number/count from ADR-033's stable ordering. The mission briefing, HUD journal,
+transition toast, pause JOURNEY, and final recap display that identity. The
+pause projection groups required steps under authored mission titles and marks
+chapters COMPLETE, ACTIVE, or UP NEXT from existing objective, collection, and
+turn-in truth. Compact headers flex instead of overflowing and chapter
+announcements participate in semantics. No schema, world/save format, protocol,
+runtime-ECS identity, simulation, renderer, settings, audio, or Forge/Game
+boundary changes. Workspace analysis, 360 tests across 18 suites, Game Windows
+release, clean Android CI packaging, and Windows/APK content/audio/native
+closure pass.
+Stage 12.44 gives those authored beats a persistent, spoiler-safe home in the
+pause menu. Focusable JOURNEY/LORE tabs retain the required-path chronicle and
+add a STORY ARCHIVE containing Relay Zero's two briefings, three objective
+memories, two relic-return beats, and two epilogues. A read-only
+`gameplayStoryArchiveChapters` projection reveals prose from existing
+authoritative objective, inventory/collection, and turn-in truth. Later
+chapters remain SEALED until prior narrative turn-ins complete, and locked
+entries carry null text so widget semantics cannot leak spoilers. The bounded
+tab transition honors Reduced Motion and the shared scroll layout remains usable
+at compact widths. No acknowledgement, transcript, schema, world/save format,
+protocol, runtime-ECS identity, simulation, renderer, settings, audio, or
+Forge/Game boundary changes. Workspace analysis, 362 tests across 18 suites,
+Game Windows release, clean Android CI packaging, and Windows/APK
+content/audio/native closure pass.
+Stage 12.45 integrates that archive into live gameplay. The HUD receives a
+`GameStoryArchiveProgress` aggregate from the same derived chapters passed to
+Pause and exposes `LORE · N/M` when memories exist. A later authoritative
+reveal produces a bounded `NEW MEMORY` scale/glow and live-region announcement;
+Reduced Motion updates immediately, and initial/restored/first-replicated state
+does not replay discovery. Pointer/touch activation reuses the existing pause
+lifecycle but initializes its public transient story section to LORE, while
+normal Escape/Start pause continues to open JOURNEY. No unread acknowledgement,
+save, protocol, content, simulation, renderer, audio, Forge, or permanent input
+binding change. Workspace analysis, 365 tests across 18 suites, Game Windows
+release, clean Android CI packaging, and Windows/APK content/audio/native
+closure pass.
+Stage 12.46 closes the remaining discovery-context gap. Game subtracts
+previously revealed stable archive keys from the current authoritative
+projection and keeps the latest current-session result in presentation state.
+LORE validates that the key still identifies a revealed row, marks it
+`LATEST MEMORY`, adds explicit screen-reader wording, and scrolls it into view
+with a bounded transition or immediately under Reduced Motion. A Chapter I
+turn-in reveals both its epilogue and Chapter II briefing; stable archive order
+selects the next briefing as the handoff target. Initial/restored/first
+replicated progress stays quiet. No unread acknowledgement, discovery queue,
+save, protocol, content, campaign, renderer, simulation, audio, Forge, or
+permanent input-binding change. Workspace analysis, 365 tests across 18 suites,
+Game Windows release, clean Android CI packaging, and byte-identical
+Windows/APK content/audio/native closure pass.
+Stage 12.47 retains the complete stable-ordered result of the latest non-empty
+discovery transition. Single reveals preserve `LATEST MEMORY`. Multi-reveal
+batches initialize on the final handoff beat, display `NEW MEMORY X OF Y`, and
+place a focusable previous/next `NEW DISCOVERIES` navigator beside the selected
+row. Selection changes positional semantics and reuses exact-row scrolling;
+locked, stale, unknown, and duplicate keys are excluded. Keeping the navigator
+adjacent is required by compact testing because a top-of-archive control can be
+scrolled offscreen by the deep link. The batch is transient and replaced by the
+next non-empty batch. No unread acknowledgement, cumulative inbox, save,
+protocol, content, campaign, renderer, simulation, audio, Forge, or permanent
+input-binding change. Workspace analysis, 365 tests across 18 suites, Game
+Windows release, clean Android CI packaging, and byte-identical Windows/APK
+content/audio/native closure pass.
+Stage 12.48 adds a player-controlled, session-only review boundary for that
+batch. Single discoveries expose an accessible row action; multi-discovery
+navigators expose one whole-batch action. Review clears the transient key list,
+gold treatment, positional label, and navigator while authoritative archive
+progress, revealed prose, and the LORE count remain unchanged. A later
+non-empty transition creates a new batch normally. No durable unread state,
+per-entry read flag, cumulative inbox, save, protocol, content, campaign,
+renderer, simulation, audio, Forge, or permanent input-binding change.
+Workspace analysis, 366 tests across 18 suites, Game Windows release, clean
+Android CI packaging, and byte-identical Windows/APK content/audio/native
+closure pass.
+Stage 12.49 reuses the live Lore shortcut's consecutive authoritative count
+delta to quantify multi-memory discoveries. A single reveal keeps
+`NEW MEMORY · N/M`; a multi-reveal transition shows `X NEW MEMORIES · N/M` and
+announces "X new story memories discovered" before returning to the persistent
+LORE aggregate. Initial/restored/first-replicated progress remains quiet and
+Reduced Motion retains an immediate aggregate update without the transient
+pulse. No queue, unread state, save, protocol, content, campaign, renderer,
+simulation, audio, Forge, or permanent input-binding change. Workspace
+analysis, 367 tests across 18 suites, Game Windows release, clean Android CI
+packaging, and byte-identical Windows/APK content/audio/native closure pass.
+Stage 12.50 passes the existing Game-owned latest discovery-batch length into
+that shortcut so the bounded pulse settles to `LORE · N/M · X NEW` until the
+existing whole-batch Lore review action clears it. The non-live semantic label
+reports the exact quantity awaiting review. Initial/restored progress remains
+unbadged, and Reduced Motion skips the pulse while showing the persistent badge
+immediately. This is still latest-batch, session-only presentation: no durable
+or per-entry unread state, cumulative queue, save, protocol, content, campaign,
+renderer, simulation, audio, Forge, or permanent input-binding change.
+Workspace analysis, 368 tests across 18 suites, Game Windows release, clean
+Android CI packaging, and byte-identical Windows/APK content/audio/native
+closure pass.
+Stage 12.51 carries the same filtered latest-batch count onto the Pause LORE
+tab as an amber `1 NEW` or `X NEW` pill. It remains visible while JOURNEY is
+selected, closing the discovery gap for keyboard/controller players who enter
+Pause through the existing Start menu. The tab and Lore navigator share one
+valid revealed-key view, so locked, stale, unknown, and duplicate keys cannot
+inflate the count. Review clears both presentations and a later batch restores
+them. Exact semantics are non-live. No direct input binding, durable/per-entry
+unread state, cumulative queue, save, protocol, content, campaign, renderer,
+simulation, audio, or Forge change. Workspace analysis, 369 tests across 18
+suites, Game Windows release, clean Android CI packaging, and byte-identical
+Windows/APK content/audio/native closure pass.
 Human packaged play/listening, analog-controller and tactile-device acceptance,
 bespoke skeletal boss/dodge animation, renderer-native VFX, and physical Android
 acceptance remain open.

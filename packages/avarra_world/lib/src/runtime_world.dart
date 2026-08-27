@@ -210,6 +210,7 @@ final class RuntimeEntityLoader {
           );
         case ObjectiveDefinition() ||
             ObjectiveGateDefinition() ||
+            ObjectiveMilestoneNarrativeDefinition() ||
             MissionNarrativeDefinition() ||
             PlayerPowerRewardDefinition():
           // Objective grouping and gates remain authored definition state.

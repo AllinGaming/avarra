@@ -488,6 +488,108 @@ as the HUD and produces objective, required-collectible, and turn-in rows with
 completed/current/pending state. The UI is scrollable and read-only; it neither
 stores progress nor introduces a branching quest system.
 
+Stage 12.41 lets that transition layer consume optional portable objective
+story. `ObjectiveMilestoneNarrativeDefinition` is resolved only from the stable
+IDs newly completed between consecutive authoritative progress views. Its
+bounded prose appears between the authored title and progress line, participates
+in live-region semantics, and remains absent for legacy worlds, restored state,
+and initial replicated baselines.
+
+Stage 12.42 validates that presentation across multiple authored missions.
+Narrative, HUD status, quest guidance, and pause chronology select the first
+incomplete stable-ordered turn-in. Completing a non-final turn-in produces the
+completed mission's epilogue followed by the next mission's opening in one
+notice and keeps gameplay running; only completion of the last turn-in can open
+the blocking result recap. Return objectives and
+missing-item feedback use the active destination's authored interactable label.
+The policy remains derived from authoritative inventory/flags and adds no
+presentation acknowledgement to saves or replication.
+
+Stage 12.43 derives chapter identity at the same presentation boundary.
+`AuthoredMissionNarrative` exposes its one-based position and count from the
+stable-ordered authored mission candidates. Game carries `CHAPTER N OF M`
+through briefing, compact/desktop journal, transition toast, pause, and final
+recap. `gameplayQuestChronicleChapters` groups the existing flat required-step
+projection beneath authored mission titles and computes COMPLETE/ACTIVE/UP NEXT
+from the same authoritative state. Flexible headers protect narrow layouts,
+and semantic labels announce chapter context. No chapter acknowledgement or
+campaign state is persisted or replicated.
+
+Stage 12.44 adds a second read-only projection beside that required-path view.
+`gameplayStoryArchiveChapters` gathers stable-ordered mission prose and authored
+objective milestone prose into spoiler-safe chapter entries. Briefings reveal
+when a chapter unlocks, milestone memories from completed objectives,
+relic-return beats from collection/inventory, and epilogues from completed
+turn-ins. Later chapters require all earlier narrative turn-ins; locked rows
+store null text and therefore cannot expose hidden prose through semantics. The
+focusable JOURNEY/LORE tabs use the existing adaptive activation scope, animate
+with a bounded fade/slide, become immediate under Reduced Motion, and stay in
+the compact scroll surface. No read acknowledgement is persisted or replicated.
+
+Stage 12.45 adds a live affordance for that projection. Game folds the archive
+chapters into `GameStoryArchiveProgress` once per presentation build, then gives
+the same chapters to Pause and the aggregate to `GameplayLoreShortcut`. The
+shortcut compares consecutive revealed counts locally, pulses only after a real
+increase, exposes the new count as a live region, and stays still under Reduced
+Motion. Its activation selects LORE through the existing pause lifecycle.
+Initial/restored state never pulses, and no presentation event, unread state, or
+menu selection is saved or replicated.
+
+Stage 12.46 adds an exact target without weakening that boundary.
+`gameplayNewlyRevealedStoryArchiveEntries` compares consecutive authoritative
+projections by stable key; Game retains only the latest current-session key and
+passes it to Pause. The Lore panel accepts it only when the matching row is
+currently revealed, applies the `LATEST MEMORY` treatment and semantic prefix,
+then uses `Scrollable.ensureVisible` after layout. The scroll lasts at most
+260 ms and becomes immediate under Reduced Motion. Multiple reveals retain
+archive order and select the last entry, which makes Chapter II's briefing the
+target of the Chapter I completion handoff. No unread or navigation state is
+persisted or replicated.
+
+Stage 12.47 retains all valid keys from that latest non-empty transition.
+`_PauseLorePanel` intersects the ordered batch with revealed archive keys,
+deduplicates it, and initializes selection at the final entry. Multi-entry
+batches render a `NEW DISCOVERIES` previous/next navigator immediately above
+the selected row and announce both navigator and row positions. Moving
+selection relocates the navigator and repeats the exact-row scroll. Single
+entries keep Stage 12.46's simpler presentation. The adjacent placement was
+selected after compact testing showed that a top-of-archive navigator could
+leave the viewport during automatic deep-link scrolling.
+
+Stage 12.48 makes that transient emphasis dismissible after review. Game passes
+one optional review callback through Pause. A single highlighted row renders a
+separate standard action beside its custom story semantic; a multi-entry
+navigator renders one whole-batch action. Activation empties only Game's
+current discovery-key list, which removes the highlight and navigator on the
+next build while leaving the derived archive and prose intact. A later
+authoritative discovery result replaces the empty list and surfaces normally.
+No read state is persisted or replicated.
+
+Stage 12.49 makes the live discovery wording use the exact positive delta that
+`GameplayLoreShortcut` already calculates. Singular feedback remains
+`NEW MEMORY`. Plural feedback gains its count (`X NEW MEMORIES`), and the
+live-region sentence uses the same number. The aggregate and exact stable-key
+batch keep their existing owners; no event queue or second archive derivation
+is introduced. Initial/restored state, pulse timing, activation, and Reduced
+Motion behavior are unchanged.
+
+Stage 12.50 passes the existing Game-owned discovery batch's length to that
+shortcut. After the live pulse, the compact control remains
+`LORE · N/M · X NEW` and its non-live semantic label reports the quantity
+awaiting review. The existing Lore action clears the stable-key batch, which
+removes the badge and temporary Lore treatment together. Initial/restored
+progress remains unbadged. Reduced Motion omits the pulse but exposes the
+pending badge immediately. No second derivation, durable unread model, queue,
+save, protocol, content, campaign, or cross-application state is introduced.
+
+Stage 12.51 carries that same batch into the Pause LORE tab. The tab shows a
+compact amber `1 NEW` or `X NEW` pill even while JOURNEY is selected and exposes
+exact non-live awaiting-review semantics. One shared revealed-key filter feeds
+the tab count and Lore navigator, preventing locked, stale, unknown, or
+duplicate keys from inflating the badge. Whole-batch review clears both
+presentations; a later batch restores them. The existing Start/Escape menu route
+is unchanged and no direct Lore binding or persistent state is added.
+
 Physical Android cost, production skinning/material effects, and an explicit
 replicated impact-event message remain open. See
 `AVARRA_STAGE_12_16_PLAYABLE_ANIMATED_CHARACTERS_VALIDATION.md` and
@@ -515,3 +617,12 @@ See `AVARRA_STAGE_12_35_ANDROID_KOTLIN_COMPATIBILITY_VALIDATION.md`.
 See `AVARRA_STAGE_12_36_PLAYER_CONTROLS_AND_HAPTICS_VALIDATION.md`.
 See `AVARRA_STAGE_12_37_ADAPTIVE_INPUT_UX_VALIDATION.md`.
 See `AVARRA_STAGE_12_38_MISSION_COMPLETION_RECAP_VALIDATION.md`.
+See `AVARRA_STAGE_12_39_OBJECTIVE_MILESTONE_PRESENTATION_VALIDATION.md`.
+See `AVARRA_STAGE_12_40_QUEST_CHRONICLE_VALIDATION.md`.
+See `AVARRA_STAGE_12_41_AUTHORED_OBJECTIVE_STORY_BEATS_VALIDATION.md` and
+ADR-033.
+See `AVARRA_STAGE_12_42_RELAY_ZERO_SECOND_CHAPTER_VALIDATION.md`.
+See `AVARRA_STAGE_12_48_TRANSIENT_MEMORY_REVIEW_VALIDATION.md`.
+See `AVARRA_STAGE_12_49_QUANTIFIED_LORE_DISCOVERY_VALIDATION.md`.
+See `AVARRA_STAGE_12_50_PENDING_LORE_BADGE_VALIDATION.md`.
+See `AVARRA_STAGE_12_51_PAUSE_LORE_BADGE_VALIDATION.md`.

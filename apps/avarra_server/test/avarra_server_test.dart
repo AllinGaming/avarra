@@ -409,6 +409,61 @@ void main() {
     );
     expect(client.inventoryItemIds, {'relic.ashen_heart'});
 
+    _moveHostEntity(host, _playerEntityId, Vector3(12.5, 0.4, -2.2));
+    await _waitUntil(
+      () =>
+          host.runtimeWorld.ecs.handleFor(_signalEaterId) != null &&
+          client.healthStates[_signalEaterId] != null,
+    );
+    final signalEaterHandle = host.runtimeWorld.ecs.handleFor(_signalEaterId)!;
+    host.runtimeWorld.ecs.replaceComponent(
+      signalEaterHandle,
+      HealthComponent(maximumHealth: 95, currentHealth: 20),
+    );
+    host.runtimeWorld.ecs.replaceComponent(
+      host.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+      const BasicAttackStateComponent(),
+    );
+    final defeatSignalEater = await _sendCommand(
+      client,
+      GameplayCommandKind.attack,
+      targetEntityId: _signalEaterId,
+    );
+    expect(
+      defeatSignalEater.accepted,
+      isTrue,
+      reason: defeatSignalEater.detail,
+    );
+    await _waitUntil(() => client.healthStates[_signalEaterId]?.current == 0);
+
+    _moveHostEntity(host, _playerEntityId, Vector3(12.5, 0.4, -4.3));
+    final recoverEchoShard = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _echoShardId,
+    );
+    expect(recoverEchoShard.accepted, isTrue, reason: recoverEchoShard.detail);
+    await _waitUntil(
+      () => client.inventoryItemIds.contains('relay.echo_shard'),
+    );
+
+    _moveHostEntity(host, _playerEntityId, Vector3(1.35, 0.4, 1.45));
+    await _waitUntil(
+      () => host.runtimeWorld.ecs.handleFor(_listeningShrineId) != null,
+    );
+    final bindEchoShard = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _listeningShrineId,
+    );
+    expect(bindEchoShard.accepted, isTrue, reason: bindEchoShard.detail);
+    await _waitUntil(
+      () =>
+          client.authoritativeFlagValue(_listeningShrineId, 'echo.bound') ==
+          true,
+    );
+    expect(client.inventoryItemIds, {'relic.ashen_heart'});
+
     await client.close();
     await hostEvents.cancel();
     await host.close();
@@ -606,3 +661,8 @@ final _ashenHeartId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000023');
 final _controlConsoleId = EntityId.parse(
   '01890f47-e8b8-7a68-8000-000000000014',
 );
+final _listeningShrineId = EntityId.parse(
+  '01890f47-e8b8-7a68-8000-000000000024',
+);
+final _signalEaterId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000026');
+final _echoShardId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000027');

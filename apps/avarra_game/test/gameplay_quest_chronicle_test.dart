@@ -16,10 +16,19 @@ void main() {
       '01890f47-e8b8-7a68-8000-000000000923',
     );
     final turnInId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000924');
+    final echoCollectibleId = EntityId.parse(
+      '01890f47-e8b8-7a68-8000-000000000927',
+    );
+    final echoTurnInId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000928');
     const turnIn = ItemTurnInDefinition(
       requiredItemId: 'relay.core',
       completionFlagKey: 'transmitted',
       completionLabel: 'Signal transmitted',
+    );
+    const echoTurnIn = ItemTurnInDefinition(
+      requiredItemId: 'relay.echo_shard',
+      completionFlagKey: 'echo.bound',
+      completionLabel: 'Echo Shard bound',
     );
     final world = WorldDefinition(
       id: WorldId.parse('01890f47-e8b8-7a68-8000-000000000925'),
@@ -51,6 +60,39 @@ void main() {
           components: const [
             InteractableDefinition(label: 'Transmit recovered core', range: 2),
             turnIn,
+            MissionNarrativeDefinition(
+              title: "Ashfall's Last Signal",
+              openingText: 'Wake the relay.',
+              returnText: 'Return the Relay Core.',
+              completionText: 'The first signal crosses the ash.',
+            ),
+          ],
+        ),
+        WorldEntityDefinition(
+          id: echoCollectibleId,
+          components: [
+            const InteractableDefinition(label: 'Recover Echo Shard', range: 2),
+            CollectibleItemDefinition(
+              itemId: 'relay.echo_shard',
+              itemLabel: 'Echo Shard',
+              collectedFlagKey: 'collected',
+              guardedByEntityId: EntityId.parse(
+                '01890f47-e8b8-7a68-8000-000000000929',
+              ),
+            ),
+          ],
+        ),
+        WorldEntityDefinition(
+          id: echoTurnInId,
+          components: const [
+            InteractableDefinition(label: 'Bind Echo Shard', range: 2),
+            echoTurnIn,
+            MissionNarrativeDefinition(
+              title: 'The Answering Dark',
+              openingText: 'Hunt the answering signal.',
+              returnText: 'Return the Echo Shard.',
+              completionText: 'The dark yields its road.',
+            ),
           ],
         ),
       ],
@@ -70,10 +112,13 @@ void main() {
         ),
       }, completedObjectiveEntityIds: completedObjectives),
       inventoryItemIds: const [],
-      itemLabels: const {'relay.core': 'Relay Core'},
+      itemLabels: const {
+        'relay.core': 'Relay Core',
+        'relay.echo_shard': 'Echo Shard',
+      },
       collectedItemEntityIds: collectedItems,
       completedTurnInEntityIds: completedTurnIns,
-      turnIns: const [turnIn],
+      turnIns: const [turnIn, echoTurnIn],
     );
 
     final midObjectives = gameplayQuestChronicleEntries(
@@ -89,10 +134,14 @@ void main() {
       'Stabilize Ash',
       'Recover Relay Core',
       'Transmit recovered core',
+      'Recover Echo Shard',
+      'Bind Echo Shard',
     ]);
     expect(midObjectives.map((entry) => entry.state), [
       GameQuestChronicleEntryState.completed,
       GameQuestChronicleEntryState.current,
+      GameQuestChronicleEntryState.pending,
+      GameQuestChronicleEntryState.pending,
       GameQuestChronicleEntryState.pending,
       GameQuestChronicleEntryState.pending,
     ]);
@@ -105,14 +154,51 @@ void main() {
         completedTurnIns: const [],
       ),
     );
-    expect(returning.last.state, GameQuestChronicleEntryState.current);
+    expect(returning[3].state, GameQuestChronicleEntryState.current);
 
-    final complete = gameplayQuestChronicleEntries(
+    final secondChapter = gameplayQuestChronicleEntries(
       definition: world,
       progress: progress(
         completedObjectives: [firstObjectiveId, secondObjectiveId],
         collectedItems: [collectibleId],
         completedTurnIns: [turnInId],
+      ),
+    );
+    expect(secondChapter.map((entry) => entry.state), [
+      GameQuestChronicleEntryState.completed,
+      GameQuestChronicleEntryState.completed,
+      GameQuestChronicleEntryState.completed,
+      GameQuestChronicleEntryState.completed,
+      GameQuestChronicleEntryState.current,
+      GameQuestChronicleEntryState.pending,
+    ]);
+    final chapterGroups = gameplayQuestChronicleChapters(
+      definition: world,
+      progress: progress(
+        completedObjectives: [firstObjectiveId, secondObjectiveId],
+        collectedItems: [collectibleId],
+        completedTurnIns: [turnInId],
+      ),
+    );
+    expect(chapterGroups, hasLength(2));
+    expect(chapterGroups.first.chapterLabel, 'CHAPTER 1 OF 2');
+    expect(chapterGroups.first.title, "Ashfall's Last Signal");
+    expect(chapterGroups.first.state, GameQuestChronicleChapterState.completed);
+    expect(chapterGroups.first.completedStepCount, 4);
+    expect(chapterGroups.last.chapterLabel, 'CHAPTER 2 OF 2');
+    expect(chapterGroups.last.title, 'The Answering Dark');
+    expect(chapterGroups.last.state, GameQuestChronicleChapterState.current);
+    expect(chapterGroups.last.entries.map((entry) => entry.label), [
+      'Recover Echo Shard',
+      'Bind Echo Shard',
+    ]);
+
+    final complete = gameplayQuestChronicleEntries(
+      definition: world,
+      progress: progress(
+        completedObjectives: [firstObjectiveId, secondObjectiveId],
+        collectedItems: [collectibleId, echoCollectibleId],
+        completedTurnIns: [turnInId, echoTurnInId],
       ),
     );
     expect(

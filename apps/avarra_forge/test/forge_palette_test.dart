@@ -61,6 +61,12 @@ void main() {
     );
     expect(
       objectiveSwitch
+          .component<ObjectiveMilestoneNarrativeDefinition>()!
+          .completionText,
+      contains('pulse'),
+    );
+    expect(
+      objectiveSwitch
           .component<SetPersistentFlagOnInteractDefinition>()!
           .flagKey,
       'activated',

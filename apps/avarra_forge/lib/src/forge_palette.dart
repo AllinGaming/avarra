@@ -482,6 +482,10 @@ final class ForgePaletteItem {
         ),
         PersistentFlagsDefinition(const {'activated': false}),
         const ObjectiveDefinition(group: forgeDefaultObjectiveGroup),
+        const ObjectiveMilestoneNarrativeDefinition(
+          completionText:
+              'The objective answers with a pulse from somewhere deeper.',
+        ),
       ],
       ForgePaletteItemKind.objectiveGate => <ContentComponentDefinition>[
         TransformDefinition(

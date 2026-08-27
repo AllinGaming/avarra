@@ -22,7 +22,9 @@ void main() {
     expect(bounds.contains(Vector3(1, 0, -0.01)), isTrue);
     expect(bounds.contains(Vector3(8.01, 0, 1)), isTrue);
     expect(bounds.contains(Vector3(-0.01, 0, -0.01)), isFalse);
-    expect(bounds.contains(Vector3(8.01, 0, -0.01)), isFalse);
+    expect(bounds.contains(Vector3(8.01, 0, -0.01)), isTrue);
+    expect(bounds.contains(Vector3(16.01, 0, -0.01)), isFalse);
+    expect(bounds.contains(Vector3(8.01, 0, -8.01)), isFalse);
   });
 
   test('contains root-only Forge movement on shallow static ground', () {
