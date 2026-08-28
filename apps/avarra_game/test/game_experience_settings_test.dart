@@ -18,7 +18,7 @@ void main() {
       musicVolume: 0.45,
       effectsVolume: 0.9,
       hapticsEnabled: false,
-      controlBindings: GameControlBindings(dodge: GameInputKey.keyR),
+      controlBindings: GameControlBindings(dodge: GameInputKey.keyQ),
     );
 
     expect(GameExperienceSettings.decode(settings.encode()), settings);
@@ -61,6 +61,24 @@ void main() {
       expect(migrated.controlBindings, GameControlBindings.defaults);
     },
   );
+
+  test('settings codec migrates version 3 bindings with Relic Mend ready', () {
+    const legacy =
+        '{"format":"avarra.game_experience_settings","version":3,'
+        '"reducedMotion":false,"cameraShakeStrength":1.0,'
+        '"showQuestGuidance":true,"showEnemyHealthBars":true,'
+        '"showCombatText":true,"audioEnabled":true,'
+        '"masterVolume":0.8,"musicVolume":0.55,"effectsVolume":0.85,'
+        '"hapticsEnabled":true,"controlBindings":{'
+        '"moveUp":"keyW","moveLeft":"keyA","moveDown":"keyS",'
+        '"moveRight":"keyD","primarySkill":"space",'
+        '"dodge":"shiftLeft","interact":"keyE"}}';
+
+    final migrated = GameExperienceSettings.decode(legacy);
+
+    expect(migrated.controlBindings.recovery, GameInputKey.keyR);
+    expect(migrated.controlBindings.interact, GameInputKey.keyE);
+  });
 
   test('settings codec rejects malformed and out-of-range values', () {
     expect(

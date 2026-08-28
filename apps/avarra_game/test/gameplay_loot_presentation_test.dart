@@ -101,4 +101,46 @@ void main() {
       throwsArgumentError,
     );
   });
+  testWidgets('presents authored player power as an awakened relic', (
+    tester,
+  ) async {
+    final notice = PickupPresentationNotice(
+      sequence: 4,
+      itemLabel: 'Drowned Crown',
+      maximumHealthBonus: 25,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          child: SizedBox(
+            width: 280,
+            child: GameplayPickupToast(notice: notice),
+          ),
+        ),
+      ),
+    );
+
+    expect(notice.grantsPower, isTrue);
+    expect(notice.rewardLabel, '+25 MAX HEALTH');
+    expect(find.text('RELIC AWAKENED'), findsOneWidget);
+    expect(find.text('Drowned Crown'), findsOneWidget);
+    expect(find.byKey(const Key('pickup_toast_reward_label')), findsOneWidget);
+    final semantics = tester.widget<Semantics>(
+      find.byKey(const Key('pickup_toast_semantics')),
+    );
+    expect(
+      semantics.properties.label,
+      'Relic acquired: Drowned Crown. 25 maximum health gained.',
+    );
+    expect(tester.takeException(), isNull);
+    expect(
+      () => PickupPresentationNotice(
+        sequence: 5,
+        itemLabel: 'Broken Relic',
+        maximumHealthBonus: -1,
+      ),
+      throwsArgumentError,
+    );
+  });
 }

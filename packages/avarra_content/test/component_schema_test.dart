@@ -12,6 +12,7 @@ void main() {
       expect(
         registry.schemas.map((schema) => schema.type),
         orderedEquals([
+          AvarraComponentType.guardianArchetype,
           AvarraComponentType.guardianArenaHazard,
           AvarraComponentType.guardianBehavior,
           AvarraComponentType.guardianBoss,
@@ -368,6 +369,42 @@ void main() {
     );
   });
 
+  test('decodes bounded Guardian archetypes only in content v13', () {
+    final archetype = registry.decode(AvarraComponentType.guardianArchetype, {
+      'schemaVersion': 1,
+      'displayName': 'Rift-Touched Reaver',
+      'role': 'reaver',
+      'eliteModifier': 'riftTouched',
+    });
+
+    expect(archetype, isA<GuardianArchetypeDefinition>());
+    expect(
+      (archetype as GuardianArchetypeDefinition).role,
+      GuardianArchetypeRole.reaver,
+    );
+    expect(
+      archetype.eliteModifier,
+      GuardianEliteModifierDefinition.riftTouched,
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.guardianArchetype, {
+        'schemaVersion': 1,
+        'displayName': 'Rift-Touched Reaver',
+        'role': 'reaver',
+        'eliteModifier': 'riftTouched',
+      }, contentSchemaVersion: 12),
+      _throwsCode(ContentErrorCodes.unknownComponentType),
+    );
+    expect(
+      () => registry.decode(AvarraComponentType.guardianArchetype, {
+        'schemaVersion': 1,
+        'displayName': 'Unknown Horror',
+        'role': 'summoner',
+        'eliteModifier': 'none',
+      }),
+      _throwsCode(ContentErrorCodes.invalidComponentData),
+    );
+  });
   test(
     'decodes authored boss and passive power reward only in content v10',
     () {

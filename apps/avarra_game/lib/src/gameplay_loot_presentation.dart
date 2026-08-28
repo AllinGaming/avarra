@@ -212,18 +212,40 @@ final class _GameplayLootBeamPainter extends CustomPainter {
 
 /// One confirmed inventory addition presented to the local player.
 final class PickupPresentationNotice {
-  PickupPresentationNotice({required this.sequence, required String itemLabel})
-    : itemLabel = itemLabel.trim() {
+  PickupPresentationNotice({
+    required this.sequence,
+    required String itemLabel,
+    this.maximumHealthBonus = 0,
+  }) : itemLabel = itemLabel.trim() {
     if (sequence <= 0) {
       throw ArgumentError.value(sequence, 'sequence', 'Must be positive.');
     }
     if (this.itemLabel.isEmpty) {
       throw ArgumentError.value(itemLabel, 'itemLabel', 'Must not be empty.');
     }
+    if (!maximumHealthBonus.isFinite || maximumHealthBonus < 0) {
+      throw ArgumentError.value(
+        maximumHealthBonus,
+        'maximumHealthBonus',
+        'Must be finite and non-negative.',
+      );
+    }
   }
 
   final int sequence;
   final String itemLabel;
+  final double maximumHealthBonus;
+
+  bool get grantsPower => maximumHealthBonus > 0;
+
+  String? get rewardLabel => grantsPower
+      ? '+${_formatLootValue(maximumHealthBonus)} MAX HEALTH'
+      : null;
+
+  String get semanticLabel => grantsPower
+      ? 'Relic acquired: $itemLabel. '
+            '${_formatLootValue(maximumHealthBonus)} maximum health gained.'
+      : 'Loot acquired: $itemLabel';
 }
 
 /// Animated, accessible confirmation for authoritative inventory pickup.
@@ -288,7 +310,7 @@ final class _GameplayPickupToastState extends State<GameplayPickupToast>
           : Semantics(
               key: const Key('pickup_toast_semantics'),
               liveRegion: true,
-              label: 'Loot acquired: ${notice.itemLabel}',
+              label: notice.semanticLabel,
               child: AnimatedBuilder(
                 animation: _controller,
                 builder: (context, child) {
@@ -308,50 +330,87 @@ final class _GameplayPickupToastState extends State<GameplayPickupToast>
                     ),
                   );
                 },
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xE619120D),
-                    border: Border.all(color: const Color(0xFFFFB85C)),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0xAAFF8A22), blurRadius: 18),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.diamond_outlined,
-                          color: Color(0xFFFFC269),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'LOOT ACQUIRED',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: const Color(0xFFFFC269),
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.6,
-                                  ),
-                            ),
-                            Text(
-                              notice.itemLabel,
-                              key: const Key('pickup_toast_item_label'),
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                          ],
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 380),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xE619120D),
+                      border: Border.all(
+                        color: notice.grantsPower
+                            ? const Color(0xFFD98CFF)
+                            : const Color(0xFFFFB85C),
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: notice.grantsPower
+                              ? const Color(0x88A641FF)
+                              : const Color(0xAAFF8A22),
+                          blurRadius: 18,
                         ),
                       ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            notice.grantsPower
+                                ? Icons.auto_awesome
+                                : Icons.diamond_outlined,
+                            color: notice.grantsPower
+                                ? const Color(0xFFE2AEFF)
+                                : const Color(0xFFFFC269),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  notice.grantsPower
+                                      ? 'RELIC AWAKENED'
+                                      : 'LOOT ACQUIRED',
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: notice.grantsPower
+                                            ? const Color(0xFFE2AEFF)
+                                            : const Color(0xFFFFC269),
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 1.6,
+                                      ),
+                                ),
+                                Text(
+                                  notice.itemLabel,
+                                  key: const Key('pickup_toast_item_label'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                ),
+                                if (notice.rewardLabel case final reward?) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    reward,
+                                    key: const Key('pickup_toast_reward_label'),
+                                    style: const TextStyle(
+                                      color: Color(0xFFE2AEFF),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.9,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -362,3 +421,7 @@ final class _GameplayPickupToastState extends State<GameplayPickupToast>
 }
 
 double _fraction(double value) => value - value.floorToDouble();
+
+String _formatLootValue(double value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(1);

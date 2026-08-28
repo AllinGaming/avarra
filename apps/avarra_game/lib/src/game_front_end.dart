@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'game_controls.dart';
 import 'game_experience_settings.dart';
+import 'gameplay_character_progression.dart';
 import 'gameplay_quest_chronicle.dart';
 import 'gameplay_story_archive.dart';
 
@@ -345,7 +346,7 @@ final class _FrontDoorTitle extends StatelessWidget {
                     ),
                     _ControlHint(
                       icon: Icons.sports_esports,
-                      text: 'X STRIKE · B DODGE · A USE',
+                      text: 'X STRIKE · B DODGE · Y MEND · A USE',
                     ),
                     _ControlHint(icon: Icons.pause, text: 'START · PAUSE'),
                   ]
@@ -363,6 +364,7 @@ final class _FrontDoorTitle extends StatelessWidget {
                           '/${controlBindings.promptLabelFor(GameControl.moveRight, inputPromptMode)} MOVE'
                           ' · ${controlBindings.promptLabelFor(GameControl.primarySkill, inputPromptMode)} STRIKE'
                           ' · ${controlBindings.promptLabelFor(GameControl.dodge, inputPromptMode)} DODGE'
+                          ' · ${controlBindings.promptLabelFor(GameControl.recovery, inputPromptMode)} MEND'
                           ' · ${controlBindings.promptLabelFor(GameControl.interact, inputPromptMode)} USE',
                     ),
                     const _ControlHint(icon: Icons.pause, text: 'ESC · PAUSE'),
@@ -942,6 +944,7 @@ final class GameplayPauseOverlay extends StatelessWidget {
     required this.missionText,
     required this.objective,
     required this.inventory,
+    this.characterProgression,
     required this.connectedSession,
     this.questChapters = const [],
     this.storyArchiveChapters = const [],
@@ -962,6 +965,7 @@ final class GameplayPauseOverlay extends StatelessWidget {
   final String missionText;
   final String objective;
   final String inventory;
+  final GameCharacterProgression? characterProgression;
   final bool connectedSession;
   final List<GameQuestChronicleChapter> questChapters;
   final List<GameStoryArchiveChapter> storyArchiveChapters;
@@ -1013,6 +1017,7 @@ final class GameplayPauseOverlay extends StatelessWidget {
                           missionText: missionText,
                           objective: objective,
                           inventory: inventory,
+                          characterProgression: characterProgression,
                           connectedSession: connectedSession,
                           questChapters: questChapters,
                           storyArchiveChapters: storyArchiveChapters,
@@ -1144,6 +1149,7 @@ final class _PauseStory extends StatelessWidget {
     required this.missionText,
     required this.objective,
     required this.inventory,
+    required this.characterProgression,
     required this.connectedSession,
     required this.questChapters,
     required this.storyArchiveChapters,
@@ -1158,6 +1164,7 @@ final class _PauseStory extends StatelessWidget {
   final String missionText;
   final String objective;
   final String inventory;
+  final GameCharacterProgression? characterProgression;
   final bool connectedSession;
   final List<GameQuestChronicleChapter> questChapters;
   final List<GameStoryArchiveChapter> storyArchiveChapters;
@@ -1194,6 +1201,10 @@ final class _PauseStory extends StatelessWidget {
           key: const Key('pause_mission_text'),
           style: const TextStyle(color: Color(0xFFCABDAC), height: 1.4),
         ),
+        if (characterProgression case final progression?) ...[
+          const SizedBox(height: 16),
+          GameplayCharacterProgressionPanel(progression: progression),
+        ],
         if (questChapters.isNotEmpty || storyArchiveChapters.isNotEmpty) ...[
           const SizedBox(height: 16),
           _PauseStoryPanels(

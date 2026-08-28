@@ -1,7 +1,7 @@
 {
   "format": "avarra.world",
   "worldFormatVersion": 2,
-  "contentSchemaVersion": 12,
+  "contentSchemaVersion": 13,
   "world": {
     "id": "01890f47-e8b8-7a68-8000-000000000010",
     "name": "Relay Zero: Ashfall",
@@ -468,7 +468,7 @@
               "schemaVersion": 1,
               "position": [5.8, 0.45, 4.8],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.42, 0.42, 0.42]
+              "scale": [0.48, 0.42, 0.48]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -500,6 +500,12 @@
               "schemaVersion": 1,
               "perceptionRange": 2.8,
               "leashRange": 3.8
+            },
+            "avarra.ai.guardian_archetype": {
+              "schemaVersion": 1,
+              "displayName": "Ash Reaver",
+              "role": "reaver",
+              "eliteModifier": "none"
             }
           }
         },
@@ -672,7 +678,7 @@
               "schemaVersion": 1,
               "position": [5.8, 0.45, 1.7],
               "rotation": [0, 0, 0, 1],
-              "scale": [0.42, 0.42, 0.42]
+              "scale": [0.34, 0.5, 0.34]
             },
             "avarra.renderable_reference": {
               "schemaVersion": 1,
@@ -686,7 +692,7 @@
             },
             "avarra.character_controller": {
               "schemaVersion": 1,
-              "moveSpeed": 1.15,
+              "moveSpeed": 0.95,
               "skinWidth": 0.03,
               "arrivalTolerance": 0.08
             },
@@ -696,14 +702,20 @@
             },
             "avarra.combat.basic_attack": {
               "schemaVersion": 1,
-              "damage": 6,
-              "range": 1,
-              "cooldownSeconds": 1.3
+              "damage": 5,
+              "range": 2.8,
+              "cooldownSeconds": 1.6
             },
             "avarra.ai.guardian_behavior": {
               "schemaVersion": 1,
-              "perceptionRange": 2.8,
-              "leashRange": 3.8
+              "perceptionRange": 3.8,
+              "leashRange": 4.8
+            },
+            "avarra.ai.guardian_archetype": {
+              "schemaVersion": 1,
+              "displayName": "Cinder Hexer",
+              "role": "hexer",
+              "eliteModifier": "none"
             }
           }
         },
@@ -982,6 +994,164 @@
               "bodyKind": "static",
               "isSensor": false
             }
+          }
+        }
+      ]
+    },
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000105",
+      "coordinate": [2, -1],
+      "entities": [
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000030",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [4, -0.1, 4], "rotation": [0, 0, 0, 1], "scale": [4, 0.08, 4]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000004"}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000031",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [3, 0.45, 2.2], "rotation": [0, 0, 0, 1], "scale": [0.42, 0.42, 0.42]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000003"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.34, 0.4, 0.34], "bodyKind": "character", "isSensor": false},
+            "avarra.character_controller": {"schemaVersion": 1, "moveSpeed": 1.45, "skinWidth": 0.03, "arrivalTolerance": 0.08},
+            "avarra.health": {"schemaVersion": 1, "maximumHealth": 45},
+            "avarra.combat.basic_attack": {"schemaVersion": 1, "damage": 7, "range": 1.1, "cooldownSeconds": 0.9},
+            "avarra.ai.guardian_behavior": {"schemaVersion": 1, "perceptionRange": 3.6, "leashRange": 4.5},
+            "avarra.ai.guardian_archetype": {"schemaVersion": 1, "displayName": "Blackwater Vanguard", "role": "vanguard", "eliteModifier": "none"}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000032",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [5.7, 0.5, 5.8], "rotation": [0, 0, 0, 1], "scale": [0.56, 0.56, 0.56]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000003"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.42, 0.48, 0.42], "bodyKind": "character", "isSensor": false},
+            "avarra.character_controller": {"schemaVersion": 1, "moveSpeed": 0.75, "skinWidth": 0.03, "arrivalTolerance": 0.08},
+            "avarra.health": {"schemaVersion": 1, "maximumHealth": 70},
+            "avarra.combat.basic_attack": {"schemaVersion": 1, "damage": 10, "range": 1.25, "cooldownSeconds": 1.6},
+            "avarra.ai.guardian_behavior": {"schemaVersion": 1, "perceptionRange": 3.2, "leashRange": 4},
+            "avarra.ai.guardian_archetype": {"schemaVersion": 1, "displayName": "Rift-Touched Reaver", "role": "reaver", "eliteModifier": "riftTouched"}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000033",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [6.4, 0.8, 3.8], "rotation": [0, 0, 0, 1], "scale": [0.25, 0.8, 0.8]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000004"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.25, 0.8, 0.8], "bodyKind": "static", "isSensor": false},
+            "avarra.isometric.occluder": {"schemaVersion": 1}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000034",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [1.2, 0.4, 6.4], "rotation": [0, 0, 0, 1], "scale": [0.42, 0.42, 0.42]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000005"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.42, 0.42, 0.42], "bodyKind": "static", "isSensor": false},
+            "avarra.interactable": {"schemaVersion": 1, "label": "Awaken the blackwater font", "range": 2.8},
+            "avarra.objective.item_turn_in": {"schemaVersion": 1, "requiredItemId": "relay.tideglass", "completionFlagKey": "tideglass.answered", "completionLabel": "Tideglass awakened"},
+            "avarra.story.mission_narrative": {
+              "schemaVersion": 1,
+              "title": "The Drowned Signal",
+              "openingText": "The Echo Shard opens a road toward drowned Kharos. Cross the blackwater causeway, silence Moraq, Bell of Kharos, and recover the Tideglass before the sunken choir wakes.",
+              "returnText": "Moraq's bell is silent. The Tideglass holds a drowned horizon, and the Drowned Crown hardens the Vanguard against the deep. Carry the Tideglass to the blackwater font.",
+              "completionText": "The blackwater font answers. Beneath Kharos, a drowned choir names the Vanguard and opens a road into the sunken city. Relay Zero is no longer the edge of the journey."
+            },
+            "avarra.persistence.flags": {"schemaVersion": 1, "flags": {"tideglass.answered": false}}
+          }
+        }
+      ]
+    },
+    {
+      "id": "01890f47-e8b8-7a68-8000-000000000106",
+      "coordinate": [2, -2],
+      "entities": [
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000035",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [4, -0.1, 4], "rotation": [0, 0, 0, 1], "scale": [4, 0.08, 4]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000004"}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000036",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [4.2, 0.58, 4.5], "rotation": [0, 0, 0, 1], "scale": [0.62, 0.62, 0.62]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000003"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.5, 0.55, 0.5], "bodyKind": "character", "isSensor": false},
+            "avarra.character_controller": {"schemaVersion": 1, "moveSpeed": 1.2, "skinWidth": 0.03, "arrivalTolerance": 0.08},
+            "avarra.health": {"schemaVersion": 1, "maximumHealth": 140},
+            "avarra.combat.basic_attack": {"schemaVersion": 1, "damage": 14, "range": 3.4, "cooldownSeconds": 1.05},
+            "avarra.ai.guardian_behavior": {"schemaVersion": 1, "perceptionRange": 5, "leashRange": 6},
+            "avarra.ai.guardian_boss": {
+              "schemaVersion": 1,
+              "displayName": "Moraq, Bell of Kharos",
+              "phaseTwoHealthFraction": 0.7,
+              "phaseThreeHealthFraction": 0.32,
+              "meleeRange": 1.1,
+              "sweepRange": 3,
+              "sweepHalfAngleDegrees": 70,
+              "eruptionRadius": 1.1,
+              "engageText": "Moraq tolls beneath the black water. Every step toward Kharos ends here.",
+              "phaseTwoText": "The drowned bell swings wide. Stand close or flee beyond its wake.",
+              "phaseThreeText": "Moraq calls the sunken choir. The blackwater ring is closing.",
+              "defeatText": "The bell breaks. Claim the Tideglass before Kharos answers the final toll."
+            },
+            "avarra.ai.guardian_arena_hazard": {"schemaVersion": 1, "innerSafeRadius": 1.35, "outerRadius": 3.4}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000037",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [4.1, 0.32, 3.5], "rotation": [0, 0, 0, 1], "scale": [0.34, 0.34, 0.34]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000007"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.3, 0.3, 0.3], "bodyKind": "static", "isSensor": false},
+            "avarra.interactable": {"schemaVersion": 1, "label": "Recover Tideglass", "range": 2.4},
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "relay.tideglass",
+              "itemLabel": "Tideglass",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000036"
+            },
+            "avarra.persistence.flags": {"schemaVersion": 1, "flags": {"collected": false}}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000038",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [5.2, 0.34, 4.9], "rotation": [0, 0, 0, 1], "scale": [0.42, 0.42, 0.42]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000007"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.32, 0.32, 0.32], "bodyKind": "static", "isSensor": false},
+            "avarra.interactable": {"schemaVersion": 1, "label": "Claim Drowned Crown", "range": 2.4},
+            "avarra.item.collectible": {
+              "schemaVersion": 1,
+              "itemId": "relic.drowned_crown",
+              "itemLabel": "Drowned Crown",
+              "collectedFlagKey": "collected",
+              "guardedByEntityId": "01890f47-e8b8-7a68-8000-000000000036"
+            },
+            "avarra.item.player_power_reward": {"schemaVersion": 1, "maximumHealthBonus": 20},
+            "avarra.persistence.flags": {"schemaVersion": 1, "flags": {"collected": false}}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000039",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [0.35, 0.7, 4], "rotation": [0, 0, 0, 1], "scale": [0.35, 0.7, 2.3]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000004"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.35, 0.7, 2.3], "bodyKind": "static", "isSensor": false},
+            "avarra.isometric.occluder": {"schemaVersion": 1}
+          }
+        },
+        {
+          "id": "01890f47-e8b8-7a68-8000-000000000040",
+          "components": {
+            "avarra.transform": {"schemaVersion": 1, "position": [7.65, 0.7, 4], "rotation": [0, 0, 0, 1], "scale": [0.35, 0.7, 2.3]},
+            "avarra.renderable_reference": {"schemaVersion": 1, "assetId": "01890f47-e8b8-7a68-9000-000000000004"},
+            "avarra.physics.collider": {"schemaVersion": 1, "halfExtents": [0.35, 0.7, 2.3], "bodyKind": "static", "isSensor": false}
           }
         }
       ]

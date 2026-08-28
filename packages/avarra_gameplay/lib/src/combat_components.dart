@@ -38,6 +38,21 @@ final class HealthComponent {
     );
   }
 
+  HealthComponent recoveredBy(double amount) {
+    if (!amount.isFinite || amount <= 0) {
+      throw AvarraException(
+        code: GameplayErrorCodes.invalidCombat,
+        message: 'Recovery must be finite and greater than zero.',
+      );
+    }
+    return HealthComponent(
+      maximumHealth: maximumHealth,
+      currentHealth: (currentHealth + amount)
+          .clamp(0, maximumHealth)
+          .toDouble(),
+    );
+  }
+
   HealthComponent restored() => HealthComponent(maximumHealth: maximumHealth);
 }
 

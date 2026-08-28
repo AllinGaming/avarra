@@ -297,6 +297,60 @@ final class GuardianBehaviorDefinition extends ContentComponentDefinition {
   };
 }
 
+enum GuardianArchetypeRole {
+  vanguard,
+  reaver,
+  hexer;
+
+  static GuardianArchetypeRole fromJson(String value) => switch (value) {
+    'vanguard' => GuardianArchetypeRole.vanguard,
+    'reaver' => GuardianArchetypeRole.reaver,
+    'hexer' => GuardianArchetypeRole.hexer,
+    _ => throw FormatException('Unsupported Guardian archetype role: $value'),
+  };
+}
+
+enum GuardianEliteModifierDefinition {
+  none,
+  riftTouched;
+
+  static GuardianEliteModifierDefinition fromJson(String value) =>
+      switch (value) {
+        'none' => GuardianEliteModifierDefinition.none,
+        'riftTouched' => GuardianEliteModifierDefinition.riftTouched,
+        _ => throw FormatException(
+          'Unsupported Guardian elite modifier: $value',
+        ),
+      };
+}
+
+/// Bounded AVARRA-specific identity and combat role for a lesser Guardian.
+final class GuardianArchetypeDefinition extends ContentComponentDefinition {
+  const GuardianArchetypeDefinition({
+    required this.displayName,
+    required this.role,
+    this.eliteModifier = GuardianEliteModifierDefinition.none,
+  });
+
+  final String displayName;
+  final GuardianArchetypeRole role;
+  final GuardianEliteModifierDefinition eliteModifier;
+
+  @override
+  String get type => AvarraComponentType.guardianArchetype;
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'schemaVersion': schemaVersion,
+    'displayName': displayName,
+    'role': role.name,
+    'eliteModifier': eliteModifier.name,
+  };
+}
+
 /// Typed authoring for AVARRA's first named, multi-phase Guardian boss.
 final class GuardianBossDefinition extends ContentComponentDefinition {
   const GuardianBossDefinition({

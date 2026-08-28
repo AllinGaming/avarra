@@ -10,6 +10,7 @@ const _bossCombatAsset = 'audio/boss_combat_layer.wav';
 const _cueAssets = <GameAudioCue, String>{
   GameAudioCue.uiConfirm: 'audio/ui_confirm.wav',
   GameAudioCue.playerDodge: 'audio/player_dodge.wav',
+  GameAudioCue.playerRecovery: 'audio/relic_mend.wav',
   GameAudioCue.guardianWindUp: 'audio/warden_windup.wav',
   GameAudioCue.combatHit: 'audio/combat_hit.wav',
   GameAudioCue.playerHurt: 'audio/player_hurt.wav',
@@ -28,6 +29,7 @@ const _cueAssets = <GameAudioCue, String>{
 const _cueGain = <GameAudioCue, double>{
   GameAudioCue.uiConfirm: 0.52,
   GameAudioCue.playerDodge: 0.78,
+  GameAudioCue.playerRecovery: 0.82,
   GameAudioCue.guardianWindUp: 0.78,
   GameAudioCue.combatHit: 0.76,
   GameAudioCue.playerHurt: 0.9,

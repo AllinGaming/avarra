@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:avarra_content/avarra_content.dart';
 import 'package:avarra_core/avarra_core.dart';
+import 'package:avarra_ecs/avarra_ecs.dart';
 import 'package:avarra_game/src/authored_world_movement_bounds.dart';
 import 'package:avarra_gameplay/avarra_gameplay.dart';
 import 'package:avarra_physics/avarra_physics.dart';
@@ -23,8 +24,58 @@ void main() {
     expect(bounds.contains(Vector3(8.01, 0, 1)), isTrue);
     expect(bounds.contains(Vector3(-0.01, 0, -0.01)), isFalse);
     expect(bounds.contains(Vector3(8.01, 0, -0.01)), isTrue);
-    expect(bounds.contains(Vector3(16.01, 0, -0.01)), isFalse);
+    expect(bounds.contains(Vector3(16.01, 0, -0.01)), isTrue);
     expect(bounds.contains(Vector3(8.01, 0, -8.01)), isFalse);
+    expect(bounds.contains(Vector3(16.01, 0, -8.01)), isTrue);
+    expect(bounds.contains(Vector3(23.99, 0, -15.99)), isTrue);
+    expect(bounds.contains(Vector3(24.01, 0, -15.99)), isFalse);
+  });
+
+  test('player can cross the authored Kharos chunk seam', () async {
+    final source = File(
+      'assets/worlds/isometric_proof.avarra',
+    ).readAsStringSync();
+    final world = WorldPackageCodec().decode(source);
+    final runtime = const RuntimeWorldLoader().load(world);
+    final streaming = ChunkStreamingController(
+      world: world,
+      ecs: runtime.ecs,
+      source: MemoryChunkStreamingSource(world.chunks),
+    );
+    streaming.reconcile([
+      ChunkStreamingRequest(
+        coordinate: const WorldChunkCoordinate(1, -1),
+        source: ChunkInterestSource.localPlayer,
+      ),
+      ChunkStreamingRequest(
+        coordinate: const WorldChunkCoordinate(2, -1),
+        source: ChunkInterestSource.localPlayer,
+      ),
+    ]);
+    await streaming.pumpUntilStable();
+
+    final playerId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000001');
+    runtime.ecs
+        .component<TransformComponent>(runtime.ecs.handleFor(playerId)!)
+        .position
+        .setValues(15.5, 0.4, -7);
+    final movement = CharacterMovementSystem(
+      ecs: runtime.ecs,
+      collisionWorld: DeterministicPhysicsCollisionWorld.fromEcs(runtime.ecs),
+    );
+
+    final result = movement.moveDirection(
+      entityId: playerId,
+      direction: Vector3(1, 0, 0),
+      deltaSeconds: 0.25,
+    );
+
+    expect(result.position.x, greaterThan(16));
+    expect(result.collidedEntityIds, isEmpty);
+    expect(
+      AuthoredWorldMovementBounds.fromWorld(world).contains(result.position),
+      isTrue,
+    );
   });
 
   test('contains root-only Forge movement on shallow static ground', () {

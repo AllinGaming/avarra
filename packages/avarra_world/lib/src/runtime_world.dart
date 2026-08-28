@@ -153,6 +153,23 @@ final class RuntimeEntityLoader {
             ),
           );
           hasGuardianBehavior = true;
+        case GuardianArchetypeDefinition():
+          ecs.addComponent(
+            handle,
+            GuardianArchetypeComponent(
+              role: switch (component.role) {
+                GuardianArchetypeRole.vanguard => GuardianCombatRole.vanguard,
+                GuardianArchetypeRole.reaver => GuardianCombatRole.reaver,
+                GuardianArchetypeRole.hexer => GuardianCombatRole.hexer,
+              },
+              eliteModifier: switch (component.eliteModifier) {
+                GuardianEliteModifierDefinition.none =>
+                  GuardianEliteModifier.none,
+                GuardianEliteModifierDefinition.riftTouched =>
+                  GuardianEliteModifier.riftTouched,
+              },
+            ),
+          );
         case GuardianBossDefinition():
           ecs.addComponent(
             handle,

@@ -115,6 +115,79 @@ void main() {
     expect(fixture.playerHealth.currentHealth, 100);
   });
 
+  test('lesser roles and Rift-Touched cadence stay deterministic', () {
+    const vanguard = GuardianArchetypeComponent(
+      role: GuardianCombatRole.vanguard,
+    );
+    const reaver = GuardianArchetypeComponent(
+      role: GuardianCombatRole.reaver,
+      eliteModifier: GuardianEliteModifier.riftTouched,
+    );
+    const hexer = GuardianArchetypeComponent(
+      role: GuardianCombatRole.hexer,
+      eliteModifier: GuardianEliteModifier.riftTouched,
+    );
+
+    expect(guardianAttackPatternFor(vanguard, 0), GuardianAttackPattern.melee);
+    expect(
+      [
+        for (var count = 0; count < 4; count++)
+          guardianAttackPatternFor(reaver, count),
+      ],
+      [
+        GuardianAttackPattern.sweep,
+        GuardianAttackPattern.sweep,
+        GuardianAttackPattern.eruption,
+        GuardianAttackPattern.sweep,
+      ],
+    );
+    expect(
+      [
+        for (var count = 0; count < 3; count++)
+          guardianAttackPatternFor(hexer, count),
+      ],
+      [
+        GuardianAttackPattern.eruption,
+        GuardianAttackPattern.eruption,
+        GuardianAttackPattern.sweep,
+      ],
+    );
+  });
+
+  test('Reaver cone and Hexer ground mark can be dodged during wind-up', () {
+    final reaver = _GuardianFixture(
+      targetPosition: Vector3(0.8, 0, 0),
+      archetype: const GuardianArchetypeComponent(
+        role: GuardianCombatRole.reaver,
+      ),
+    );
+    final sweepWarning = reaver.tick(Duration.zero);
+    expect(sweepWarning.attackPattern, GuardianAttackPattern.sweep);
+    expect(reaver.guardianState.windUpCompletesAt, guardianSweepWindUpDuration);
+    reaver.movePlayer(Vector3(0, 0, 0.8));
+    final sweptPast = reaver.tick(const Duration(milliseconds: 1000));
+    expect(sweptPast.attack?.rejection, CombatAttackRejection.outOfRange);
+    expect(reaver.playerHealth.currentHealth, 100);
+    expect(reaver.guardianState.completedAttackCount, 1);
+
+    final hexer = _GuardianFixture(
+      targetPosition: Vector3(0.8, 0, 0),
+      archetype: const GuardianArchetypeComponent(
+        role: GuardianCombatRole.hexer,
+      ),
+    );
+    final eruptionWarning = hexer.tick(Duration.zero);
+    expect(eruptionWarning.attackPattern, GuardianAttackPattern.eruption);
+    expect(
+      hexer.guardianState.windUpCompletesAt,
+      guardianEruptionWindUpDuration,
+    );
+    hexer.movePlayer(Vector3(0, 0, 0.8));
+    final leftMark = hexer.tick(const Duration(milliseconds: 1200));
+    expect(leftMark.attack?.rejection, CombatAttackRejection.outOfRange);
+    expect(hexer.playerHealth.currentHealth, 100);
+    expect(hexer.guardianState.completedAttackCount, 1);
+  });
   test(
     'boss phases select deterministic patterns and locked shapes can miss',
     () {
@@ -220,6 +293,7 @@ final class _GuardianFixture {
     Vector3? homePosition,
     GuardianBehaviorPhase initialPhase = GuardianBehaviorPhase.idle,
     bool blocked = false,
+    GuardianArchetypeComponent? archetype,
     bool boss = false,
     bool arenaHazard = false,
   }) {
@@ -269,6 +343,9 @@ final class _GuardianFixture {
         ),
       );
 
+    if (archetype != null) {
+      ecs.addComponent(guardian, archetype);
+    }
     if (boss) {
       ecs.addComponent(
         guardian,

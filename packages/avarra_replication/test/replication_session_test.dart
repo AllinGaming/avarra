@@ -215,16 +215,22 @@ void main() {
       directionZ: -0.8,
     );
     await dodge.sent;
+    final recovery = connected.client.submitGameplayCommand(
+      kind: GameplayCommandKind.recovery,
+    );
+    await recovery.sent;
     await Future<void>.delayed(const Duration(milliseconds: 5));
     final commands = server.takeGameplayCommands(connected.connectionId);
     expect(commands.map((command) => command.sequence), [
       submission.sequence,
       second.sequence,
       dodge.sequence,
+      recovery.sequence,
     ]);
-    expect(commands.last.kind, GameplayCommandKind.dodge);
-    expect(commands.last.directionX, 0.6);
-    expect(commands.last.directionZ, -0.8);
+    expect(commands[2].kind, GameplayCommandKind.dodge);
+    expect(commands[2].directionX, 0.6);
+    expect(commands[2].directionZ, -0.8);
+    expect(commands.last.kind, GameplayCommandKind.recovery);
 
     final resultEvent = connected.client.events
         .where((event) => event is ReplicationGameplayCommandResult)
@@ -247,6 +253,12 @@ void main() {
         revision: 1,
         healthStates: [
           NetworkHealthState(entityId: _globalId, current: 75, maximum: 100),
+        ],
+        recoveryStates: [
+          NetworkRecoveryState(
+            entityId: _globalId,
+            remainingCooldownMicroseconds: 6000000,
+          ),
         ],
         persistentFlagStates: [
           NetworkPersistentFlagState(
@@ -271,6 +283,10 @@ void main() {
     );
     await _waitUntil(() => connected.client.latestGameplayStateRevision == 1);
     expect(connected.client.healthStates[_globalId]?.current, 75);
+    expect(
+      connected.client.recoveryStates[_globalId]?.remainingCooldownMicroseconds,
+      6000000,
+    );
     expect(
       connected.client.authoritativeFlagValue(_localId, 'activated'),
       true,

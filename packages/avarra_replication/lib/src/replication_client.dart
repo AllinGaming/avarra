@@ -137,6 +137,7 @@ final class ReplicationClient {
       StreamController.broadcast();
   final Map<NetworkEntityId, ReplicatedEntityState> _entities = {};
   final Map<EntityId, NetworkHealthState> _healthStates = {};
+  final Map<EntityId, NetworkRecoveryState> _recoveryStates = {};
   final Map<EntityId, NetworkPersistentFlagState> _persistentFlagStates = {};
   final Map<EntityId, NetworkGuardianState> _guardianStates = {};
   Set<String> _inventoryItemIds = const {};
@@ -163,6 +164,8 @@ final class ReplicationClient {
       Map.unmodifiable(_entities);
   Map<EntityId, NetworkHealthState> get healthStates =>
       Map.unmodifiable(_healthStates);
+  Map<EntityId, NetworkRecoveryState> get recoveryStates =>
+      Map.unmodifiable(_recoveryStates);
   Map<EntityId, NetworkPersistentFlagState> get persistentFlagStates =>
       Map.unmodifiable(_persistentFlagStates);
   Map<EntityId, NetworkGuardianState> get guardianStates =>
@@ -369,6 +372,13 @@ final class ReplicationClient {
               (state) => MapEntry(state.entityId, state),
             ),
           );
+        _recoveryStates
+          ..clear()
+          ..addEntries(
+            message.recoveryStates.map(
+              (state) => MapEntry(state.entityId, state),
+            ),
+          );
         _persistentFlagStates
           ..clear()
           ..addEntries(
@@ -425,6 +435,7 @@ final class ReplicationClient {
       );
     _entities.clear();
     _healthStates.clear();
+    _recoveryStates.clear();
     _persistentFlagStates.clear();
     _guardianStates.clear();
     _inventoryItemIds = const {};

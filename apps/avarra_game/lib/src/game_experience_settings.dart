@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'game_controls.dart';
 
 const _settingsFormat = 'avarra.game_experience_settings';
-const _settingsVersion = 3;
+const _settingsVersion = 4;
 
 /// Game-owned preferences that never enter world or save authority.
 @immutable
@@ -100,6 +100,7 @@ final class GameExperienceSettings {
         decoded['version'] is! int ||
         (decoded['version'] != 1 &&
             decoded['version'] != 2 &&
+            decoded['version'] != 3 &&
             decoded['version'] != _settingsVersion)) {
       throw const FormatException('Unsupported AVARRA Game settings.');
     }
@@ -116,7 +117,10 @@ final class GameExperienceSettings {
     final hapticsEnabled = version < 3 ? true : decoded['hapticsEnabled'];
     final controlBindings = version < 3
         ? GameControlBindings.defaults
-        : GameControlBindings.decode(decoded['controlBindings']);
+        : GameControlBindings.decode(
+            decoded['controlBindings'],
+            allowMissingRecovery: version < 4,
+          );
     if (reducedMotion is! bool ||
         shake is! num ||
         !shake.toDouble().isFinite ||

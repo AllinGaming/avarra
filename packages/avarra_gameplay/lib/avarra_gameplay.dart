@@ -8,3 +8,4 @@ export 'src/guardian_behavior_components.dart';
 export 'src/guardian_behavior_system.dart';
 export 'src/interaction_effect_components.dart';
 export 'src/interaction_system.dart';
+export 'src/recovery_system.dart';

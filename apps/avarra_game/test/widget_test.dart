@@ -16,6 +16,7 @@ import 'package:avarra_replication/avarra_replication.dart';
 import 'package:avarra_server/avarra_server.dart';
 import 'package:avarra_world/avarra_world.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -81,7 +82,7 @@ void main() {
     expect(find.text('Guardian: beyond locked gate'), findsOneWidget);
     expect(find.byKey(const Key('camera_status')), findsOneWidget);
     expect(find.byKey(const Key('world_version_status')), findsOneWidget);
-    expect(find.text('Chunk 0,0 · 1/4 active'), findsOneWidget);
+    expect(find.text('Chunk 0,0 · 1/6 active'), findsOneWidget);
     expect(find.byKey(const Key('streaming_status')), findsOneWidget);
     expect(find.text('Save r0 · No save yet'), findsOneWidget);
     expect(
@@ -373,6 +374,14 @@ void main() {
             entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000024'),
             flags: const {'echo.bound': true},
           ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000037'),
+            flags: const {'collected': true},
+          ),
+          EntitySaveState(
+            entityId: EntityId.parse('01890f47-e8b8-7a68-8000-000000000034'),
+            flags: const {'tideglass.answered': true},
+          ),
         ],
         players: const [],
       ),
@@ -387,7 +396,7 @@ void main() {
     );
     await _pumpUntilSaveReady(tester);
 
-    expect(find.text('Mission complete · Echo Shard bound'), findsOneWidget);
+    expect(find.text('Mission complete · Tideglass awakened'), findsOneWidget);
     expect(find.text('Inventory · Empty'), findsOneWidget);
     expect(find.text('10 ECS entities bound to the scene'), findsOneWidget);
     expect(find.byKey(const Key('mission_complete_overlay')), findsNothing);
@@ -482,7 +491,7 @@ void main() {
     );
     await _pumpUntilSaveReady(tester);
 
-    expect(find.text('Chunk 0,0 · 1/4 active'), findsOneWidget);
+    expect(find.text('Chunk 0,0 · 1/6 active'), findsOneWidget);
     expect(find.text('Save r4 · Restored revision 4'), findsOneWidget);
   });
 
@@ -716,6 +725,30 @@ void main() {
       find.textContaining('Device: 64.0 MiB · thermal none'),
       findsOneWidget,
     );
+    expect(find.textContaining('battery 84%'), findsOneWidget);
+    expect(find.byKey(const Key('copy_playtest_evidence')), findsOneWidget);
+    MethodCall? clipboardCall;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') clipboardCall = call;
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.tap(find.byKey(const Key('copy_playtest_evidence')));
+    await tester.pump();
+    expect(find.textContaining('Playtest report copied'), findsOneWidget);
+    expect(clipboardCall?.method, 'Clipboard.setData');
+    expect(
+      (clipboardCall?.arguments as Map<Object?, Object?>?)?['text'],
+      contains('# AVARRA Playtest Evidence'),
+    );
     expect(host.metrics.activeClients, 1);
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -741,6 +774,8 @@ final class _FakeHostDeviceMetricsSampler implements HostDeviceMetricsSampler {
       thermalStatus: 'none',
       platformBytesSent: 2048,
       platformBytesReceived: 4096,
+      batteryLevelPercent: 84,
+      batteryCharging: false,
     );
   }
 }

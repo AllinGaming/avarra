@@ -42,6 +42,42 @@ Duration guardianWindUpDurationFor(GuardianAttackPattern pattern) =>
       GuardianAttackPattern.fissureRing => guardianFissureRingWindUpDuration,
     };
 
+const double guardianLesserSweepHalfAngleDegrees = 55;
+const double guardianLesserEruptionRadius = 0.9;
+
+enum GuardianCombatRole { vanguard, reaver, hexer }
+
+enum GuardianEliteModifier { none, riftTouched }
+
+/// Runtime-only combat policy materialized from one authored lesser archetype.
+final class GuardianArchetypeComponent {
+  const GuardianArchetypeComponent({
+    required this.role,
+    this.eliteModifier = GuardianEliteModifier.none,
+  });
+
+  final GuardianCombatRole role;
+  final GuardianEliteModifier eliteModifier;
+}
+
+GuardianAttackPattern guardianAttackPatternFor(
+  GuardianArchetypeComponent archetype,
+  int completedAttackCount,
+) {
+  final basePattern = switch (archetype.role) {
+    GuardianCombatRole.vanguard => GuardianAttackPattern.melee,
+    GuardianCombatRole.reaver => GuardianAttackPattern.sweep,
+    GuardianCombatRole.hexer => GuardianAttackPattern.eruption,
+  };
+  final riftAttack =
+      archetype.eliteModifier == GuardianEliteModifier.riftTouched &&
+      completedAttackCount % 3 == 2;
+  if (!riftAttack) return basePattern;
+  return basePattern == GuardianAttackPattern.eruption
+      ? GuardianAttackPattern.sweep
+      : GuardianAttackPattern.eruption;
+}
+
 /// Narrow authored tuning for AVARRA's first multi-phase Guardian boss.
 final class GuardianBossComponent {
   GuardianBossComponent({

@@ -35,6 +35,7 @@ void main() {
         directionX: 0.6,
         directionZ: -0.8,
       ),
+      GameplayCommandMessage(sequence: 7, kind: GameplayCommandKind.recovery),
       SpawnEntityMessage(
         networkEntityId: NetworkEntityId(9),
         entityId: _entityId,
@@ -62,6 +63,12 @@ void main() {
         revision: 7,
         healthStates: [
           NetworkHealthState(entityId: _entityId, current: 70, maximum: 100),
+        ],
+        recoveryStates: [
+          NetworkRecoveryState(
+            entityId: _entityId,
+            remainingCooldownMicroseconds: 8500000,
+          ),
         ],
         persistentFlagStates: [
           NetworkPersistentFlagState(
@@ -147,6 +154,17 @@ void main() {
     );
   });
 
+  test('rejects recovery commands with client-authored arguments', () {
+    expect(
+      () => GameplayCommandMessage(
+        sequence: 1,
+        kind: GameplayCommandKind.recovery,
+        targetEntityId: _entityId,
+      ),
+      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    );
+  });
+
   test('rejects target-bearing or unbounded dodge commands', () {
     expect(
       () => GameplayCommandMessage(
@@ -182,17 +200,17 @@ void main() {
       ),
       throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
     );
-    expect(
-      () => NetworkGuardianState(
-        entityId: _entityId,
-        phase: NetworkGuardianPhase.idle,
-        encounterPhase: NetworkGuardianEncounterPhase.standard,
-        attackPattern: NetworkGuardianAttackPattern.sweep,
-        targetEntityId: null,
-        windUpRemainingMicroseconds: 0,
-      ),
-      throwsA(_hasCode(NetworkErrorCodes.invalidValue)),
+    final lesserSpecial = NetworkGuardianState(
+      entityId: _entityId,
+      phase: NetworkGuardianPhase.windingUp,
+      encounterPhase: NetworkGuardianEncounterPhase.standard,
+      attackPattern: NetworkGuardianAttackPattern.sweep,
+      targetEntityId: _entityId,
+      windUpRemainingMicroseconds: 500000,
+      telegraphTargetX: 1,
+      telegraphTargetZ: 2,
     );
+    expect(lesserSpecial.attackPattern, NetworkGuardianAttackPattern.sweep);
   });
 
   test('hashes identical package text deterministically', () {

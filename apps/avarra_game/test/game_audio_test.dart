@@ -132,6 +132,7 @@ void main() {
       'ashfall_ambience.wav': 12,
       'ui_confirm.wav': 0.14,
       'player_dodge.wav': 0.32,
+      'relic_mend.wav': 0.78,
       'warden_windup.wav': 0.65,
       'combat_hit.wav': 0.24,
       'player_hurt.wav': 0.38,
@@ -186,6 +187,18 @@ void main() {
     expect(
       bossWindUpAudioCue(GuardianAttackPattern.fissureRing),
       GameAudioCue.bossFissureRingWindUp,
+    );
+    expect(
+      guardianWindUpAudioCue(GuardianAttackPattern.melee, boss: false),
+      GameAudioCue.guardianWindUp,
+    );
+    expect(
+      guardianWindUpAudioCue(GuardianAttackPattern.sweep, boss: false),
+      GameAudioCue.bossSweepWindUp,
+    );
+    expect(
+      guardianWindUpAudioCue(GuardianAttackPattern.eruption, boss: false),
+      GameAudioCue.bossEruptionWindUp,
     );
   });
 }

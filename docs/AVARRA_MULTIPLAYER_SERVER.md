@@ -164,6 +164,12 @@ shared collision sweep and cooldown and replicates the resulting transform;
 client prediction cannot declare acceptance. Clock synchronization, rollback,
 loss/jitter tuning, and compact event/delta representation remain open.
 
+Stage 12.60 advances the handshake to protocol v7. A target-free Relic Mend
+command asks the host to run the shared RecoverySystem; clients cannot provide
+health, amount, or cooldown. Gameplay snapshots carry bounded remaining
+recovery cooldown for each eligible avatar alongside authoritative health.
+Recovery is encounter-scoped and is not added to save format v2.
+
 Spawn metadata now distinguishes authored `world` entities from dynamic
 `playerAvatar` entities. Clients may instantiate the proof player-avatar shape
 without treating arbitrary unknown world spawns as players.

@@ -10,6 +10,7 @@ import 'game_experience_settings.dart';
 enum GameAudioCue {
   uiConfirm,
   playerDodge,
+  playerRecovery,
   guardianWindUp,
   combatHit,
   playerHurt,
@@ -32,6 +33,19 @@ GameAudioCue bossWindUpAudioCue(GuardianAttackPattern pattern) =>
       GuardianAttackPattern.eruption => GameAudioCue.bossEruptionWindUp,
       GuardianAttackPattern.fissureRing => GameAudioCue.bossFissureRingWindUp,
     };
+
+GameAudioCue guardianWindUpAudioCue(
+  GuardianAttackPattern pattern, {
+  required bool boss,
+}) {
+  if (boss) return bossWindUpAudioCue(pattern);
+  return switch (pattern) {
+    GuardianAttackPattern.melee => GameAudioCue.guardianWindUp,
+    GuardianAttackPattern.sweep => GameAudioCue.bossSweepWindUp,
+    GuardianAttackPattern.eruption => GameAudioCue.bossEruptionWindUp,
+    GuardianAttackPattern.fissureRing => GameAudioCue.bossFissureRingWindUp,
+  };
+}
 
 enum GameAudioCombatIntensity {
   exploration,

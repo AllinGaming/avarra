@@ -254,6 +254,13 @@ dodge displacement and cooldown rejection, while Game prediction is corrected
 by replicated transforms. This does not close clock synchronization,
 prediction/rollback, jitter/loss, transport priority, or physical-LAN criteria.
 
+Stage 12.60 advances the handshake to protocol v7 for one target-free recovery
+intent and bounded per-entity remaining cooldown. The host owns accepted health
+and readiness; Game's local cooldown is presentation only and is replaced by
+the next authoritative snapshot. The strict JSON/full-snapshot representation
+remains provisional and does not close compact encoding, clock synchronization,
+latency, loss/jitter, or physical-LAN decisions.
+
 ---
 
 ## OD-004 — Binary Serialization
@@ -291,8 +298,9 @@ permanent format.
 
 Stage 12.28 advances to protocol v5 for boss phase/pattern/locked-target truth.
 Stages 12.31-12.32 advance to protocol v6 for the fissure-ring pattern and
-bounded dodge direction. These remain strict prototype JSON messages behind
-the replaceable codec/frame boundary.
+bounded dodge direction. Stage 12.60 advances to protocol v7 for target-free
+Relic Mend intent and bounded remaining recovery cooldown. These remain strict
+prototype JSON messages behind the replaceable codec/frame boundary.
 
 ---
 

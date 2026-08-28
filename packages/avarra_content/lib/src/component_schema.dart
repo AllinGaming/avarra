@@ -450,11 +450,48 @@ final class ComponentSchemaRegistry {
           ],
         ),
         ComponentSchema(
+          type: AvarraComponentType.guardianArchetype,
+          version: 1,
+          introducedInContentSchemaVersion: 13,
+          editorLabel: 'Guardian Archetype',
+          editorOrder: 48,
+          help:
+              'Named lesser-enemy role with one bounded optional elite modifier.',
+          requiredComponentTypes: const {
+            AvarraComponentType.guardianBehavior,
+            AvarraComponentType.basicAttack,
+          },
+          fields: const [
+            ComponentFieldSchema(
+              name: 'displayName',
+              kind: ComponentFieldKind.string,
+              editorLabel: 'Enemy name',
+              defaultValue: 'Ash Vanguard',
+              maximumLength: 80,
+            ),
+            ComponentFieldSchema(
+              name: 'role',
+              kind: ComponentFieldKind.string,
+              allowedStringValues: {'vanguard', 'reaver', 'hexer'},
+              editorLabel: 'Combat role',
+              defaultValue: 'vanguard',
+            ),
+            ComponentFieldSchema(
+              name: 'eliteModifier',
+              kind: ComponentFieldKind.string,
+              allowedStringValues: {'none', 'riftTouched'},
+              editorLabel: 'Elite modifier',
+              defaultValue: 'none',
+              help: 'Rift-Touched changes every third attack pattern.',
+            ),
+          ],
+        ),
+        ComponentSchema(
           type: AvarraComponentType.guardianBoss,
           version: 1,
           introducedInContentSchemaVersion: 10,
           editorLabel: 'Guardian Boss',
-          editorOrder: 48,
+          editorOrder: 49,
           help:
               'Named three-phase Guardian with melee, sweep, and eruption attacks.',
           requiredComponentTypes: const {
@@ -552,7 +589,7 @@ final class ComponentSchemaRegistry {
           version: 1,
           introducedInContentSchemaVersion: 11,
           editorLabel: 'Guardian Arena Hazard',
-          editorOrder: 49,
+          editorOrder: 50,
           help:
               'Phase-three fissure ring with a safe core and safe outer space.',
           requiredComponentTypes: const {
@@ -985,6 +1022,7 @@ final class ComponentSchemaRegistry {
       AvarraComponentType.health => _decodeHealth(data),
       AvarraComponentType.basicAttack => _decodeBasicAttack(data),
       AvarraComponentType.guardianBehavior => _decodeGuardianBehavior(data),
+      AvarraComponentType.guardianArchetype => _decodeGuardianArchetype(data),
       AvarraComponentType.guardianBoss => _decodeGuardianBoss(data),
       AvarraComponentType.guardianArenaHazard => _decodeGuardianArenaHazard(
         data,
@@ -1081,6 +1119,25 @@ final class ComponentSchemaRegistry {
     return GuardianBehaviorDefinition(
       perceptionRange: perceptionRange,
       leashRange: leashRange,
+    );
+  }
+
+  GuardianArchetypeDefinition _decodeGuardianArchetype(
+    Map<String, Object?> data,
+  ) {
+    final displayName = data['displayName']! as String;
+    if (displayName.trim().isEmpty || displayName.length > 80) {
+      _invalidComponent(
+        AvarraComponentType.guardianArchetype,
+        'Guardian archetype name must contain 1 to 80 characters.',
+      );
+    }
+    return GuardianArchetypeDefinition(
+      displayName: displayName,
+      role: GuardianArchetypeRole.fromJson(data['role']! as String),
+      eliteModifier: GuardianEliteModifierDefinition.fromJson(
+        data['eliteModifier']! as String,
+      ),
     );
   }
 

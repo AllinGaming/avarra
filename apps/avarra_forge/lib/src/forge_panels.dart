@@ -448,6 +448,101 @@ final class ObjectPalettePanel extends StatelessWidget {
                 guardianMissionSettings.copyWith(bossEncounter: value),
               ),
             ),
+            if (!guardianMissionSettings.bossEncounter) ...[
+              KeyedSubtree(
+                key: ValueKey((
+                  'mission_guardian_name_profile',
+                  guardianMissionProfileRevision,
+                )),
+                child: TextFormField(
+                  key: const Key('mission_guardian_name'),
+                  initialValue: guardianMissionSettings.guardianDisplayName,
+                  maxLength: 80,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Enemy name',
+                  ),
+                  onChanged: (value) => onGuardianMissionSettingsChanged(
+                    guardianMissionSettings.copyWith(
+                      guardianDisplayName: value,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'Combat role',
+                  prefixIcon: Icon(Icons.shield_outlined),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<GuardianArchetypeRole>(
+                    key: const Key('mission_guardian_role'),
+                    value: guardianMissionSettings.guardianRole,
+                    isDense: true,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: GuardianArchetypeRole.vanguard,
+                        child: Text('Vanguard - direct pressure'),
+                      ),
+                      DropdownMenuItem(
+                        value: GuardianArchetypeRole.reaver,
+                        child: Text('Reaver - sweeping cone'),
+                      ),
+                      DropdownMenuItem(
+                        value: GuardianArchetypeRole.hexer,
+                        child: Text('Hexer - locked ground mark'),
+                      ),
+                    ],
+                    onChanged: (role) {
+                      if (role != null) {
+                        onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(guardianRole: role),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              InputDecorator(
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'Elite modifier',
+                  prefixIcon: Icon(Icons.auto_awesome_outlined),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<GuardianEliteModifierDefinition>(
+                    key: const Key('mission_guardian_elite_modifier'),
+                    value: guardianMissionSettings.guardianEliteModifier,
+                    isDense: true,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: GuardianEliteModifierDefinition.none,
+                        child: Text('None'),
+                      ),
+                      DropdownMenuItem(
+                        value: GuardianEliteModifierDefinition.riftTouched,
+                        child: Text('Rift-Touched - third attack mutates'),
+                      ),
+                    ],
+                    onChanged: (modifier) {
+                      if (modifier != null) {
+                        onGuardianMissionSettingsChanged(
+                          guardianMissionSettings.copyWith(
+                            guardianEliteModifier: modifier,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             if (guardianMissionSettings.bossEncounter) ...[
               KeyedSubtree(
                 key: ValueKey((

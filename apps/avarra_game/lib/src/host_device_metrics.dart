@@ -8,12 +8,24 @@ final class HostDeviceMetrics {
     required this.thermalStatus,
     required this.platformBytesSent,
     required this.platformBytesReceived,
+    this.batteryLevelPercent,
+    this.batteryCharging,
+    this.deviceModel,
+    this.operatingSystemVersion,
+    this.appVersion,
+    this.appBuildNumber,
   });
 
   final int memoryBytes;
   final String thermalStatus;
   final int? platformBytesSent;
   final int? platformBytesReceived;
+  final double? batteryLevelPercent;
+  final bool? batteryCharging;
+  final String? deviceModel;
+  final String? operatingSystemVersion;
+  final String? appVersion;
+  final String? appBuildNumber;
 }
 
 abstract interface class HostDeviceMetricsSampler {
@@ -34,6 +46,8 @@ final class PlatformHostDeviceMetricsSampler
         thermalStatus: 'unavailable',
         platformBytesSent: null,
         platformBytesReceived: null,
+        deviceModel: Platform.operatingSystem,
+        operatingSystemVersion: Platform.operatingSystemVersion,
       );
     }
     try {
@@ -43,6 +57,13 @@ final class PlatformHostDeviceMetricsSampler
         thermalStatus: (values?['thermalStatus'] as String?) ?? 'unknown',
         platformBytesSent: values?['networkTxBytes'] as int?,
         platformBytesReceived: values?['networkRxBytes'] as int?,
+        batteryLevelPercent: (values?['batteryLevelPercent'] as num?)
+            ?.toDouble(),
+        batteryCharging: values?['batteryCharging'] as bool?,
+        deviceModel: values?['deviceModel'] as String?,
+        operatingSystemVersion: values?['operatingSystemVersion'] as String?,
+        appVersion: values?['appVersion'] as String?,
+        appBuildNumber: values?['appBuildNumber'] as String?,
       );
     } on PlatformException {
       return HostDeviceMetrics(
@@ -50,6 +71,8 @@ final class PlatformHostDeviceMetricsSampler
         thermalStatus: 'unavailable',
         platformBytesSent: null,
         platformBytesReceived: null,
+        deviceModel: Platform.operatingSystem,
+        operatingSystemVersion: Platform.operatingSystemVersion,
       );
     }
   }

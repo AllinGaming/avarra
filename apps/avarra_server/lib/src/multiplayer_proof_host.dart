@@ -61,6 +61,7 @@ final class MultiplayerProofHost {
          ecs: runtimeWorld.ecs,
          collisionWorld: collisionWorld,
        ),
+       _recoverySystem = RecoverySystem(ecs: runtimeWorld.ecs),
        _interactionSystem = InteractionSystem(
          ecs: runtimeWorld.ecs,
          collisionWorld: collisionWorld,
@@ -69,6 +70,13 @@ final class MultiplayerProofHost {
          ecs: runtimeWorld.ecs,
          collisionWorld: collisionWorld,
        ) {
+    final playerHandle = runtimeWorld.ecs.handleFor(playerEntityId)!;
+    if (!runtimeWorld.ecs.hasComponent<RecoveryStateComponent>(playerHandle)) {
+      runtimeWorld.ecs.addComponent(
+        playerHandle,
+        const RecoveryStateComponent(),
+      );
+    }
     _playerSpawns[playerEntityId] = primaryPlayerSpawn;
     _nextAutosaveAt = autosaveInterval;
   }
@@ -234,6 +242,7 @@ final class MultiplayerProofHost {
   late CharacterMovementSystem _movementSystem;
   late DodgeSystem _dodgeSystem;
   late CombatSystem _combatSystem;
+  final RecoverySystem _recoverySystem;
   late InteractionSystem _interactionSystem;
   late GuardianBehaviorSystem _guardianSystem;
   Timer? _timer;
@@ -400,7 +409,9 @@ final class MultiplayerProofHost {
         )
         ..addComponent(handle, const BasicAttackStateComponent());
     }
-    runtimeWorld.ecs.addComponent(handle, const DodgeStateComponent());
+    runtimeWorld.ecs
+      ..addComponent(handle, const DodgeStateComponent())
+      ..addComponent(handle, const RecoveryStateComponent());
     final reconnectSpawn = runtimeWorld.ecs
         .component<TransformComponent>(handle)
         .copyWith();
@@ -660,6 +671,24 @@ final class MultiplayerProofHost {
         if (result.accepted) {
           adventureState.markPlayerDirty(replication.playerIdFor(connectionId));
         }
+      case GameplayCommandKind.recovery:
+        final result = _recoverySystem.recover(
+          entityId: actorId,
+          simulationTime: _simulationTime,
+        );
+        accepted = result.accepted;
+        detail = result.accepted
+            ? 'Relic Mend restored ${result.healthRestored.toStringAsFixed(0)} health.'
+            : switch (result.rejection!) {
+                RecoveryRejection.unavailable => 'Relic Mend is unavailable.',
+                RecoveryRejection.defeated =>
+                  'Defeated players cannot use Relic Mend.',
+                RecoveryRejection.fullHealth => 'Health is already full.',
+                RecoveryRejection.cooldown => 'Relic Mend is recovering.',
+              };
+        if (result.accepted) {
+          _gameplayStateRevision += 1;
+        }
       case GameplayCommandKind.restart:
         accepted = _combatSystem.restart(
           entityId: actorId,
@@ -670,6 +699,7 @@ final class MultiplayerProofHost {
             : 'Restart is unavailable.';
         if (accepted) {
           _dodgeSystem.reset(actorId);
+          _recoverySystem.reset(actorId);
           _gameplayStateRevision += 1;
           _guardianSystem.resetActiveGuardians();
           adventureState.markPlayerDirty(replication.playerIdFor(connectionId));
@@ -739,6 +769,7 @@ final class MultiplayerProofHost {
 
   GameplayStateSnapshotMessage _gameplaySnapshotFor(PlayerId playerId) {
     final health = runtimeWorld.ecs.query<HealthComponent>().toList();
+    final recovery = runtimeWorld.ecs.query<RecoveryStateComponent>().toList();
     final flags = adventureState.persistentFlagSnapshots();
     return GameplayStateSnapshotMessage(
       revision: _gameplayStateRevision,
@@ -748,6 +779,16 @@ final class MultiplayerProofHost {
             entityId: entry.entityId,
             current: entry.component.currentHealth,
             maximum: entry.component.maximumHealth,
+          ),
+      ],
+      recoveryStates: [
+        for (final entry in recovery)
+          NetworkRecoveryState(
+            entityId: entry.entityId,
+            remainingCooldownMicroseconds:
+                entry.component.nextReadyAt > _simulationTime
+                ? (entry.component.nextReadyAt - _simulationTime).inMicroseconds
+                : 0,
           ),
       ],
       persistentFlagStates: [

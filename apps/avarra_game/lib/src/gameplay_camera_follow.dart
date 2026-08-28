@@ -46,6 +46,58 @@ Vector3 smoothGameplayCameraTarget({
   return current + (offset * (1 - retained));
 }
 
+/// Builds a bounded presentation target that looks slightly ahead of the
+/// player without changing authoritative movement or picking.
+Vector3 gameplayCameraLookAheadTarget({
+  required Vector3 playerPosition,
+  Vector3? movementDirection,
+  Vector3? focusPosition,
+  double movementLead = 0.85,
+  double focusWeight = 0.2,
+  double maximumFocusDistance = 8,
+}) {
+  _requireFiniteVector(playerPosition, 'playerPosition');
+  if (movementDirection != null) {
+    _requireFiniteVector(movementDirection, 'movementDirection');
+  }
+  if (focusPosition != null) {
+    _requireFiniteVector(focusPosition, 'focusPosition');
+  }
+  if (!movementLead.isFinite || movementLead < 0 || movementLead > 3) {
+    throw ArgumentError.value(movementLead, 'movementLead');
+  }
+  if (!focusWeight.isFinite || focusWeight < 0 || focusWeight > 0.5) {
+    throw ArgumentError.value(focusWeight, 'focusWeight');
+  }
+  if (!maximumFocusDistance.isFinite ||
+      maximumFocusDistance <= 0 ||
+      maximumFocusDistance > 32) {
+    throw ArgumentError.value(maximumFocusDistance, 'maximumFocusDistance');
+  }
+
+  final result = Vector3.copy(playerPosition);
+  result.y = playerPosition.y;
+  if (movementDirection != null) {
+    final movement = Vector3(movementDirection.x, 0, movementDirection.z);
+    if (movement.length2 > 1e-9) {
+      movement.normalize();
+      result.add(movement * movementLead);
+    }
+  }
+  if (focusPosition != null && focusWeight > 0) {
+    final focus = focusPosition - playerPosition;
+    focus.y = 0;
+    final distance = focus.length;
+    if (distance > 1e-9) {
+      if (distance > maximumFocusDistance) {
+        focus.scale(maximumFocusDistance / distance);
+      }
+      result.add(focus * focusWeight);
+    }
+  }
+  return result;
+}
+
 void _requireFiniteVector(Vector3 value, String name) {
   if (!value.storage.every((component) => component.isFinite)) {
     throw ArgumentError.value(value, name, 'Must be finite.');

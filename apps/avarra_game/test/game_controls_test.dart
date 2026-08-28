@@ -22,6 +22,10 @@ void main() {
       GameControl.dodge,
     );
     expect(
+      bindings.actionControlFor(LogicalKeyboardKey.gameButtonY),
+      GameControl.recovery,
+    );
+    expect(
       bindings.actionControlFor(LogicalKeyboardKey.gameButtonA),
       GameControl.interact,
     );
@@ -143,6 +147,13 @@ void main() {
         GameInputPromptMode.controller,
       ),
       'B',
+    );
+    expect(
+      bindings.promptLabelFor(
+        GameControl.recovery,
+        GameInputPromptMode.controller,
+      ),
+      'Y',
     );
     expect(
       bindings.promptLabelFor(

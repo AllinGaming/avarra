@@ -7,7 +7,7 @@ import 'network_values.dart';
 
 const String avarraNetworkWireFormat = 'avarra.net';
 const int currentNetworkWireVersion = 1;
-const int currentNetworkProtocolVersion = 6;
+const int currentNetworkProtocolVersion = 8;
 
 abstract final class NetworkMessageType {
   static const clientHello = 1;
@@ -116,7 +116,7 @@ final class MovementIntentMessage extends NetworkMessage {
 }
 
 /// Discrete player actions whose outcome is decided by the host.
-enum GameplayCommandKind { attack, interact, dodge, restart }
+enum GameplayCommandKind { attack, interact, dodge, recovery, restart }
 
 final class GameplayCommandMessage extends NetworkMessage {
   GameplayCommandMessage({
@@ -152,9 +152,9 @@ final class GameplayCommandMessage extends NetworkMessage {
             lengthSquared > 1.000001) {
           _invalid('Dodge commands require one bounded planar direction.');
         }
-      case GameplayCommandKind.restart:
+      case GameplayCommandKind.recovery || GameplayCommandKind.restart:
         if (targetEntityId != null || hasDirection) {
-          _invalid('Restart commands cannot include a target or direction.');
+          _invalid('Recovery and restart commands cannot include arguments.');
         }
     }
   }
@@ -305,6 +305,21 @@ final class NetworkHealthState {
   final double maximum;
 }
 
+final class NetworkRecoveryState {
+  NetworkRecoveryState({
+    required this.entityId,
+    required this.remainingCooldownMicroseconds,
+  }) {
+    if (remainingCooldownMicroseconds < 0 ||
+        remainingCooldownMicroseconds > 60000000) {
+      _invalid('Network recovery state values are invalid.');
+    }
+  }
+
+  final EntityId entityId;
+  final int remainingCooldownMicroseconds;
+}
+
 final class NetworkPersistentFlagState {
   NetworkPersistentFlagState({
     required this.entityId,
@@ -360,9 +375,7 @@ final class NetworkGuardianState {
                 telegraphTargetX!.abs() > 1000000)) ||
         (telegraphTargetZ != null &&
             (!telegraphTargetZ!.isFinite ||
-                telegraphTargetZ!.abs() > 1000000)) ||
-        (encounterPhase == NetworkGuardianEncounterPhase.standard &&
-            attackPattern != NetworkGuardianAttackPattern.melee)) {
+                telegraphTargetZ!.abs() > 1000000))) {
       _invalid('Network guardian state values are invalid.');
     }
   }
@@ -384,9 +397,15 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
     required Iterable<NetworkHealthState> healthStates,
     required Iterable<NetworkPersistentFlagState> persistentFlagStates,
     required Iterable<String> inventoryItemIds,
+    Iterable<NetworkRecoveryState> recoveryStates = const [],
     Iterable<NetworkGuardianState> guardianStates = const [],
   }) : healthStates = List.unmodifiable(
          healthStates.toList()..sort(
+           (left, right) => left.entityId.value.compareTo(right.entityId.value),
+         ),
+       ),
+       recoveryStates = List.unmodifiable(
+         recoveryStates.toList()..sort(
            (left, right) => left.entityId.value.compareTo(right.entityId.value),
          ),
        ),
@@ -405,6 +424,7 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
        ) {
     if (revision < 0 ||
         this.healthStates.length > 256 ||
+        this.recoveryStates.length > 256 ||
         this.persistentFlagStates.length > 256 ||
         this.guardianStates.length > 256 ||
         this.inventoryItemIds.length > 64 ||
@@ -413,6 +433,8 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
         ) ||
         this.healthStates.map((state) => state.entityId).toSet().length !=
             this.healthStates.length ||
+        this.recoveryStates.map((state) => state.entityId).toSet().length !=
+            this.recoveryStates.length ||
         this.persistentFlagStates
                 .map((state) => state.entityId)
                 .toSet()
@@ -428,6 +450,7 @@ final class GameplayStateSnapshotMessage extends NetworkMessage {
 
   final int revision;
   final List<NetworkHealthState> healthStates;
+  final List<NetworkRecoveryState> recoveryStates;
   final List<NetworkPersistentFlagState> persistentFlagStates;
   final List<NetworkGuardianState> guardianStates;
   final Set<String> inventoryItemIds;

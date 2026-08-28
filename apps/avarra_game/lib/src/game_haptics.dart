@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 /// authoritative outcomes. They never influence simulation.
 enum GameHapticCue {
   dodge,
+  recovery,
   combatImpact,
   playerHurt,
   enemyDefeated,
@@ -21,6 +22,7 @@ final class PlatformGameHapticsController implements GameHapticsController {
   @override
   Future<void> play(GameHapticCue cue) => switch (cue) {
     GameHapticCue.dodge => HapticFeedback.mediumImpact(),
+    GameHapticCue.recovery => HapticFeedback.mediumImpact(),
     GameHapticCue.combatImpact => HapticFeedback.lightImpact(),
     GameHapticCue.playerHurt => HapticFeedback.heavyImpact(),
     GameHapticCue.enemyDefeated => HapticFeedback.heavyImpact(),

@@ -33,6 +33,15 @@ final class FixedStepFrameClock {
 
   Duration? _previousElapsed;
   int _accumulatedMicroseconds = 0;
+  int clampedFrameDeltaCount = 0;
+  int discardedSimulationStepCount = 0;
+
+  /// Fraction of the next fixed step already accumulated for presentation.
+  ///
+  /// Simulation consumers should continue to use [advance]. This value is a
+  /// renderer hint only: it never changes the number or ordering of steps.
+  double get interpolationAlpha =>
+      (_accumulatedMicroseconds / step.inMicroseconds).clamp(0.0, 1.0);
 
   int advance(Duration elapsed) {
     final previous = _previousElapsed;
@@ -41,7 +50,11 @@ final class FixedStepFrameClock {
       return 0;
     }
 
-    final frameMicroseconds = (elapsed - previous).inMicroseconds.clamp(
+    final rawFrameMicroseconds = (elapsed - previous).inMicroseconds;
+    if (rawFrameMicroseconds > maximumFrameDelta.inMicroseconds) {
+      clampedFrameDeltaCount += 1;
+    }
+    final frameMicroseconds = rawFrameMicroseconds.clamp(
       0,
       maximumFrameDelta.inMicroseconds,
     );
@@ -50,6 +63,7 @@ final class FixedStepFrameClock {
     final steps = availableSteps.clamp(0, maximumStepsPerFrame);
     _accumulatedMicroseconds -= steps * step.inMicroseconds;
     if (availableSteps > maximumStepsPerFrame) {
+      discardedSimulationStepCount += availableSteps - maximumStepsPerFrame;
       _accumulatedMicroseconds %= step.inMicroseconds;
     }
     return steps;
@@ -58,5 +72,10 @@ final class FixedStepFrameClock {
   void reset() {
     _previousElapsed = null;
     _accumulatedMicroseconds = 0;
+  }
+
+  void resetDiagnostics() {
+    clampedFrameDeltaCount = 0;
+    discardedSimulationStepCount = 0;
   }
 }

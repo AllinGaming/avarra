@@ -103,6 +103,55 @@ void main() {
     expect(isForgeFloorTile(solid), isFalse);
   });
 
+  test('enemy palette exposes distinct typed role and elite presets', () {
+    final assetId = AssetId.parse('01890f47-e8b8-7a68-8000-000000000502');
+    final presets = {
+      for (final item in forgeObjectPalette.where(
+        (item) => item.kind == ForgePaletteItemKind.guardian,
+      ))
+        item.id: item,
+    };
+
+    expect(presets.keys, {
+      'guardian',
+      'guardian_reaver',
+      'guardian_hexer',
+      'guardian_rift_reaver',
+    });
+    WorldEntityDefinition entity(String id) => presets[id]!.createEntity(
+      entityId: EntityId.generate(),
+      assetId: assetId,
+      groundPosition: const ContentVector3(0, 0, 0),
+    );
+
+    final vanguard = entity('guardian');
+    final reaver = entity('guardian_reaver');
+    final hexer = entity('guardian_hexer');
+    final elite = entity('guardian_rift_reaver');
+    expect(
+      vanguard.component<GuardianArchetypeDefinition>()!.role,
+      GuardianArchetypeRole.vanguard,
+    );
+    expect(
+      reaver.component<GuardianArchetypeDefinition>()!.role,
+      GuardianArchetypeRole.reaver,
+    );
+    expect(
+      hexer.component<GuardianArchetypeDefinition>()!.role,
+      GuardianArchetypeRole.hexer,
+    );
+    expect(hexer.component<BasicAttackDefinition>()!.range, 3);
+    expect(
+      elite.component<GuardianArchetypeDefinition>()!.eliteModifier,
+      GuardianEliteModifierDefinition.riftTouched,
+    );
+    expect({
+      vanguard.component<TransformDefinition>()!.scale,
+      reaver.component<TransformDefinition>()!.scale,
+      hexer.component<TransformDefinition>()!.scale,
+      elite.component<TransformDefinition>()!.scale,
+    }, hasLength(4));
+  });
   test('floor brush fills every deterministic cell along a stroke', () {
     final start = ForgeFloorCell.fromGround(const ContentVector3(0.2, 0, -0.2));
     final end = ForgeFloorCell.fromGround(const ContentVector3(6.2, 0, 2.2));
@@ -188,6 +237,9 @@ void main() {
       settings: const ForgeGuardianMissionSettings(
         guardianMaximumHealth: 64,
         guardianDamage: 11,
+        guardianDisplayName: 'Vault Hexer',
+        guardianRole: GuardianArchetypeRole.hexer,
+        guardianEliteModifier: GuardianEliteModifierDefinition.riftTouched,
         spacing: 3,
         itemLabel: 'Arcane core',
         completionLabel: 'Gateway secured',
@@ -213,6 +265,15 @@ void main() {
     );
     expect(mission.guardian.component<HealthDefinition>()!.maximumHealth, 64);
     expect(mission.guardian.component<BasicAttackDefinition>()!.damage, 11);
+    final archetype = mission.guardian
+        .component<GuardianArchetypeDefinition>()!;
+    expect(archetype.displayName, 'Vault Hexer');
+    expect(archetype.role, GuardianArchetypeRole.hexer);
+    expect(
+      archetype.eliteModifier,
+      GuardianEliteModifierDefinition.riftTouched,
+    );
+    expect(mission.guardian.component<BasicAttackDefinition>()!.range, 3);
 
     final collectible = mission.collectible
         .component<CollectibleItemDefinition>()!;
@@ -363,6 +424,7 @@ void main() {
 
     expect(settings.bossEncounter, isTrue);
     expect(forgeGuardianMissionProfileIdForSettings(settings), 'ascendant');
+    expect(mission.guardian.component<GuardianArchetypeDefinition>(), isNull);
     final boss = mission.guardian.component<GuardianBossDefinition>()!;
     final hazard = mission.guardian.component<GuardianArenaHazardDefinition>()!;
     expect(boss.displayName, 'Mordren, Ember Tyrant');

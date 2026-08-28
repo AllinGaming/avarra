@@ -1708,6 +1708,113 @@ new acknowledgement or navigation model. Human keyboard/controller play should
 determine whether the established Start-menu traversal is sufficient before a
 direct Lore binding is considered. See the Stage 12.51 validation.
 
+Stage 12.52 extends Relay Zero into a third authored chapter, The Drowned
+Signal. Two streamed blackwater chunks lead to Moraq, Bell of Kharos, a second
+three-phase Guardian encounter, two lesser guardians, the Tideglass recovery,
+and the Drowned Crown health reward. Existing narrative, quest guidance, pause
+chronicle, Story Archive, save restore, and final recap derive that chapter from
+the existing turn-in/inventory truth; content remains schema v12 and no generic
+campaign or encounter state is added.
+
+Game also adds a session-only Battle Rhythm presentation. Accepted local-player
+combat results build a two-and-a-half-second hit chain, expose accumulated
+damage, and show a FINISHER cue on an authoritative defeat. Guardian damage,
+rejected/speculative attacks, restored saves, and initial replication snapshots
+cannot inflate it. The badge is reduced-motion aware, accessible, and clears on
+restart. Game analysis and 140 Game tests pass, including focused chain expiry,
+finisher, timer, and semantics regressions. Full workspace release builds,
+physical Android play, direct-LAN, and human chapter pacing/listening remain
+open. See `AVARRA_STAGE_12_52_DROWNED_SIGNAL_AND_COMBAT_RHYTHM_VALIDATION.md`.
+
+Stage 12.53 removes the visible fixed-step boundary from the renderer. Game
+samples the bounded remainder from `FixedStepFrameClock` and interpolates only
+same-asset entities present in consecutive immutable presentation snapshots
+before ambient, boss, dodge, and Thermion layers. It is presentation-only:
+fixed simulation ordering, server authority, prediction, save state,
+replication messages, and the 64-entity work budget remain unchanged. Spawn,
+stream, asset-swap, and restart paths stay safe by snapping or using the
+current transform. Focused smoothing and clock tests pass; packaged
+high-refresh/low-refresh play, physical Android, and direct-LAN acceptance
+remain open. See `AVARRA_STAGE_12_53_FIXED_STEP_PRESENTATION_SMOOTHING_VALIDATION.md`.
+Stage 12.54 adds a persistent boss HUD for authored Guardian encounters.
+Game projects the nearest active boss (or the explicitly selected boss) into a
+bounded bar showing authored name, health, encounter phase, and live attack
+posture. Wind-up attacks name their response (`MELEE INCOMING`, `SWEEP
+INCOMING`, `ERUPTION INCOMING`, or `FISSURE RING INCOMING`) while the existing
+world telegraph remains the actionable authority. Health easing, phase color,
+compact layout, semantic live-region behavior, and reduced-motion handling are
+presentation-only; no combat, save, network, campaign, or input schema changes
+are introduced. Full Game tests (147), analysis, Windows release, and Android
+debug packaging pass. See `AVARRA_STAGE_12_54_BOSS_HUD_VALIDATION.md`.
+Stage 12.55 adds bounded camera look-ahead for traversal and combat framing.
+The Game derives a presentation target from planar movement plus a softly weighted
+active ground, interaction, or attack target, then feeds it through the existing
+frame-rate-independent follow half-life. Movement lead, focus weight, focus
+distance, streamed targets, and correction snaps remain bounded; restart still
+centers on the player. No movement, collision, picking, target, save, network,
+replication, or server-authority behavior changes. Full Game tests (149),
+analysis, Windows release, and Android debug packaging pass. See
+`AVARRA_STAGE_12_55_CAMERA_LOOKAHEAD_VALIDATION.md`.
+Stage 12.56 makes authored player-power relics read as real rewards. Confirmed
+local and replicated inventory additions now distinguish ordinary loot from an
+existing `PlayerPowerRewardDefinition`, presenting `RELIC AWAKENED` and the
+exact maximum-health increase without inventing rarity or equipment state.
+Initial replicated inventory snapshots remain silent, compact layout and live
+semantics are covered, and save/network/content schemas are unchanged. Full
+Game tests (150), focused analysis, Windows release, and Android debug packaging
+pass. See
+`AVARRA_STAGE_12_56_AUTHORED_RELIC_REWARD_FEEDBACK_VALIDATION.md`.
+Stage 12.57 serializes the Game's transient attention moments through one
+bounded notice lane. Boss beats, authored power relics, objective milestones,
+story transitions, and ordinary loot now resolve in that order instead of
+animating and announcing concurrently. Pause, briefing, and completion overlays
+suspend the lane without discarding pending notices. This is presentation-only:
+gameplay authority, content, saves, replication, and each notice's existing
+timing remain unchanged. Full Game tests (152), focused analysis, Windows
+release, and Android debug packaging pass. See
+`AVARRA_STAGE_12_57_TRANSIENT_NOTICE_LANE_VALIDATION.md`.
+Stage 12.58 gives authored relic power a persistent place in the pause menu.
+The responsive Character Power card derives live vitality, authored base
+health, cumulative maximum-health bonuses, owned relic identity, and locked
+future-relic slots from existing world, ECS, and inventory truth. Undiscovered
+names stay hidden and worlds without power rewards receive an honest empty
+state. No equipment, rarity, combat-stat, save, network, or schema state is
+introduced. Full Game tests (155), focused analysis, Windows release, and
+Android debug packaging pass. See
+`AVARRA_STAGE_12_58_PERSISTENT_CHARACTER_POWER_VALIDATION.md`.
+Stage 12.59 turns the live HUD inventory summary into an accessible Character
+Power shortcut using the existing pause lifecycle. It keeps a bounded pill,
+announces both action and inventory context, and adds no input binding, menu,
+inventory, save, replication, or Forge state. Full Game tests (156), focused
+analysis, Windows release, and Android debug packaging pass. See
+`AVARRA_STAGE_12_59_CHARACTER_POWER_ACCESS_AND_FUTURE_PLAN_VALIDATION.md`.
+`AVARRA_GAME_FUTURE_PASSES.md` is the prioritized execution annex for work
+after this baseline: physical product evidence first, then gated survival,
+enemy-variety, itemization, living-biome/plant, campaign, and co-op slices.
+Open architecture choices remain behind ADR entry gates.
+Stage 12.60 implements the first survival-loop proof as built-in Relic Mend.
+The pure-Dart authority restores up to 35 health on a 12-second simulation-time
+cooldown; offline Game and the multiplayer host share it, while protocol v7
+replicates remaining readiness and health. Game adds a remappable R/Y/touch
+action-bar slot, accessible full/ready/cooldown state, settings-v4 migration,
+and original audio/haptic feedback. Save v2, content/world schemas, and Forge
+remain unchanged. Gameplay (19), network (10), replication (11), server (13),
+focused Game (27), and full Game (157) tests pass, as do focused analysis,
+Windows release, and Android debug packaging. Physical/human Gate 0 and balance
+against both bosses remain open. See
+`AVARRA_STAGE_12_60_AUTHORITY_OWNED_RELIC_MEND_VALIDATION.md` and ADR-039.
+
+Stage 12.61 makes the physical/human Gate 0 executable from inside Game. Device
+sampling now runs offline as well as in connected sessions; Android reports
+physical device, OS/API, app-build, process-memory, thermal, battery, and UID
+network identity/evidence. Game also counts slow frames plus clamped/discarded
+fixed-step work and copies a sanitized Markdown report containing world,
+protocol, host, streaming, health, mission, inventory, interaction, and human
+observation fields. The recorder is Game-owned diagnostics only and adds no
+simulation, save, content, replication, upload, or Forge state. Full Game tests
+(159), analysis, Windows release, and Android debug packaging pass. Physical
+Android and direct-LAN evidence remain open. See
+`AVARRA_STAGE_12_61_EXPORTABLE_PLAYTEST_EVIDENCE_VALIDATION.md`.
 Physical Android sustained play, touch quality, valid frame telemetry,
 thermal/battery, direct-LAN in both directions, and a human 10–15 minute
 product playtest remain open. See

@@ -15,6 +15,7 @@ enum GameControl {
   moveRight,
   primarySkill,
   dodge,
+  recovery,
   interact,
 }
 
@@ -26,6 +27,7 @@ extension GameControlLabel on GameControl {
     GameControl.moveRight => 'Move right',
     GameControl.primarySkill => 'Basic strike',
     GameControl.dodge => 'Dodge',
+    GameControl.recovery => 'Relic Mend',
     GameControl.interact => 'Interact',
   };
 
@@ -36,6 +38,7 @@ extension GameControlLabel on GameControl {
     GameControl.moveRight => true,
     GameControl.primarySkill ||
     GameControl.dodge ||
+    GameControl.recovery ||
     GameControl.interact => false,
   };
 }
@@ -126,6 +129,7 @@ final class GameControlBindings {
     this.moveRight = GameInputKey.keyD,
     this.primarySkill = GameInputKey.space,
     this.dodge = GameInputKey.shiftLeft,
+    this.recovery = GameInputKey.keyR,
     this.interact = GameInputKey.keyE,
   });
 
@@ -137,6 +141,7 @@ final class GameControlBindings {
   final GameInputKey moveRight;
   final GameInputKey primarySkill;
   final GameInputKey dodge;
+  final GameInputKey recovery;
   final GameInputKey interact;
 
   GameInputKey keyFor(GameControl control) => switch (control) {
@@ -146,6 +151,7 @@ final class GameControlBindings {
     GameControl.moveRight => moveRight,
     GameControl.primarySkill => primarySkill,
     GameControl.dodge => dodge,
+    GameControl.recovery => recovery,
     GameControl.interact => interact,
   };
 
@@ -161,6 +167,7 @@ final class GameControlBindings {
           GameControl.moveRight => 'D-PAD RIGHT',
           GameControl.primarySkill => 'X',
           GameControl.dodge => 'B',
+          GameControl.recovery => 'Y',
           GameControl.interact => 'A',
         },
       };
@@ -195,6 +202,7 @@ final class GameControlBindings {
     for (final control in const [
       GameControl.primarySkill,
       GameControl.dodge,
+      GameControl.recovery,
       GameControl.interact,
     ]) {
       if (matches(control, key)) return control;
@@ -228,6 +236,9 @@ final class GameControlBindings {
       GameControl.dodge =>
         key == LogicalKeyboardKey.gameButtonB ||
             key == LogicalKeyboardKey.gameButton2,
+      GameControl.recovery =>
+        key == LogicalKeyboardKey.gameButtonY ||
+            key == LogicalKeyboardKey.gameButton4,
       GameControl.interact =>
         key == LogicalKeyboardKey.gameButtonA ||
             key == LogicalKeyboardKey.gameButton1,
@@ -242,13 +253,21 @@ final class GameControlBindings {
       control.name: keyFor(control).name,
   };
 
-  factory GameControlBindings.decode(Object? source) {
+  factory GameControlBindings.decode(
+    Object? source, {
+    bool allowMissingRecovery = false,
+  }) {
     if (source is! Map<String, dynamic>) {
       throw const FormatException('Invalid AVARRA control bindings.');
     }
     final parsed = <GameControl, GameInputKey>{};
     for (final control in GameControl.values) {
       final value = source[control.name];
+      if (control == GameControl.recovery &&
+          value == null &&
+          allowMissingRecovery) {
+        continue;
+      }
       if (value is! String) {
         throw const FormatException('Invalid AVARRA control bindings.');
       }
@@ -260,6 +279,12 @@ final class GameControlBindings {
       }
       parsed[control] = key;
     }
+    if (!parsed.containsKey(GameControl.recovery)) {
+      parsed[GameControl.recovery] = const [
+        GameInputKey.keyR,
+        ...GameInputKey.values,
+      ].firstWhere((key) => !parsed.values.contains(key));
+    }
     if (parsed.values.toSet().length != GameControl.values.length) {
       throw const FormatException('AVARRA control keys must be unique.');
     }
@@ -270,6 +295,7 @@ final class GameControlBindings {
       moveRight: parsed[GameControl.moveRight]!,
       primarySkill: parsed[GameControl.primarySkill]!,
       dodge: parsed[GameControl.dodge]!,
+      recovery: parsed[GameControl.recovery]!,
       interact: parsed[GameControl.interact]!,
     );
   }
@@ -282,6 +308,7 @@ final class GameControlBindings {
         moveRight: control == GameControl.moveRight ? key : moveRight,
         primarySkill: control == GameControl.primarySkill ? key : primarySkill,
         dodge: control == GameControl.dodge ? key : dodge,
+        recovery: control == GameControl.recovery ? key : recovery,
         interact: control == GameControl.interact ? key : interact,
       );
 
@@ -294,6 +321,7 @@ final class GameControlBindings {
       moveRight == other.moveRight &&
       primarySkill == other.primarySkill &&
       dodge == other.dodge &&
+      recovery == other.recovery &&
       interact == other.interact;
 
   @override
@@ -304,6 +332,7 @@ final class GameControlBindings {
     moveRight,
     primarySkill,
     dodge,
+    recovery,
     interact,
   );
 }
@@ -331,8 +360,10 @@ final _controllerLogicalKeys = <LogicalKeyboardKey>{
   LogicalKeyboardKey.gameButtonA,
   LogicalKeyboardKey.gameButtonB,
   LogicalKeyboardKey.gameButtonX,
+  LogicalKeyboardKey.gameButtonY,
   LogicalKeyboardKey.gameButton1,
   LogicalKeyboardKey.gameButton2,
   LogicalKeyboardKey.gameButton3,
+  LogicalKeyboardKey.gameButton4,
   LogicalKeyboardKey.gameButtonStart,
 };

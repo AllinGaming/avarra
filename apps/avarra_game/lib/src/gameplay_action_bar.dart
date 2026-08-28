@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'game_controls.dart';
 
-enum GameplayHotkeyAction { primarySkill, dodge, interact }
+enum GameplayHotkeyAction { primarySkill, dodge, recovery, interact }
 
 GameplayHotkeyAction? gameplayHotkeyActionFor(
   LogicalKeyboardKey key, {
@@ -13,6 +13,7 @@ GameplayHotkeyAction? gameplayHotkeyActionFor(
 }) => switch (bindings.actionControlFor(key)) {
   GameControl.primarySkill => GameplayHotkeyAction.primarySkill,
   GameControl.dodge => GameplayHotkeyAction.dodge,
+  GameControl.recovery => GameplayHotkeyAction.recovery,
   GameControl.interact => GameplayHotkeyAction.interact,
   _ => null,
 };
@@ -86,8 +87,10 @@ final class GameplayActionBar extends StatelessWidget {
     required this.primaryCooldown,
     required this.primaryEngaged,
     required this.dodgeCooldown,
+    required this.recoveryCooldown,
     required this.onPrimary,
     required this.onDodge,
+    required this.onRecovery,
     required this.onInteract,
     this.controlBindings = GameControlBindings.defaults,
     this.inputPromptMode = GameInputPromptMode.keyboard,
@@ -101,8 +104,10 @@ final class GameplayActionBar extends StatelessWidget {
   final GameplaySkillCooldown primaryCooldown;
   final bool primaryEngaged;
   final GameplaySkillCooldown dodgeCooldown;
+  final GameplaySkillCooldown recoveryCooldown;
   final VoidCallback? onPrimary;
   final VoidCallback? onDodge;
+  final VoidCallback? onRecovery;
   final VoidCallback? onInteract;
   final GameControlBindings controlBindings;
   final GameInputPromptMode inputPromptMode;
@@ -120,7 +125,7 @@ final class GameplayActionBar extends StatelessWidget {
         : primaryEngaged
         ? 'AUTO STRIKE · READY'
         : 'BASIC STRIKE · READY';
-    final primarySize = compact ? 64.0 : 72.0;
+    final primarySize = compact ? 58.0 : 72.0;
 
     return Semantics(
       key: const Key('gameplay_action_bar'),
@@ -145,9 +150,9 @@ final class GameplayActionBar extends StatelessWidget {
         ),
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-            compact ? 10 : 14,
+            compact ? 8 : 14,
             compact ? 7 : 9,
-            compact ? 10 : 14,
+            compact ? 8 : 14,
             compact ? 8 : 10,
           ),
           child: Column(
@@ -174,9 +179,35 @@ final class GameplayActionBar extends StatelessWidget {
                     current: currentHealth,
                     maximum: maximumHealth,
                     fraction: healthFraction,
-                    size: compact ? 58 : 66,
+                    size: compact ? 54 : 66,
                   ),
-                  SizedBox(width: compact ? 9 : 13),
+                  SizedBox(width: compact ? 7 : 13),
+                  _SkillSlot(
+                    key: const Key('recovery_skill_slot'),
+                    actionKey: const Key('relic_mend'),
+                    label: 'RELIC MEND',
+                    semanticStatus: currentHealth >= maximumHealth
+                        ? 'health full'
+                        : recoveryCooldown.isReady
+                        ? 'ready, restores up to 35 health'
+                        : '${recoveryCooldown.remainingLabel} remaining',
+                    hotkey: controlBindings.promptLabelFor(
+                      GameControl.recovery,
+                      inputPromptMode,
+                    ),
+                    icon: Icons.auto_fix_high_rounded,
+                    size: compact ? 48 : 58,
+                    accent: const Color(0xFFC891FF),
+                    cooldownFraction: recoveryCooldown.remainingFraction,
+                    cooldownKey: const Key('recovery_skill_cooldown'),
+                    onTap:
+                        recoveryCooldown.isReady &&
+                            currentHealth < maximumHealth
+                        ? onRecovery
+                        : null,
+                    showLabel: !compact,
+                  ),
+                  SizedBox(width: compact ? 7 : 11),
                   _SkillSlot(
                     key: const Key('primary_skill_slot'),
                     actionKey: const Key('basic_attack'),
@@ -196,7 +227,7 @@ final class GameplayActionBar extends StatelessWidget {
                     onTap: onPrimary,
                     showLabel: !compact,
                   ),
-                  SizedBox(width: compact ? 8 : 11),
+                  SizedBox(width: compact ? 7 : 11),
                   _SkillSlot(
                     key: const Key('dodge_skill_slot'),
                     actionKey: const Key('dodge'),
@@ -209,14 +240,14 @@ final class GameplayActionBar extends StatelessWidget {
                       inputPromptMode,
                     ),
                     icon: Icons.double_arrow_rounded,
-                    size: compact ? 52 : 58,
+                    size: compact ? 48 : 58,
                     accent: const Color(0xFF7CE3C1),
                     cooldownFraction: dodgeCooldown.remainingFraction,
                     cooldownKey: const Key('dodge_skill_cooldown'),
                     onTap: dodgeCooldown.isReady ? onDodge : null,
                     showLabel: !compact,
                   ),
-                  SizedBox(width: compact ? 8 : 11),
+                  SizedBox(width: compact ? 7 : 11),
                   _SkillSlot(
                     key: const Key('interaction_skill_slot'),
                     actionKey: const Key('interact'),
@@ -227,7 +258,7 @@ final class GameplayActionBar extends StatelessWidget {
                       inputPromptMode,
                     ),
                     icon: Icons.touch_app_rounded,
-                    size: compact ? 52 : 58,
+                    size: compact ? 48 : 58,
                     accent: const Color(0xFF65C9D4),
                     cooldownKey: const Key('interaction_skill_cooldown'),
                     onTap: onInteract,

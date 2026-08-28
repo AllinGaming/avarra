@@ -373,6 +373,22 @@ binding. Locked, unknown, and duplicate keys do not inflate it. Whole-batch
 review clears both Lore treatment and tab badge, and later batches return. See
 `docs/AVARRA_STAGE_12_51_PAUSE_LORE_BADGE_VALIDATION.md`.
 
+Stage 12.60 adds authority-owned Relic Mend: a 35-health, 12-second recovery
+choice shared by offline Game and the host. Protocol v7 replicates remaining
+cooldown, while Game provides a remappable R/Y/touch slot, accessible state,
+settings-v4 migration, and original audio/haptic feedback. It adds no potion
+inventory, save state, world schema, or Forge dependency. See
+`docs/AVARRA_STAGE_12_60_AUTHORITY_OWNED_RELIC_MEND_VALIDATION.md` and ADR-039.
+
+Stage 12.61 adds an exportable Game-owned playtest report behind the in-game
+information panel. Offline, client, and host sessions sample available device
+metrics; Android adds physical device/OS/app-build, process-memory, thermal,
+battery, and UID traffic data. The report also includes frame/fixed-step, host,
+world, mission, health, inventory, interaction, and human-review evidence. It
+copies sanitized Markdown only on explicit player action and changes no
+authority, save, content, replication, upload, or Forge state. See
+`docs/AVARRA_STAGE_12_61_EXPORTABLE_PLAYTEST_EVIDENCE_VALIDATION.md`.
+
 Windows and Android compile/package gates pass. The pinned Thermion commit has
 also passed Windows and Pixel 10 Pro Android-emulator visual/lifecycle checks.
 GitHub Actions now gives Android native compilation a dedicated Windows job

@@ -52,6 +52,25 @@ void main() {
         return (rush + cut) * envelope;
       },
     ),
+    'relic_mend.wav': (
+      seconds: 0.78,
+      synth: (time, index) {
+        final envelope = _attackRelease(time, 0.78, 0.012, 0.34);
+        const notes = [220.0, 329.63, 440.0, 659.25];
+        var chime = 0.0;
+        for (var note = 0; note < notes.length; note += 1) {
+          final start = note * 0.075;
+          final local = time - start;
+          if (local < 0) continue;
+          chime +=
+              math.sin(_twoPi * notes[note] * local) *
+              math.exp(-local * 5.5) *
+              0.26;
+        }
+        final breath = _noise(index, 0x4D3D) * math.exp(-time * 8) * 0.08;
+        return (chime + breath) * envelope;
+      },
+    ),
     'warden_windup.wav': (
       seconds: 0.65,
       synth: (time, _) {

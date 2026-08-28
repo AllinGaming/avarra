@@ -298,6 +298,42 @@ void main() {
     await host.close();
   });
 
+  test('listen host owns Relic Mend health and cooldown', () async {
+    final host = await MultiplayerProofHost.start(
+      worldPackageSource: _findProofWorld().readAsStringSync(),
+      primaryPlayerId: _primaryPlayerId,
+      port: 0,
+    );
+    final hostEvents = host.events.listen((_) {});
+    final client = await _connect(host, _primaryPlayerId);
+    await client.waitForControlledEntity();
+    final player = host.runtimeWorld.ecs.handleFor(_playerEntityId)!;
+    host.runtimeWorld.ecs.replaceComponent(
+      player,
+      HealthComponent(maximumHealth: 100, currentHealth: 30),
+    );
+
+    final recovery = await _sendCommand(client, GameplayCommandKind.recovery);
+    expect(recovery.accepted, isTrue, reason: recovery.detail);
+    await _waitUntil(() => client.healthStates[_playerEntityId]?.current == 65);
+    expect(
+      client.recoveryStates[_playerEntityId]?.remainingCooldownMicroseconds,
+      greaterThan(0),
+    );
+
+    final repeated = await _sendCommand(client, GameplayCommandKind.recovery);
+    expect(repeated.accepted, isFalse);
+    expect(repeated.detail, contains('recovering'));
+    expect(
+      host.runtimeWorld.ecs.component<HealthComponent>(player).currentHealth,
+      65,
+    );
+
+    await client.close();
+    await hostEvents.cancel();
+    await host.close();
+  });
+
   test('host authoritatively completes the Relay Zero mission', () async {
     final host = await MultiplayerProofHost.start(
       worldPackageSource: _findProofWorld().readAsStringSync(),
@@ -463,6 +499,78 @@ void main() {
           true,
     );
     expect(client.inventoryItemIds, {'relic.ashen_heart'});
+
+    _moveHostEntity(host, _playerEntityId, Vector3(20.2, 0.4, -11.5));
+    await _waitUntil(
+      () =>
+          host.runtimeWorld.ecs.handleFor(_moraqId) != null &&
+          client.healthStates[_moraqId] != null,
+    );
+    final moraqHandle = host.runtimeWorld.ecs.handleFor(_moraqId)!;
+    host.runtimeWorld.ecs.replaceComponent(
+      moraqHandle,
+      HealthComponent(maximumHealth: 140, currentHealth: 20),
+    );
+    host.runtimeWorld.ecs.replaceComponent(
+      host.runtimeWorld.ecs.handleFor(_playerEntityId)!,
+      const BasicAttackStateComponent(),
+    );
+    final defeatMoraq = await _sendCommand(
+      client,
+      GameplayCommandKind.attack,
+      targetEntityId: _moraqId,
+    );
+    expect(defeatMoraq.accepted, isTrue, reason: defeatMoraq.detail);
+    await _waitUntil(() => client.healthStates[_moraqId]?.current == 0);
+
+    _moveHostEntity(host, _playerEntityId, Vector3(20.1, 0.4, -12.5));
+    final recoverTideglass = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _tideglassId,
+    );
+    expect(recoverTideglass.accepted, isTrue, reason: recoverTideglass.detail);
+    await _waitUntil(() => client.inventoryItemIds.contains('relay.tideglass'));
+
+    _moveHostEntity(host, _playerEntityId, Vector3(21.2, 0.4, -11.1));
+    final claimDrownedCrown = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _drownedCrownId,
+    );
+    expect(
+      claimDrownedCrown.accepted,
+      isTrue,
+      reason: claimDrownedCrown.detail,
+    );
+    await _waitUntil(
+      () =>
+          client.inventoryItemIds.contains('relic.drowned_crown') &&
+          client.healthStates[_playerEntityId]?.maximum == 145,
+    );
+
+    _moveHostEntity(host, _playerEntityId, Vector3(17.2, 0.4, -0.6));
+    await _waitUntil(
+      () => host.runtimeWorld.ecs.handleFor(_blackwaterFontId) != null,
+    );
+    final awakenTideglass = await _sendCommand(
+      client,
+      GameplayCommandKind.interact,
+      targetEntityId: _blackwaterFontId,
+    );
+    expect(awakenTideglass.accepted, isTrue, reason: awakenTideglass.detail);
+    await _waitUntil(
+      () =>
+          client.authoritativeFlagValue(
+            _blackwaterFontId,
+            'tideglass.answered',
+          ) ==
+          true,
+    );
+    expect(client.inventoryItemIds, {
+      'relic.ashen_heart',
+      'relic.drowned_crown',
+    });
 
     await client.close();
     await hostEvents.cancel();
@@ -666,3 +774,9 @@ final _listeningShrineId = EntityId.parse(
 );
 final _signalEaterId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000026');
 final _echoShardId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000027');
+final _blackwaterFontId = EntityId.parse(
+  '01890f47-e8b8-7a68-8000-000000000034',
+);
+final _moraqId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000036');
+final _tideglassId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000037');
+final _drownedCrownId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000038');

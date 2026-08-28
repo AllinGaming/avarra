@@ -362,7 +362,19 @@ final class WorldPackageCodec {
         context: {'entityId': entityId.value},
       );
     }
+    final archetype = components
+        .whereType<GuardianArchetypeDefinition>()
+        .firstOrNull;
     final boss = components.whereType<GuardianBossDefinition>().firstOrNull;
+    if (archetype != null &&
+        (!types.contains(AvarraComponentType.guardianBehavior) ||
+            boss != null)) {
+      _invalid(
+        '$path.components',
+        'A Guardian archetype requires Guardian behavior and cannot also be a boss.',
+        context: {'entityId': entityId.value},
+      );
+    }
     if (boss != null) {
       final attack = components.whereType<BasicAttackDefinition>().firstOrNull;
       if (!types.contains(AvarraComponentType.guardianBehavior) ||

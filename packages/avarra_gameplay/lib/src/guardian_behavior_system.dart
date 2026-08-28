@@ -119,6 +119,7 @@ final class GuardianBehaviorSystem {
     final initialState = ecs.component<GuardianBehaviorStateComponent>(handle);
     final health = ecs.component<HealthComponent>(handle);
     final boss = ecs.tryComponent<GuardianBossComponent>(handle);
+    final archetype = ecs.tryComponent<GuardianArchetypeComponent>(handle);
     final arenaHazard = ecs.tryComponent<GuardianArenaHazardComponent>(handle);
     var state = initialState;
     final encounterPhase = _encounterPhaseFor(boss, health);
@@ -231,15 +232,15 @@ final class GuardianBehaviorSystem {
           positionChanged: false,
         );
       }
-      final targetInsidePattern =
-          boss == null ||
-          _targetInsideBossPattern(
-            boss: boss,
-            arenaHazard: arenaHazard,
-            state: state,
-            guardianPosition: transform.position,
-            targetPosition: targetPosition,
-          );
+      final targetInsidePattern = _targetInsidePattern(
+        boss: boss,
+        archetype: archetype,
+        arenaHazard: arenaHazard,
+        state: state,
+        guardianPosition: transform.position,
+        targetPosition: targetPosition,
+        basicAttackRange: attackDefinition.range,
+      );
       final attack = targetInsidePattern
           ? _combat.attack(
               attackerId: guardianId,
@@ -251,8 +252,8 @@ final class GuardianBehaviorSystem {
               targetId: effectiveTargetId,
               rejection: CombatAttackRejection.outOfRange,
             );
-      if (boss != null) {
-        _consumeBossAttackCooldown(
+      if (boss != null || archetype != null) {
+        _consumeGuardianAttackCooldown(
           handle: handle,
           attack: attackDefinition,
           simulationTime: simulationTime,
@@ -271,7 +272,8 @@ final class GuardianBehaviorSystem {
         targetEntityId: effectiveTargetId,
         encounterPhase: state.encounterPhase,
         completedAttackCount:
-            state.completedAttackCount + (boss == null ? 0 : 1),
+            state.completedAttackCount +
+            (boss == null && archetype == null ? 0 : 1),
       );
       _replaceStateIfChanged(handle, state, next);
       return GuardianBehaviorTickResult(
@@ -285,7 +287,7 @@ final class GuardianBehaviorSystem {
         attack: attack,
       );
     }
-    final nextPattern = _nextAttackPattern(boss, arenaHazard, state);
+    final nextPattern = _nextAttackPattern(boss, arenaHazard, archetype, state);
     final engagementRange = _engagementRange(
       boss,
       arenaHazard,
@@ -421,11 +423,15 @@ final class GuardianBehaviorSystem {
   GuardianAttackPattern _nextAttackPattern(
     GuardianBossComponent? boss,
     GuardianArenaHazardComponent? arenaHazard,
+    GuardianArchetypeComponent? archetype,
     GuardianBehaviorStateComponent state,
   ) {
-    if (boss == null ||
-        state.encounterPhase == GuardianEncounterPhase.standard ||
-        state.encounterPhase == GuardianEncounterPhase.phaseOne) {
+    if (boss == null) {
+      return archetype == null
+          ? GuardianAttackPattern.melee
+          : guardianAttackPatternFor(archetype, state.completedAttackCount);
+    }
+    if (state.encounterPhase == GuardianEncounterPhase.phaseOne) {
       return GuardianAttackPattern.melee;
     }
     if (state.encounterPhase == GuardianEncounterPhase.phaseTwo) {
@@ -464,34 +470,54 @@ final class GuardianBehaviorSystem {
     };
   }
 
-  bool _targetInsideBossPattern({
-    required GuardianBossComponent boss,
+  bool _targetInsidePattern({
+    required GuardianBossComponent? boss,
+    required GuardianArchetypeComponent? archetype,
     required GuardianArenaHazardComponent? arenaHazard,
     required GuardianBehaviorStateComponent state,
     required Vector3 guardianPosition,
     required Vector3 targetPosition,
+    required double basicAttackRange,
   }) {
     final lockedTarget = state.telegraphTargetPosition!;
+    if (boss != null) {
+      return switch (state.attackPattern) {
+        GuardianAttackPattern.melee =>
+          _planarDistance(guardianPosition, targetPosition) <= boss.meleeRange,
+        GuardianAttackPattern.eruption =>
+          _planarDistance(lockedTarget, targetPosition) <= boss.eruptionRadius,
+        GuardianAttackPattern.sweep => _insideSweep(
+          origin: guardianPosition,
+          lockedTarget: lockedTarget,
+          target: targetPosition,
+          range: boss.sweepRange,
+          halfAngleDegrees: boss.sweepHalfAngleDegrees,
+        ),
+        GuardianAttackPattern.fissureRing =>
+          arenaHazard != null &&
+              _insideFissureRing(
+                center: lockedTarget,
+                target: targetPosition,
+                innerSafeRadius: arenaHazard.innerSafeRadius,
+                outerRadius: arenaHazard.outerRadius,
+              ),
+      };
+    }
+    if (archetype == null) return true;
     return switch (state.attackPattern) {
       GuardianAttackPattern.melee =>
-        _planarDistance(guardianPosition, targetPosition) <= boss.meleeRange,
+        _planarDistance(guardianPosition, targetPosition) <= basicAttackRange,
       GuardianAttackPattern.eruption =>
-        _planarDistance(lockedTarget, targetPosition) <= boss.eruptionRadius,
+        _planarDistance(lockedTarget, targetPosition) <=
+            guardianLesserEruptionRadius,
       GuardianAttackPattern.sweep => _insideSweep(
         origin: guardianPosition,
         lockedTarget: lockedTarget,
         target: targetPosition,
-        range: boss.sweepRange,
-        halfAngleDegrees: boss.sweepHalfAngleDegrees,
+        range: basicAttackRange,
+        halfAngleDegrees: guardianLesserSweepHalfAngleDegrees,
       ),
-      GuardianAttackPattern.fissureRing =>
-        arenaHazard != null &&
-            _insideFissureRing(
-              center: lockedTarget,
-              target: targetPosition,
-              innerSafeRadius: arenaHazard.innerSafeRadius,
-              outerRadius: arenaHazard.outerRadius,
-            ),
+      GuardianAttackPattern.fissureRing => false,
     };
   }
 
@@ -526,7 +552,7 @@ final class GuardianBehaviorSystem {
     return lockedDirection.dot(targetDirection) >= minimumDot;
   }
 
-  void _consumeBossAttackCooldown({
+  void _consumeGuardianAttackCooldown({
     required EntityHandle handle,
     required BasicAttackComponent attack,
     required Duration simulationTime,

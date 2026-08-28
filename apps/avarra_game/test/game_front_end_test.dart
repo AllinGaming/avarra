@@ -787,21 +787,21 @@ void main() {
     );
 
     expect(
-      find.text('I/J/K/L MOVE · Q STRIKE · SHIFT DODGE · F USE'),
+      find.text('I/J/K/L MOVE · Q STRIKE · SHIFT DODGE · R MEND · F USE'),
       findsOneWidget,
     );
 
     await tester.sendKeyEvent(LogicalKeyboardKey.gameButtonA);
     await tester.pump();
     expect(entered, 1);
-    expect(find.text('X STRIKE · B DODGE · A USE'), findsOneWidget);
+    expect(find.text('X STRIKE · B DODGE · Y MEND · A USE'), findsOneWidget);
     expect(find.text('START · PAUSE'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('front_door_settings')));
     await tester.pump();
     expect(openedSettings, 1);
     expect(
-      find.text('I/J/K/L MOVE · Q STRIKE · SHIFT DODGE · F USE'),
+      find.text('I/J/K/L MOVE · Q STRIKE · SHIFT DODGE · R MEND · F USE'),
       findsOneWidget,
     );
   });

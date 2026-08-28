@@ -79,6 +79,9 @@ final class ForgeGuardianMissionSettings {
   const ForgeGuardianMissionSettings({
     this.guardianMaximumHealth = 36,
     this.guardianDamage = 7,
+    this.guardianDisplayName = 'Ash Vanguard',
+    this.guardianRole = GuardianArchetypeRole.vanguard,
+    this.guardianEliteModifier = GuardianEliteModifierDefinition.none,
     this.spacing = 2,
     this.bossEncounter = false,
     this.bossDisplayName = 'Ash Warden',
@@ -111,6 +114,9 @@ final class ForgeGuardianMissionSettings {
 
   final double guardianMaximumHealth;
   final double guardianDamage;
+  final String guardianDisplayName;
+  final GuardianArchetypeRole guardianRole;
+  final GuardianEliteModifierDefinition guardianEliteModifier;
   final double spacing;
   final bool bossEncounter;
   final String bossDisplayName;
@@ -140,6 +146,13 @@ final class ForgeGuardianMissionSettings {
     }
     if (!guardianDamage.isFinite || guardianDamage <= 0) {
       return 'Guardian damage must be greater than zero';
+    }
+    if (!bossEncounter) {
+      final normalizedGuardianName = guardianDisplayName.trim();
+      if (normalizedGuardianName.isEmpty ||
+          normalizedGuardianName.length > 80) {
+        return 'Guardian name must contain 1 to 80 characters';
+      }
     }
     if (!spacing.isFinite || spacing <= 0) {
       return 'Mission spacing must be greater than zero';
@@ -225,6 +238,9 @@ final class ForgeGuardianMissionSettings {
   ForgeGuardianMissionSettings copyWith({
     double? guardianMaximumHealth,
     double? guardianDamage,
+    String? guardianDisplayName,
+    GuardianArchetypeRole? guardianRole,
+    GuardianEliteModifierDefinition? guardianEliteModifier,
     double? spacing,
     bool? bossEncounter,
     String? bossDisplayName,
@@ -252,6 +268,10 @@ final class ForgeGuardianMissionSettings {
       guardianMaximumHealth:
           guardianMaximumHealth ?? this.guardianMaximumHealth,
       guardianDamage: guardianDamage ?? this.guardianDamage,
+      guardianDisplayName: guardianDisplayName ?? this.guardianDisplayName,
+      guardianRole: guardianRole ?? this.guardianRole,
+      guardianEliteModifier:
+          guardianEliteModifier ?? this.guardianEliteModifier,
       spacing: spacing ?? this.spacing,
       bossEncounter: bossEncounter ?? this.bossEncounter,
       bossDisplayName: bossDisplayName ?? this.bossDisplayName,
@@ -347,12 +367,28 @@ final class ForgePaletteItem {
     required this.label,
     required this.description,
     required this.kind,
+    this.guardianDisplayName,
+    this.guardianRole,
+    this.guardianEliteModifier = GuardianEliteModifierDefinition.none,
+    this.guardianMoveSpeed = 2.2,
+    this.guardianMaximumHealth = 36,
+    this.guardianDamage = 7,
+    this.guardianRange = 1.8,
+    this.guardianCooldownSeconds = 1,
   });
 
   final String id;
   final String label;
   final String description;
   final ForgePaletteItemKind kind;
+  final String? guardianDisplayName;
+  final GuardianArchetypeRole? guardianRole;
+  final GuardianEliteModifierDefinition guardianEliteModifier;
+  final double guardianMoveSpeed;
+  final double guardianMaximumHealth;
+  final double guardianDamage;
+  final double guardianRange;
+  final double guardianCooldownSeconds;
 
   ForgePaletteItemCategory get category => switch (kind) {
     ForgePaletteItemKind.floorTile ||
@@ -509,7 +545,21 @@ final class ForgePaletteItem {
         TransformDefinition(
           position: ContentVector3(x, 0.75, z),
           rotation: const ContentQuaternion(0, 0, 0, 1),
-          scale: const ContentVector3(0.9, 1.5, 0.9),
+          scale: switch ((guardianRole, guardianEliteModifier)) {
+            (_, GuardianEliteModifierDefinition.riftTouched) =>
+              const ContentVector3(1.1, 1.65, 1.1),
+            (GuardianArchetypeRole.reaver, _) => const ContentVector3(
+              1.02,
+              1.45,
+              1.02,
+            ),
+            (GuardianArchetypeRole.hexer, _) => const ContentVector3(
+              0.72,
+              1.65,
+              0.72,
+            ),
+            _ => const ContentVector3(0.9, 1.5, 0.9),
+          },
         ),
         RenderableReferenceDefinition(assetId: assetId),
         const PhysicsColliderDefinition(
@@ -517,14 +567,24 @@ final class ForgePaletteItem {
           bodyKind: ContentPhysicsBodyKind.character,
           isSensor: false,
         ),
-        const CharacterControllerDefinition(
-          moveSpeed: 2.2,
+        CharacterControllerDefinition(
+          moveSpeed: guardianMoveSpeed,
           skinWidth: 0.02,
           arrivalTolerance: 0.15,
         ),
-        const HealthDefinition(maximumHealth: 36),
-        const BasicAttackDefinition(damage: 7, range: 1.8, cooldownSeconds: 1),
+        HealthDefinition(maximumHealth: guardianMaximumHealth),
+        BasicAttackDefinition(
+          damage: guardianDamage,
+          range: guardianRange,
+          cooldownSeconds: guardianCooldownSeconds,
+        ),
         const GuardianBehaviorDefinition(perceptionRange: 7, leashRange: 12),
+        if (guardianRole case final role?)
+          GuardianArchetypeDefinition(
+            displayName: guardianDisplayName ?? 'Ash Vanguard',
+            role: role,
+            eliteModifier: guardianEliteModifier,
+          ),
       ],
       ForgePaletteItemKind.collectibleItem => <ContentComponentDefinition>[
         TransformDefinition(
@@ -657,10 +717,52 @@ const forgeObjectPalette = <ForgePaletteItem>[
     kind: ForgePaletteItemKind.objectiveGate,
   ),
   ForgePaletteItem(
-    id: 'guardian',
-    label: 'Guardian',
-    description: 'Combat enemy with authored perception and leash',
+    id: 'guardian_reaver',
+    label: 'Reaver',
+    description: 'Broad lesser enemy with a committed sweeping cone',
     kind: ForgePaletteItemKind.guardian,
+    guardianDisplayName: 'Blackwater Reaver',
+    guardianRole: GuardianArchetypeRole.reaver,
+    guardianMoveSpeed: 2,
+    guardianMaximumHealth: 48,
+    guardianDamage: 8,
+    guardianRange: 2,
+    guardianCooldownSeconds: 1.25,
+  ),
+  ForgePaletteItem(
+    id: 'guardian_hexer',
+    label: 'Hexer',
+    description: 'Slender ranged enemy that locks a ground eruption',
+    kind: ForgePaletteItemKind.guardian,
+    guardianDisplayName: 'Cinder Hexer',
+    guardianRole: GuardianArchetypeRole.hexer,
+    guardianMoveSpeed: 1.8,
+    guardianMaximumHealth: 28,
+    guardianDamage: 6,
+    guardianRange: 3,
+    guardianCooldownSeconds: 1.45,
+  ),
+  ForgePaletteItem(
+    id: 'guardian_rift_reaver',
+    label: 'Rift-Touched Reaver',
+    description: 'Elite Reaver whose third commitment becomes a ground mark',
+    kind: ForgePaletteItemKind.guardian,
+    guardianDisplayName: 'Rift-Touched Reaver',
+    guardianRole: GuardianArchetypeRole.reaver,
+    guardianEliteModifier: GuardianEliteModifierDefinition.riftTouched,
+    guardianMoveSpeed: 1.85,
+    guardianMaximumHealth: 70,
+    guardianDamage: 10,
+    guardianRange: 2.2,
+    guardianCooldownSeconds: 1.3,
+  ),
+  ForgePaletteItem(
+    id: 'guardian',
+    label: 'Vanguard',
+    description: 'Direct-pressure lesser enemy with a readable melee strike',
+    kind: ForgePaletteItemKind.guardian,
+    guardianDisplayName: 'Ash Vanguard',
+    guardianRole: GuardianArchetypeRole.vanguard,
   ),
   ForgePaletteItem(
     id: 'collectible_item',
@@ -756,24 +858,48 @@ ForgeGuardianMissionTemplate createForgeGuardianMissionTemplate({
       groundPosition.z + settings.spacing,
     ),
   );
+  final guardianComponents = <ContentComponentDefinition>[];
+  for (final component in guardianPreset.components.values) {
+    if (component is HealthDefinition) {
+      guardianComponents.add(
+        HealthDefinition(maximumHealth: settings.guardianMaximumHealth),
+      );
+      continue;
+    }
+    if (component is BasicAttackDefinition) {
+      guardianComponents.add(
+        BasicAttackDefinition(
+          damage: settings.guardianDamage,
+          range: settings.bossEncounter
+              ? settings.bossFissureOuterRadius > settings.bossSweepRange
+                    ? settings.bossFissureOuterRadius
+                    : settings.bossSweepRange
+              : settings.guardianRole == GuardianArchetypeRole.hexer
+              ? 3
+              : component.range,
+          cooldownSeconds: component.cooldownSeconds,
+        ),
+      );
+      continue;
+    }
+    if (component is GuardianArchetypeDefinition) {
+      if (!settings.bossEncounter) {
+        guardianComponents.add(
+          GuardianArchetypeDefinition(
+            displayName: settings.guardianDisplayName.trim(),
+            role: settings.guardianRole,
+            eliteModifier: settings.guardianEliteModifier,
+          ),
+        );
+      }
+      continue;
+    }
+    guardianComponents.add(component);
+  }
   final guardian = WorldEntityDefinition(
     id: guardianPreset.id,
     components: [
-      for (final component in guardianPreset.components.values)
-        if (component is HealthDefinition)
-          HealthDefinition(maximumHealth: settings.guardianMaximumHealth)
-        else if (component is BasicAttackDefinition)
-          BasicAttackDefinition(
-            damage: settings.guardianDamage,
-            range: settings.bossEncounter
-                ? settings.bossFissureOuterRadius > settings.bossSweepRange
-                      ? settings.bossFissureOuterRadius
-                      : settings.bossSweepRange
-                : component.range,
-            cooldownSeconds: component.cooldownSeconds,
-          )
-        else
-          component,
+      ...guardianComponents,
       if (settings.bossEncounter)
         GuardianBossDefinition(
           displayName: settings.bossDisplayName.trim(),

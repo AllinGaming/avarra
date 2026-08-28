@@ -138,6 +138,93 @@ void main() {
       );
     });
   });
+
+  group('recovery', () {
+    test('restores bounded health and advances simulation-time cooldown', () {
+      final ecs = EcsWorld();
+      final playerId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000051');
+      final player = ecs.createEntity(entityId: playerId);
+      ecs
+        ..addComponent(
+          player,
+          HealthComponent(maximumHealth: 100, currentHealth: 72),
+        )
+        ..addComponent(player, const RecoveryStateComponent());
+      final system = RecoverySystem(ecs: ecs);
+
+      final first = system.recover(
+        entityId: playerId,
+        simulationTime: const Duration(seconds: 3),
+      );
+      expect(first.accepted, isTrue);
+      expect(first.healthRestored, 28);
+      expect(first.currentHealth, 100);
+      expect(
+        ecs.component<RecoveryStateComponent>(player).nextReadyAt,
+        const Duration(seconds: 15),
+      );
+
+      ecs.replaceComponent(
+        player,
+        HealthComponent(maximumHealth: 100, currentHealth: 40),
+      );
+      final coolingDown = system.recover(
+        entityId: playerId,
+        simulationTime: const Duration(seconds: 4),
+      );
+      expect(coolingDown.rejection, RecoveryRejection.cooldown);
+      expect(coolingDown.remainingCooldown, const Duration(seconds: 11));
+
+      final ready = system.recover(
+        entityId: playerId,
+        simulationTime: const Duration(seconds: 15),
+      );
+      expect(ready.healthRestored, playerRecoveryAmount);
+      expect(ready.currentHealth, 75);
+    });
+
+    test('rejects full, defeated, and unavailable actors without cooldown', () {
+      final ecs = EcsWorld();
+      final fullId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000052');
+      final full = ecs.createEntity(entityId: fullId);
+      ecs
+        ..addComponent(full, HealthComponent(maximumHealth: 100))
+        ..addComponent(full, const RecoveryStateComponent());
+      final defeatedId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000053');
+      final defeated = ecs.createEntity(entityId: defeatedId);
+      ecs
+        ..addComponent(
+          defeated,
+          HealthComponent(maximumHealth: 100, currentHealth: 0),
+        )
+        ..addComponent(defeated, const RecoveryStateComponent());
+      final missingId = EntityId.parse('01890f47-e8b8-7a68-8000-000000000054');
+      final system = RecoverySystem(ecs: ecs);
+
+      expect(
+        system
+            .recover(entityId: fullId, simulationTime: Duration.zero)
+            .rejection,
+        RecoveryRejection.fullHealth,
+      );
+      expect(
+        system
+            .recover(entityId: defeatedId, simulationTime: Duration.zero)
+            .rejection,
+        RecoveryRejection.defeated,
+      );
+      expect(
+        system
+            .recover(entityId: missingId, simulationTime: Duration.zero)
+            .rejection,
+        RecoveryRejection.unavailable,
+      );
+      expect(
+        ecs.component<RecoveryStateComponent>(full).nextReadyAt,
+        Duration.zero,
+      );
+    });
+  });
 }
 
 final class _Fixture {

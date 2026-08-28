@@ -34,11 +34,14 @@ import 'src/game_haptics.dart';
 import 'src/game_launch_configuration.dart';
 import 'src/gameplay_action_bar.dart';
 import 'src/gameplay_atmosphere_overlay.dart';
+import 'src/gameplay_boss_bar.dart';
 import 'src/gameplay_boss_fx.dart';
 import 'src/gameplay_boss_presentation.dart';
 import 'src/gameplay_camera_follow.dart';
 import 'src/gameplay_character_animation.dart';
+import 'src/gameplay_character_progression.dart';
 import 'src/gameplay_combat_feedback_overlay.dart';
+import 'src/gameplay_combat_rhythm.dart';
 import 'src/gameplay_dodge_presentation.dart';
 import 'src/gameplay_enemy_health_overlay.dart';
 import 'src/gameplay_enemy_telegraph_overlay.dart';
@@ -46,9 +49,12 @@ import 'src/gameplay_loot_presentation.dart';
 import 'src/gameplay_lore_discovery.dart';
 import 'src/gameplay_motion.dart';
 import 'src/gameplay_navigation_feedback.dart';
+import 'src/gameplay_notice_lane.dart';
 import 'src/gameplay_player_danger_overlay.dart';
+import 'src/gameplay_presentation_smoothing.dart';
 import 'src/gameplay_quest_chronicle.dart';
 import 'src/gameplay_quest_guidance.dart';
+import 'src/gameplay_session_evidence.dart';
 import 'src/gameplay_story_archive.dart';
 import 'src/gameplay_story_presentation.dart';
 import 'src/gameplay_target_frame.dart';
@@ -675,6 +681,8 @@ class _PresentationBoundaryScreenState
     extends State<_PresentationBoundaryScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late PresentationSnapshot _presentation;
+  PresentationSnapshot _previousPresentation = PresentationSnapshot.empty;
+  double _presentationInterpolationAlpha = 1;
   Map<EntityId, GameplayMotionKind> _presentationMotionKinds = const {};
   final ValueNotifier<Duration> _presentationMotionTime = ValueNotifier(
     Duration.zero,
@@ -685,6 +693,7 @@ class _PresentationBoundaryScreenState
   late DodgeSystem _dodgeSystem;
   late InteractionSystem _interactionSystem;
   late CombatSystem _combatSystem;
+  late RecoverySystem _recoverySystem;
   late GuardianBehaviorSystem _guardianBehaviorSystem;
   late AuthoredInteractionEffectExecutor _interactionEffects;
   late final AuthoredWorldMovementBounds _movementBounds;
@@ -700,6 +709,7 @@ class _PresentationBoundaryScreenState
   final MovementInputPacer _movementInputPacer = MovementInputPacer();
   final Map<EntityId, NetworkTransformInterpolator> _remoteInterpolators = {};
   final Stopwatch _movementClock = Stopwatch()..start();
+  late final GameplaySessionEvidenceRecorder _sessionEvidenceRecorder;
   final FixedStepFrameClock _frameClock = FixedStepFrameClock(
     step: _simulationStep,
   );
@@ -713,6 +723,7 @@ class _PresentationBoundaryScreenState
   EntityId? _interactionMoveTargetId;
   Duration _nextNetworkAutoAttackAt = Duration.zero;
   Duration _nextNetworkDodgeAt = Duration.zero;
+  Duration _nextNetworkRecoveryAt = Duration.zero;
   Vector3 _lastDodgeDirection = Vector3(0, 0, -1);
   GameplayDodgePresentation? _dodgePresentation;
   Timer? _saveTimer;
@@ -730,6 +741,7 @@ class _PresentationBoundaryScreenState
   int _frameCount = 0;
   int _totalFrameMicroseconds = 0;
   int _maximumFrameMicroseconds = 0;
+  int _slowFrameCount = 0;
   bool _hostEnding = false;
   bool _inputSubmissionPaused = false;
   bool _rendererReady = false;
@@ -745,6 +757,7 @@ class _PresentationBoundaryScreenState
   Duration _simulationTime = Duration.zero;
   final CombatPresentationTimeline _combatPresentationTimeline =
       CombatPresentationTimeline();
+  GameplayCombatRhythm _combatRhythm = const GameplayCombatRhythm.empty();
   Set<String> _presentedInventoryItemIds = const {};
   bool _hasPresentedReplicatedInventorySnapshot = false;
   PickupPresentationNotice? _pickupNotice;
@@ -766,6 +779,9 @@ class _PresentationBoundaryScreenState
   @override
   void initState() {
     super.initState();
+    _sessionEvidenceRecorder = GameplaySessionEvidenceRecorder(
+      startedAtUtc: DateTime.now().toUtc(),
+    );
     _gameLoopTicker = createTicker(_handleGameFrame);
     WidgetsBinding.instance.addObserver(this);
     _saveStatus = widget.restoredSave
@@ -783,12 +799,22 @@ class _PresentationBoundaryScreenState
     if (multiplayerClient != null) {
       _applyReplicatedEntities(multiplayerClient);
     }
+    final playerHandle = widget.runtimeWorld.ecs.handleFor(_playerEntityId)!;
+    if (!widget.runtimeWorld.ecs.hasComponent<RecoveryStateComponent>(
+      playerHandle,
+    )) {
+      widget.runtimeWorld.ecs.addComponent(
+        playerHandle,
+        const RecoveryStateComponent(),
+      );
+    }
     _movementBounds = AuthoredWorldMovementBounds.fromWorld(
       widget.runtimeWorld.definition,
     );
     _playerSpawnTransform = _authoredPlayerSpawn(authoredPlayerEntityId);
     _applyAuthoredPlayerPower();
     _presentation = _extractPresentation();
+    _previousPresentation = _presentation;
     if (multiplayerClient != null) {
       _applyAuthoritativeGameplayState(multiplayerClient);
     }
@@ -812,6 +838,7 @@ class _PresentationBoundaryScreenState
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
+    _recoverySystem = RecoverySystem(ecs: widget.runtimeWorld.ecs);
     _guardianBehaviorSystem = GuardianBehaviorSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
@@ -866,13 +893,11 @@ class _PresentationBoundaryScreenState
         },
       );
     }
-    if (widget.multiplayerHost != null) {
-      _hostMetricsTimer = Timer.periodic(
-        const Duration(seconds: 1),
-        (_) => unawaited(_sampleHostMetrics()),
-      );
-      unawaited(_sampleHostMetrics());
-    }
+    _hostMetricsTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => unawaited(_sampleHostMetrics()),
+    );
+    unawaited(_sampleHostMetrics());
     SchedulerBinding.instance.addTimingsCallback(_recordFrameTimings);
   }
 
@@ -1056,11 +1081,32 @@ class _PresentationBoundaryScreenState
     final compactLayout = MediaQuery.sizeOf(context).width < 700;
     final missionNarrative = _missionNarrative;
     final questMarker = widget.settings.showQuestGuidance ? _questMarker : null;
+    final bossHudState = _bossHudState;
+    final noticeLane = selectGameplayNoticeLane(
+      blocked: _isGameplaySuspended,
+      hasBoss: _bossNotice != null,
+      hasPowerReward: _pickupNotice?.grantsPower ?? false,
+      hasObjective: _objectiveMilestoneNotice != null,
+      hasStory: _storyNotice != null,
+      hasLoot: _pickupNotice != null,
+    );
+    final showsPickupNotice =
+        noticeLane == GameplayNoticeLaneSlot.powerReward ||
+        noticeLane == GameplayNoticeLaneSlot.loot;
     final storyArchiveChapters = gameplayStoryArchiveChapters(
       definition: widget.runtimeWorld.definition,
       progress: _adventureProgress,
     );
     final storyArchiveProgress = gameStoryArchiveProgress(storyArchiveChapters);
+    final playerHealth = _healthFor(_playerEntityId);
+    final characterProgression = !_isPaused || playerHealth == null
+        ? null
+        : gameplayCharacterProgression(
+            definition: widget.runtimeWorld.definition,
+            authoredPlayerEntityId: _authoredPlayerEntityId,
+            inventoryItemIds: _adventureProgress.inventoryItemIds,
+            currentHealth: playerHealth.currentHealth,
+          );
     final status = !widget.enableRenderer || _showDiagnostics
         ? Column(
             mainAxisSize: MainAxisSize.min,
@@ -1102,10 +1148,15 @@ class _PresentationBoundaryScreenState
                 key: const Key('multiplayer_status'),
               ),
               Text(_performanceStatus, key: const Key('host_performance')),
-              if (widget.multiplayerHost != null) ...[
+              if (widget.multiplayerHost != null)
                 Text(_hostStatus, key: const Key('host_status')),
-                Text(_hostDeviceStatus, key: const Key('host_device_status')),
-              ],
+              Text(_deviceStatus, key: const Key('host_device_status')),
+              TextButton.icon(
+                key: const Key('copy_playtest_evidence'),
+                onPressed: _copyPlaytestEvidence,
+                icon: const Icon(Icons.content_copy, size: 18),
+                label: const Text('Copy playtest report'),
+              ),
               Text(
                 _adventureProgress.status(widget.runtimeWorld.definition),
                 key: const Key('authored_objective_status'),
@@ -1147,10 +1198,17 @@ class _PresentationBoundaryScreenState
                 builder: (context, elapsed, _) {
                   final combatFrame = _combatPresentationFrame;
                   final bossFxStates = _bossFxStates;
+                  final smoothedSnapshot = smoothGameplayPresentation(
+                    previous: _previousPresentation,
+                    current: _presentation,
+                    alpha: _presentationInterpolationAlpha,
+                    entityIds: _presentationMotionKinds.keys.toSet(),
+                    maximumInterpolatedEntities: 64,
+                  );
                   final ambientSnapshot = widget.settings.reducedMotion
-                      ? _presentation
+                      ? smoothedSnapshot
                       : applyGameplayMotion(
-                          snapshot: _presentation,
+                          snapshot: smoothedSnapshot,
                           motionKinds: _presentationMotionKinds,
                           elapsed: elapsed,
                           priorityEntityIds: {
@@ -1328,7 +1386,7 @@ class _PresentationBoundaryScreenState
                   child: Padding(
                     padding: EdgeInsets.only(top: compactLayout ? 242 : 104),
                     child: GameplayPickupToast(
-                      notice: _pickupNotice,
+                      notice: showsPickupNotice ? _pickupNotice : null,
                       onFinished: _handlePickupToastFinished,
                     ),
                   ),
@@ -1343,7 +1401,9 @@ class _PresentationBoundaryScreenState
                       left: compactLayout ? 10 : 0,
                     ),
                     child: GameplayStoryToast(
-                      notice: _storyNotice,
+                      notice: noticeLane == GameplayNoticeLaneSlot.story
+                          ? _storyNotice
+                          : null,
                       compact: compactLayout,
                       onFinished: _handleStoryNoticeFinished,
                     ),
@@ -1356,7 +1416,9 @@ class _PresentationBoundaryScreenState
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: GameplayObjectiveMilestoneToast(
-                      notice: _objectiveMilestoneNotice,
+                      notice: noticeLane == GameplayNoticeLaneSlot.objective
+                          ? _objectiveMilestoneNotice
+                          : null,
                       compact: compactLayout,
                       reducedMotion: widget.settings.reducedMotion,
                       onFinished: _handleObjectiveMilestoneFinished,
@@ -1370,9 +1432,28 @@ class _PresentationBoundaryScreenState
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: GameplayBossToast(
-                      notice: _bossNotice,
+                      notice: noticeLane == GameplayNoticeLaneSlot.boss
+                          ? _bossNotice
+                          : null,
                       compact: compactLayout,
                       onFinished: _handleBossNoticeFinished,
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: compactLayout ? 210 : 116,
+                      left: compactLayout ? 10 : 24,
+                      right: compactLayout ? 10 : 24,
+                    ),
+                    child: GameplayBossBar(
+                      state: bossHudState,
+                      compact: compactLayout,
+                      reducedMotion: widget.settings.reducedMotion,
                     ),
                   ),
                 ),
@@ -1421,6 +1502,7 @@ class _PresentationBoundaryScreenState
                     widget.runtimeWorld.definition,
                   ),
                   inventory: _adventureProgress.inventoryStatus,
+                  characterProgression: characterProgression,
                   questChapters: gameplayQuestChronicleChapters(
                     definition: widget.runtimeWorld.definition,
                     progress: _adventureProgress,
@@ -1595,10 +1677,9 @@ class _PresentationBoundaryScreenState
                           icon: Icons.shield,
                           label: _compactGuardianStatus,
                         ),
-                        _statusPill(
+                        GameplayCharacterProgressionShortcut(
                           key: const Key('compact_inventory_status'),
-                          icon: Icons.inventory_2,
-                          label: adventure.inventoryItemIds.isEmpty
+                          inventoryLabel: adventure.inventoryItemIds.isEmpty
                               ? 'Empty'
                               : adventure.inventoryItemIds
                                     .map(
@@ -1607,6 +1688,7 @@ class _PresentationBoundaryScreenState
                                           itemId,
                                     )
                                     .join(', '),
+                          onPressed: _togglePause,
                         ),
                         if (storyArchiveProgress.hasMemories)
                           GameplayLoreShortcut(
@@ -1789,22 +1871,37 @@ class _PresentationBoundaryScreenState
         ),
       );
     }
-    return GameplayActionBar(
-      currentHealth: health.currentHealth,
-      maximumHealth: health.maximumHealth,
-      primaryCooldown: _playerAttackCooldown(attack),
-      primaryEngaged: _attackMoveTargetId != null,
-      dodgeCooldown: _playerDodgeCooldown(),
-      onPrimary: !_rendererReady || attackTargetId == null
-          ? null
-          : _attackSelected,
-      onDodge: !_rendererReady ? null : _triggerDodge,
-      onInteract: !_rendererReady || interactionTargetId == null
-          ? null
-          : _interactSelected,
-      controlBindings: widget.settings.controlBindings,
-      inputPromptMode: _inputPromptMode,
-      compact: compactLayout,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GameplayCombatRhythmBadge(
+          rhythm: _combatRhythm,
+          now: _simulationTime,
+          compact: compactLayout,
+          reducedMotion: widget.settings.reducedMotion,
+        ),
+        if (_combatRhythm.at(_simulationTime).isActive)
+          SizedBox(height: compactLayout ? 6 : 8),
+        GameplayActionBar(
+          currentHealth: health.currentHealth,
+          maximumHealth: health.maximumHealth,
+          primaryCooldown: _playerAttackCooldown(attack),
+          primaryEngaged: _attackMoveTargetId != null,
+          dodgeCooldown: _playerDodgeCooldown(),
+          recoveryCooldown: _playerRecoveryCooldown(),
+          onPrimary: !_rendererReady || attackTargetId == null
+              ? null
+              : _attackSelected,
+          onDodge: !_rendererReady ? null : _triggerDodge,
+          onRecovery: !_rendererReady ? null : _triggerRecovery,
+          onInteract: !_rendererReady || interactionTargetId == null
+              ? null
+              : _interactSelected,
+          controlBindings: widget.settings.controlBindings,
+          inputPromptMode: _inputPromptMode,
+          compact: compactLayout,
+        ),
+      ],
     );
   }
 
@@ -2067,16 +2164,23 @@ class _PresentationBoundaryScreenState
         '${metrics.maximumTickMilliseconds.toStringAsFixed(2)} ms';
   }
 
-  String get _hostDeviceStatus {
-    final metrics = _hostMetrics ?? widget.multiplayerHost!.metrics;
+  String get _deviceStatus {
+    final host = widget.multiplayerHost;
+    final hostMetrics = _hostMetrics ?? host?.metrics;
     final device = _hostDeviceMetrics;
     final memory = device == null
         ? '-'
         : (device.memoryBytes / (1024 * 1024)).toStringAsFixed(1);
+    final battery = device?.batteryLevelPercent == null
+        ? '-'
+        : '${device!.batteryLevelPercent!.toStringAsFixed(0)}%';
+    final sent = hostMetrics?.bytesSent ?? device?.platformBytesSent;
+    final received =
+        hostMetrics?.bytesReceived ?? device?.platformBytesReceived;
     return 'Device: $memory MiB · thermal '
-        '${device?.thermalStatus ?? '-'} · net '
-        '↑${_formatBytes(metrics.bytesSent)} '
-        '↓${_formatBytes(metrics.bytesReceived)} · '
+        '${device?.thermalStatus ?? '-'} · battery $battery · net '
+        'sent ${sent == null || sent < 0 ? '-' : _formatBytes(sent)} '
+        'received ${received == null || received < 0 ? '-' : _formatBytes(received)} · '
         '${widget.streaming.snapshot.activeChunkCount} chunks';
   }
 
@@ -2089,22 +2193,96 @@ class _PresentationBoundaryScreenState
         _maximumFrameMicroseconds,
         microseconds,
       );
+      if (microseconds > 33333) {
+        _slowFrameCount += 1;
+      }
     }
   }
 
   Future<void> _sampleHostMetrics() async {
     final host = widget.multiplayerHost;
-    if (host == null || host.isClosed) {
+    if (host?.isClosed ?? false) {
       return;
     }
     final device = await widget.hostDeviceMetricsSampler.sample();
     if (!mounted) {
       return;
     }
+    _sessionEvidenceRecorder.recordDeviceSample(device);
     setState(() {
-      _hostMetrics = host.metrics;
+      if (host != null) {
+        _hostMetrics = host.metrics;
+      }
       _hostDeviceMetrics = device;
     });
+  }
+
+  GameplaySessionEvidence _buildSessionEvidence() {
+    final definition = widget.runtimeWorld.definition;
+    final health = _healthFor(_playerEntityId);
+    final host = widget.multiplayerHost;
+    final metrics = host == null ? null : (_hostMetrics ?? host.metrics);
+    return _sessionEvidenceRecorder.build(
+      capturedAtUtc: DateTime.now().toUtc(),
+      sessionDuration: _movementClock.elapsed,
+      worldName: definition.name,
+      worldId: definition.id.value,
+      sourceLabel: widget.sourceLabel,
+      worldFormatVersion: definition.worldFormatVersion,
+      contentSchemaVersion: definition.contentSchemaVersion,
+      networkProtocolVersion: currentNetworkProtocolVersion,
+      sessionMode: host != null
+          ? 'listen-host'
+          : widget.multiplayerClient != null
+          ? 'remote-client'
+          : 'offline',
+      rendererReady: _rendererReady,
+      frameSamples: _frameCount,
+      averageFrameMilliseconds: _frameCount == 0
+          ? null
+          : _totalFrameMicroseconds / _frameCount / 1000,
+      maximumFrameMilliseconds: _frameCount == 0
+          ? null
+          : _maximumFrameMicroseconds / 1000,
+      slowFrameCount: _slowFrameCount,
+      clampedFrameDeltaCount: _frameClock.clampedFrameDeltaCount,
+      discardedSimulationStepCount: _frameClock.discardedSimulationStepCount,
+      activeChunkCount: widget.streaming.snapshot.activeChunkCount,
+      totalChunkCount: widget.streaming.totalChunkCount,
+      currentHealth: health?.currentHealth,
+      maximumHealth: health?.maximumHealth,
+      missionComplete: _adventureProgress.isMissionComplete,
+      missionStatus: _adventureProgress.status(definition),
+      inventoryItemCount: _adventureProgress.inventoryItemIds.length,
+      interactionStatus: _interactionStatus,
+      completedHostTicks: metrics?.completedTicks,
+      averageHostTickMilliseconds: metrics?.averageTickMilliseconds,
+      maximumHostTickMilliseconds: metrics?.maximumTickMilliseconds,
+      activeClients: metrics?.activeClients,
+      authoritativeEntityCount: metrics?.entityCount,
+      hostBytesSent: metrics?.bytesSent,
+      hostBytesReceived: metrics?.bytesReceived,
+    );
+  }
+
+  Future<void> _copyPlaytestEvidence() async {
+    try {
+      await Clipboard.setData(
+        ClipboardData(text: _buildSessionEvidence().toMarkdown()),
+      );
+      if (mounted) {
+        setState(() {
+          _interactionStatus =
+              'Playtest report copied · add the human observations';
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _interactionStatus = 'Could not copy playtest report: $error';
+        });
+      }
+    }
   }
 
   Future<void> _endHostedSession() async {
@@ -2131,6 +2309,8 @@ class _PresentationBoundaryScreenState
       _frameCount = 0;
       _totalFrameMicroseconds = 0;
       _maximumFrameMicroseconds = 0;
+      _slowFrameCount = 0;
+      _frameClock.resetDiagnostics();
       _interactionStatus = 'Ready · tap or hold the movement arrows';
     });
     _startGameLoop();
@@ -2152,11 +2332,13 @@ class _PresentationBoundaryScreenState
     if (_isGameplaySuspended || _preparedForWorldReplacement) return;
     final steps = _frameClock.advance(elapsed);
     for (var index = 0; index < steps; index += 1) {
+      _previousPresentation = _presentation;
       _tickMovement();
     }
+    _presentationInterpolationAlpha = _frameClock.interpolationAlpha;
     _advanceCameraFollow(elapsed);
     if (_hasExpiredDefeatPresentation) {
-      setState(() => _presentation = _extractPresentation());
+      setState(() => _refreshPresentation());
     }
     _presentationMotionTime.value = elapsed;
   }
@@ -2180,10 +2362,20 @@ class _PresentationBoundaryScreenState
   }
 
   void _setCameraFollowTarget(Vector3 target, {bool snap = false}) {
-    _cameraFollowTarget = Vector3.copy(target);
     if (snap) {
+      _cameraFollowTarget = Vector3.copy(target);
       _cameraRig = _cameraRig.copyWith(target: target);
+      return;
     }
+    final focusId = _attackMoveTargetId ?? _selectedEntityId;
+    final focusPosition = focusId == null
+        ? _groundTarget?.position
+        : _transformFor(focusId)?.position;
+    _cameraFollowTarget = gameplayCameraLookAheadTarget(
+      playerPosition: target,
+      movementDirection: _directMovementDirection,
+      focusPosition: focusPosition,
+    );
   }
 
   Vector3 get _playerPosition {
@@ -2217,8 +2409,18 @@ class _PresentationBoundaryScreenState
       .whereType<GuardianBossDefinition>()
       .firstOrNull;
 
+  GuardianArchetypeDefinition? _guardianArchetypeDefinition(
+    EntityId entityId,
+  ) => widget.runtimeWorld.definition.allEntities
+      .where((entity) => entity.id == entityId)
+      .map((entity) => entity.component<GuardianArchetypeDefinition>())
+      .whereType<GuardianArchetypeDefinition>()
+      .firstOrNull;
+
   String _guardianLabel(EntityId entityId) =>
-      _guardianBossDefinition(entityId)?.displayName ?? 'Guardian';
+      _guardianBossDefinition(entityId)?.displayName ??
+      _guardianArchetypeDefinition(entityId)?.displayName ??
+      'Guardian';
 
   void _applyAuthoredPlayerPower() {
     if (widget.multiplayerClient != null) return;
@@ -2483,6 +2685,8 @@ class _PresentationBoundaryScreenState
       final boss = widget.runtimeWorld.ecs.tryComponent<GuardianBossComponent>(
         entry.handle,
       );
+      final archetype = widget.runtimeWorld.ecs
+          .tryComponent<GuardianArchetypeComponent>(entry.handle);
       final arenaHazard = widget.runtimeWorld.ecs
           .tryComponent<GuardianArenaHazardComponent>(entry.handle);
       final remaining = state.remainingWindUpAt(_simulationTime);
@@ -2501,13 +2705,18 @@ class _PresentationBoundaryScreenState
             GuardianAttackPattern.melee => boss?.meleeRange ?? attack.range,
             GuardianAttackPattern.sweep => boss?.sweepRange ?? attack.range,
             GuardianAttackPattern.eruption =>
-              boss?.eruptionRadius ?? attack.range,
+              boss?.eruptionRadius ??
+                  (archetype == null
+                      ? attack.range
+                      : guardianLesserEruptionRadius),
             GuardianAttackPattern.fissureRing =>
               arenaHazard?.outerRadius ?? attack.range,
           },
           attackPattern: state.attackPattern,
           telegraphTargetPosition: state.telegraphTargetPosition!,
-          sweepHalfAngleDegrees: boss?.sweepHalfAngleDegrees ?? 55,
+          sweepHalfAngleDegrees:
+              boss?.sweepHalfAngleDegrees ??
+              guardianLesserSweepHalfAngleDegrees,
           innerSafeRadius: arenaHazard?.innerSafeRadius ?? 0,
           remaining: remaining,
           total: guardianWindUpDurationFor(state.attackPattern),
@@ -2548,6 +2757,46 @@ class _PresentationBoundaryScreenState
       (left, right) => left.entityId.value.compareTo(right.entityId.value),
     );
     return List.unmodifiable(states);
+  }
+
+  GameplayBossHudState? get _bossHudState {
+    final active = _bossFxStates.where((state) => state.isActive).toList();
+    if (active.isEmpty) return null;
+    final selectedId = _selectedEntityId;
+    final playerPosition = _playerPosition;
+    active.sort((left, right) {
+      final leftSelected = left.entityId == selectedId;
+      final rightSelected = right.entityId == selectedId;
+      if (leftSelected != rightSelected) return leftSelected ? -1 : 1;
+      final leftTransform = _transformFor(left.entityId);
+      final rightTransform = _transformFor(right.entityId);
+      final leftDistance = leftTransform == null
+          ? double.infinity
+          : (leftTransform.position - playerPosition).length2;
+      final rightDistance = rightTransform == null
+          ? double.infinity
+          : (rightTransform.position - playerPosition).length2;
+      final distanceOrder = leftDistance.compareTo(rightDistance);
+      return distanceOrder != 0
+          ? distanceOrder
+          : left.entityId.value.compareTo(right.entityId.value);
+    });
+    final state = active.first;
+    final transform = _transformFor(state.entityId);
+    if (selectedId != state.entityId &&
+        transform != null &&
+        (transform.position - playerPosition).length2 > 24 * 24) {
+      return null;
+    }
+    return GameplayBossHudState(
+      entityId: state.entityId,
+      label: _guardianLabel(state.entityId),
+      behaviorPhase: state.behaviorPhase,
+      encounterPhase: state.encounterPhase,
+      attackPattern: state.attackPattern,
+      currentHealth: state.currentHealth,
+      maximumHealth: state.maximumHealth,
+    );
   }
 
   Set<EntityId> get _activePresentationCharacterEntityIds => {
@@ -2639,6 +2888,13 @@ class _PresentationBoundaryScreenState
 
   void _recordAcceptedCombatResult(CombatAttackResult result) {
     if (!result.accepted || result.damageDealt <= 0) return;
+    if (result.attackerId == _playerEntityId) {
+      _combatRhythm = _combatRhythm.registerHit(
+        now: _simulationTime,
+        damage: result.damageDealt,
+        defeated: result.targetKilled,
+      );
+    }
     _combatPresentationTimeline.recordAcceptedAttack(
       attackerEntityId: result.attackerId,
       targetEntityId: result.targetId,
@@ -2753,9 +3009,35 @@ class _PresentationBoundaryScreenState
     );
   }
 
+  GameplaySkillCooldown _playerRecoveryCooldown() {
+    final handle = widget.runtimeWorld.ecs.handleFor(_playerEntityId);
+    final nextReadyAt = widget.multiplayerClient == null && handle != null
+        ? widget.runtimeWorld.ecs
+                  .tryComponent<RecoveryStateComponent>(handle)
+                  ?.nextReadyAt ??
+              Duration.zero
+        : _nextNetworkRecoveryAt;
+    return GameplaySkillCooldown.at(
+      total: playerRecoveryCooldown,
+      now: _simulationTime,
+      nextReadyAt: nextReadyAt,
+    );
+  }
+
   void _clearActionTargets() {
     _attackMoveTargetId = null;
     _interactionMoveTargetId = null;
+  }
+
+  void _refreshPresentation({bool snap = false}) {
+    final next = _extractPresentation();
+    if (snap) {
+      _previousPresentation = next;
+      _presentationInterpolationAlpha = 1;
+    } else {
+      _previousPresentation = _presentation;
+    }
+    _presentation = next;
   }
 
   PresentationSnapshot _extractPresentation() {
@@ -2890,7 +3172,7 @@ class _PresentationBoundaryScreenState
     }
 
     setState(() {
-      _presentation = _extractPresentation();
+      _refreshPresentation();
       _interactionStatus = status;
     });
   }
@@ -2997,7 +3279,7 @@ class _PresentationBoundaryScreenState
     final newlyOpenedGateIds = openGatesAfter.difference(openGatesBefore);
     _applyAuthoredPlayerPower();
     _rebuildGameplayQueries();
-    _presentation = _extractPresentation();
+    _refreshPresentation();
     switch (effect.kind!) {
       case AuthoredInteractionEffectKind.persistentFlag:
         if (newlyOpenedGateIds.isNotEmpty) {
@@ -3015,7 +3297,15 @@ class _PresentationBoundaryScreenState
         _recordObjectiveMilestone(objectiveProgressBefore);
       case AuthoredInteractionEffectKind.collectibleItem:
         if (!inventoryItemsBefore.contains(effect.itemId)) {
-          _recordPickupPresentation(effect.itemLabel!);
+          _recordPickupPresentation(
+            effect.itemLabel!,
+            maximumHealthBonus:
+                authoredPlayerPowerRewardFor(
+                  widget.runtimeWorld.definition,
+                  entityId,
+                )?.maximumHealthBonus ??
+                0,
+          );
         }
         _selectedEntityId = null;
         _interactionStatus =
@@ -3049,12 +3339,16 @@ class _PresentationBoundaryScreenState
     _dispatchIntent(InteractEntityIntent(targetId));
   }
 
-  void _recordPickupPresentation(String itemLabel) {
+  void _recordPickupPresentation(
+    String itemLabel, {
+    double maximumHealthBonus = 0,
+  }) {
     unawaited(widget.audioController.play(GameAudioCue.pickup));
     _playHaptic(GameHapticCue.pickup);
     _pickupNotice = PickupPresentationNotice(
       sequence: _nextPickupNoticeSequence++,
       itemLabel: itemLabel,
+      maximumHealthBonus: maximumHealthBonus,
     );
   }
 
@@ -3073,6 +3367,10 @@ class _PresentationBoundaryScreenState
       final labels = _adventureProgress.itemLabels;
       _recordPickupPresentation(
         addedItems.map((itemId) => labels[itemId] ?? itemId).join(' + '),
+        maximumHealthBonus: authoredPlayerPower(
+          widget.runtimeWorld.definition,
+          addedItems,
+        ).maximumHealthBonus,
       );
     }
     _presentedInventoryItemIds = Set.unmodifiable(nextItems);
@@ -3267,6 +3565,58 @@ class _PresentationBoundaryScreenState
     setState(() => _bossNotice = null);
   }
 
+  void _triggerRecovery() {
+    if (_isGameplaySuspended || !_rendererReady || _isPlayerDead) return;
+    final health = _healthFor(_playerEntityId);
+    if (health == null) {
+      setState(() => _interactionStatus = 'Relic Mend is unavailable');
+      return;
+    }
+    if (health.currentHealth >= health.maximumHealth) {
+      setState(() => _interactionStatus = 'Health is already full');
+      return;
+    }
+    final cooldown = _playerRecoveryCooldown();
+    if (!cooldown.isReady) {
+      setState(() {
+        _interactionStatus =
+            'Relic Mend recovering - ${cooldown.remainingLabel}';
+      });
+      return;
+    }
+    final multiplayerClient = widget.multiplayerClient;
+    if (multiplayerClient != null) {
+      final submission = multiplayerClient.submitGameplayCommand(
+        kind: GameplayCommandKind.recovery,
+      );
+      _watchGameplayCommand(submission.sent);
+      _nextNetworkRecoveryAt = _simulationTime + playerRecoveryCooldown;
+      setState(() {
+        _interactionStatus = 'Relic Mend submitted to the host';
+      });
+      return;
+    }
+    final result = _recoverySystem.recover(
+      entityId: _playerEntityId,
+      simulationTime: _simulationTime,
+    );
+    if (result.accepted) {
+      unawaited(widget.audioController.play(GameAudioCue.playerRecovery));
+      _playHaptic(GameHapticCue.recovery);
+    }
+    setState(() {
+      _refreshPresentation();
+      _interactionStatus = result.accepted
+          ? 'Relic Mend restored ${_formatHealth(result.healthRestored)} health'
+          : switch (result.rejection!) {
+              RecoveryRejection.unavailable => 'Relic Mend is unavailable',
+              RecoveryRejection.defeated => 'Restart before using Relic Mend',
+              RecoveryRejection.fullHealth => 'Health is already full',
+              RecoveryRejection.cooldown => 'Relic Mend is still recovering',
+            };
+    });
+  }
+
   void _triggerDodge() {
     if (_isGameplaySuspended || !_rendererReady || _isPlayerDead) return;
     final cooldown = _playerDodgeCooldown();
@@ -3335,7 +3685,7 @@ class _PresentationBoundaryScreenState
         ..replaceComponent<TransformComponent>(handle, beforeTransform)
         ..replaceComponent<DodgeStateComponent>(handle, beforeState);
       setState(() {
-        _presentation = _extractPresentation();
+        _refreshPresentation();
         _interactionStatus = 'Dodge stopped at the authored world edge';
       });
       return;
@@ -3398,8 +3748,10 @@ class _PresentationBoundaryScreenState
     _clearActionTargets();
     _nextNetworkAutoAttackAt = Duration.zero;
     _nextNetworkDodgeAt = Duration.zero;
+    _nextNetworkRecoveryAt = Duration.zero;
     _dodgePresentation = null;
     _combatPresentationTimeline.clear();
+    _combatRhythm = const GameplayCombatRhythm.empty();
     final multiplayerClient = widget.multiplayerClient;
     if (multiplayerClient != null) {
       final submission = multiplayerClient.submitGameplayCommand(
@@ -3421,12 +3773,13 @@ class _PresentationBoundaryScreenState
     _touchMovementByPointer.clear();
     _simulationTime = Duration.zero;
     _dodgeSystem.reset(_playerEntityId);
+    _recoverySystem.reset(_playerEntityId);
     _guardianBehaviorSystem.resetActiveGuardians();
     _bossNotice = null;
     _syncBossAudioIntensity();
     _rebuildGameplayQueries();
     setState(() {
-      _presentation = _extractPresentation();
+      _refreshPresentation(snap: true);
       _setCameraFollowTarget(_playerPosition, snap: true);
       _interactionStatus = 'Restarted at the Relay Zero entry point';
     });
@@ -3524,6 +3877,9 @@ class _PresentationBoundaryScreenState
           _cameraRig = _cameraRig.zoomBy(factor);
       }
     });
+    if (intent is SelectEntityIntent || intent is SetGroundTargetIntent) {
+      _setCameraFollowTarget(_playerPosition);
+    }
     if (intent is SetGroundTargetIntent) {
       _scheduleStreamingRefresh();
     }
@@ -3553,6 +3909,8 @@ class _PresentationBoundaryScreenState
             _attackSelected();
           case GameplayHotkeyAction.dodge:
             _triggerDodge();
+          case GameplayHotkeyAction.recovery:
+            _triggerRecovery();
           case GameplayHotkeyAction.interact:
             _interactSelected();
         }
@@ -3827,13 +4185,14 @@ class _PresentationBoundaryScreenState
       if (guardian.previousPhase != GuardianBehaviorPhase.windingUp &&
           guardian.phase == GuardianBehaviorPhase.windingUp) {
         final handle = widget.runtimeWorld.ecs.handleFor(guardian.guardianId);
-        final cue =
-            handle != null &&
-                widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(
-                  handle,
-                )
-            ? bossWindUpAudioCue(guardian.attackPattern)
-            : GameAudioCue.guardianWindUp;
+        final cue = guardianWindUpAudioCue(
+          guardian.attackPattern,
+          boss:
+              handle != null &&
+              widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(
+                handle,
+              ),
+        );
         unawaited(widget.audioController.play(cue));
       }
       if (guardian.attack case final attack? when !attack.accepted) {
@@ -3864,14 +4223,14 @@ class _PresentationBoundaryScreenState
         }
       }
       if (playerAttack != null) {
-        _presentation = _extractPresentation();
+        _refreshPresentation();
         _interactionStatus = _combatAttackStatus(playerAttack);
       }
       if (readyInteractionTargetId != null) {
         _interactWith(readyInteractionTargetId);
       }
       if (guardianChanged) {
-        _presentation = _extractPresentation();
+        _refreshPresentation();
       }
       for (final guardian in guardianResults) {
         final attack = guardian.attack;
@@ -3892,7 +4251,7 @@ class _PresentationBoundaryScreenState
   }
 
   void _applyMovement(CharacterMovementResult result) {
-    _presentation = _extractPresentation();
+    _refreshPresentation();
     _setCameraFollowTarget(result.position);
     if (result.collidedEntityIds.isNotEmpty) {
       _interactionStatus = 'Path blocked';
@@ -3999,7 +4358,7 @@ class _PresentationBoundaryScreenState
       return;
     }
     setState(() {
-      _presentation = _extractPresentation();
+      _refreshPresentation();
       _setCameraFollowTarget(result.position);
       if (result.collidedEntityIds.isNotEmpty) {
         _interactionStatus = 'Path blocked';
@@ -4028,6 +4387,7 @@ class _PresentationBoundaryScreenState
       _pendingMovementInputs.clear();
       _remoteInterpolators.clear();
       _touchMovementByPointer.clear();
+      _nextNetworkRecoveryAt = Duration.zero;
       _inputSubmissionPaused = false;
       _movementInputPacer.reset();
     }
@@ -4057,6 +4417,9 @@ class _PresentationBoundaryScreenState
         _interactionStatus = result.detail;
         if (result.kind == GameplayCommandKind.dodge && !result.accepted) {
           _nextNetworkDodgeAt = Duration.zero;
+        }
+        if (result.kind == GameplayCommandKind.recovery && !result.accepted) {
+          _nextNetworkRecoveryAt = Duration.zero;
         }
       }
       if (widget.runtimeWorld.ecs.handleFor(_playerEntityId) != null) {
@@ -4119,7 +4482,7 @@ class _PresentationBoundaryScreenState
         displayed == null ? authoritative : _transformFromNetwork(displayed),
       );
     }
-    _presentation = _extractPresentation();
+    _refreshPresentation(snap: true);
   }
 
   void _applyAuthoritativeGameplayState(
@@ -4134,6 +4497,18 @@ class _PresentationBoundaryScreenState
       final previous = widget.runtimeWorld.ecs.tryComponent<HealthComponent>(
         handle,
       );
+      if (emitCombatFeedback &&
+          previous != null &&
+          state.entityId == _playerEntityId &&
+          state.current > previous.currentHealth &&
+          (client
+                      .recoveryStates[state.entityId]
+                      ?.remainingCooldownMicroseconds ??
+                  0) >
+              0) {
+        unawaited(widget.audioController.play(GameAudioCue.playerRecovery));
+        _playHaptic(GameHapticCue.recovery);
+      }
       if (emitCombatFeedback &&
           previous != null &&
           state.current < previous.currentHealth) {
@@ -4170,6 +4545,24 @@ class _PresentationBoundaryScreenState
         widget.runtimeWorld.ecs.addComponent(handle, health);
       }
     }
+    for (final state in client.recoveryStates.values) {
+      final nextReadyAt =
+          _simulationTime +
+          Duration(microseconds: state.remainingCooldownMicroseconds);
+      if (state.entityId == _playerEntityId) {
+        _nextNetworkRecoveryAt = nextReadyAt;
+      }
+      final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
+      if (handle == null) continue;
+      final recoveryState = RecoveryStateComponent(nextReadyAt: nextReadyAt);
+      if (widget.runtimeWorld.ecs.hasComponent<RecoveryStateComponent>(
+        handle,
+      )) {
+        widget.runtimeWorld.ecs.replaceComponent(handle, recoveryState);
+      } else {
+        widget.runtimeWorld.ecs.addComponent(handle, recoveryState);
+      }
+    }
     for (final state in client.guardianStates.values) {
       final handle = widget.runtimeWorld.ecs.handleFor(state.entityId);
       if (handle == null) continue;
@@ -4186,10 +4579,12 @@ class _PresentationBoundaryScreenState
       if (emitCombatFeedback &&
           current.phase != GuardianBehaviorPhase.windingUp &&
           phase == GuardianBehaviorPhase.windingUp) {
-        final cue =
-            widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(handle)
-            ? bossWindUpAudioCue(attackPattern)
-            : GameAudioCue.guardianWindUp;
+        final cue = guardianWindUpAudioCue(
+          attackPattern,
+          boss: widget.runtimeWorld.ecs.hasComponent<GuardianBossComponent>(
+            handle,
+          ),
+        );
         unawaited(widget.audioController.play(cue));
       }
       if (emitCombatFeedback &&
@@ -4256,7 +4651,7 @@ class _PresentationBoundaryScreenState
         _collectedItemEntityIds.contains(interactionTargetId)) {
       _interactionMoveTargetId = null;
     }
-    _presentation = _extractPresentation();
+    _refreshPresentation(snap: true);
   }
 
   void _watchGameplayCommand(Future<void> sent) {
@@ -4307,7 +4702,9 @@ class _PresentationBoundaryScreenState
         scale: Vector3(value.scale[0], value.scale[1], value.scale[2]),
       ),
     );
-    widget.runtimeWorld.ecs.addComponent(handle, const DodgeStateComponent());
+    widget.runtimeWorld.ecs
+      ..addComponent(handle, const DodgeStateComponent())
+      ..addComponent(handle, const RecoveryStateComponent());
     widget.runtimeWorld.ecs.addComponent(
       handle,
       RenderableReferenceComponent(assetId: renderable.assetId),
@@ -4389,7 +4786,7 @@ class _PresentationBoundaryScreenState
     }
     if (changed) {
       setState(() {
-        _presentation = _extractPresentation();
+        _refreshPresentation();
       });
     }
   }
@@ -4537,7 +4934,7 @@ class _PresentationBoundaryScreenState
           }
           _rebuildGameplayQueries();
           setState(() {
-            _presentation = _extractPresentation();
+            _refreshPresentation(snap: true);
             final selectedEntityId = _selectedEntityId;
             if (selectedEntityId != null &&
                 widget.runtimeWorld.ecs.handleFor(selectedEntityId) == null) {
@@ -4597,6 +4994,7 @@ class _PresentationBoundaryScreenState
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,
     );
+    _recoverySystem = RecoverySystem(ecs: widget.runtimeWorld.ecs);
     _guardianBehaviorSystem = GuardianBehaviorSystem(
       ecs: widget.runtimeWorld.ecs,
       collisionWorld: _collisionWorld,

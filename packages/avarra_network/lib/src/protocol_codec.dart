@@ -130,6 +130,14 @@ final class NetworkProtocolCodec {
               'maximum': state.maximum,
             },
         ],
+        'recoveryStates': [
+          for (final state in message.recoveryStates)
+            {
+              'entityId': state.entityId.value,
+              'remainingCooldownMicroseconds':
+                  state.remainingCooldownMicroseconds,
+            },
+        ],
         'persistentFlagStates': [
           for (final state in message.persistentFlagStates)
             {'entityId': state.entityId.value, 'flags': state.flags},
@@ -311,6 +319,7 @@ final class NetworkProtocolCodec {
         _exactFields(payload, const {
           'revision',
           'healthStates',
+          'recoveryStates',
           'persistentFlagStates',
           'guardianStates',
           'inventoryItemIds',
@@ -318,6 +327,10 @@ final class NetworkProtocolCodec {
         final health = _list(
           payload['healthStates'],
           r'$.payload.healthStates',
+        );
+        final recovery = _list(
+          payload['recoveryStates'],
+          r'$.payload.recoveryStates',
         );
         final flags = _list(
           payload['persistentFlagStates'],
@@ -337,6 +350,13 @@ final class NetworkProtocolCodec {
             for (var index = 0; index < health.length; index += 1)
               _decodeHealthState(
                 _object(health[index], r'$.payload.healthStates[$index]'),
+                index,
+              ),
+          ],
+          recoveryStates: [
+            for (var index = 0; index < recovery.length; index += 1)
+              _decodeRecoveryState(
+                _object(recovery[index], r'$.payload.recoveryStates[$index]'),
                 index,
               ),
           ],
@@ -456,6 +476,26 @@ final class NetworkProtocolCodec {
       maximum: _double(
         value['maximum'],
         r'$.payload.healthStates[$index].maximum',
+      ),
+    );
+  }
+
+  NetworkRecoveryState _decodeRecoveryState(
+    Map<String, dynamic> value,
+    int index,
+  ) {
+    _exactFields(value, const {
+      'entityId',
+      'remainingCooldownMicroseconds',
+    }, r'$.payload.recoveryStates[]');
+    return NetworkRecoveryState(
+      entityId: _entityId(
+        value['entityId'],
+        r'$.payload.recoveryStates[$index].entityId',
+      ),
+      remainingCooldownMicroseconds: _int(
+        value['remainingCooldownMicroseconds'],
+        r'$.payload.recoveryStates[$index].remainingCooldownMicroseconds',
       ),
     );
   }

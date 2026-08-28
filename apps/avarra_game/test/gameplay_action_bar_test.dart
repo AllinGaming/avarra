@@ -41,6 +41,10 @@ void main() {
       gameplayHotkeyActionFor(LogicalKeyboardKey.shiftLeft),
       GameplayHotkeyAction.dodge,
     );
+    expect(
+      gameplayHotkeyActionFor(LogicalKeyboardKey.keyR),
+      GameplayHotkeyAction.recovery,
+    );
     expect(gameplayHotkeyActionFor(LogicalKeyboardKey.keyQ), isNull);
   });
 
@@ -48,6 +52,7 @@ void main() {
     final bindings = GameControlBindings.defaults
         .rebind(GameControl.primarySkill, GameInputKey.keyQ)
         .rebind(GameControl.dodge, GameInputKey.keyR)
+        .rebind(GameControl.recovery, GameInputKey.keyC)
         .rebind(GameControl.interact, GameInputKey.keyF);
 
     expect(
@@ -57,6 +62,10 @@ void main() {
     expect(
       gameplayHotkeyActionFor(LogicalKeyboardKey.keyR, bindings: bindings),
       GameplayHotkeyAction.dodge,
+    );
+    expect(
+      gameplayHotkeyActionFor(LogicalKeyboardKey.keyC, bindings: bindings),
+      GameplayHotkeyAction.recovery,
     );
     expect(
       gameplayHotkeyActionFor(LogicalKeyboardKey.keyF, bindings: bindings),
@@ -74,10 +83,12 @@ void main() {
   testWidgets('shows health and dispatches ready action slots', (tester) async {
     var primaryActivations = 0;
     var dodgeActivations = 0;
+    var recoveryActivations = 0;
     var interactionActivations = 0;
     final bindings = GameControlBindings.defaults
         .rebind(GameControl.primarySkill, GameInputKey.keyQ)
         .rebind(GameControl.dodge, GameInputKey.keyR)
+        .rebind(GameControl.recovery, GameInputKey.keyC)
         .rebind(GameControl.interact, GameInputKey.keyF);
     await tester.pumpWidget(
       MaterialApp(
@@ -95,8 +106,13 @@ void main() {
                 total: playerDodgeCooldown,
                 remaining: Duration.zero,
               ),
+              recoveryCooldown: GameplaySkillCooldown(
+                total: playerRecoveryCooldown,
+                remaining: Duration.zero,
+              ),
               onPrimary: () => primaryActivations++,
               onDodge: () => dodgeActivations++,
+              onRecovery: () => recoveryActivations++,
               onInteract: () => interactionActivations++,
               controlBindings: bindings,
             ),
@@ -109,6 +125,7 @@ void main() {
     expect(find.text('75/100'), findsOneWidget);
     expect(find.text('Q'), findsOneWidget);
     expect(find.text('R'), findsOneWidget);
+    expect(find.text('C'), findsOneWidget);
     expect(find.text('F'), findsOneWidget);
     expect(find.text('BASIC STRIKE · READY'), findsOneWidget);
     expect(
@@ -122,9 +139,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('basic_attack')));
     await tester.tap(find.byKey(const Key('dodge')));
+    await tester.tap(find.byKey(const Key('relic_mend')));
     await tester.tap(find.byKey(const Key('interact')));
     expect(primaryActivations, 1);
     expect(dodgeActivations, 1);
+    expect(recoveryActivations, 1);
     expect(interactionActivations, 1);
   });
 
@@ -147,8 +166,13 @@ void main() {
                 total: playerDodgeCooldown,
                 remaining: const Duration(milliseconds: 600),
               ),
+              recoveryCooldown: GameplaySkillCooldown(
+                total: playerRecoveryCooldown,
+                remaining: const Duration(seconds: 6),
+              ),
               onPrimary: () {},
               onDodge: () {},
+              onRecovery: () {},
               onInteract: null,
               compact: true,
             ),
@@ -160,6 +184,7 @@ void main() {
     expect(find.text('BASIC STRIKE · 0.4s'), findsOneWidget);
     expect(find.byKey(const Key('primary_skill_cooldown')), findsOneWidget);
     expect(find.byKey(const Key('dodge_skill_cooldown')), findsOneWidget);
+    expect(find.byKey(const Key('recovery_skill_cooldown')), findsOneWidget);
     expect(
       tester.widget<InkWell>(find.byKey(const Key('dodge'))).onTap,
       isNull,
@@ -187,8 +212,13 @@ void main() {
                 total: playerDodgeCooldown,
                 remaining: Duration.zero,
               ),
+              recoveryCooldown: GameplaySkillCooldown(
+                total: playerRecoveryCooldown,
+                remaining: Duration.zero,
+              ),
               onPrimary: () {},
               onDodge: () {},
+              onRecovery: () {},
               onInteract: () {},
               inputPromptMode: GameInputPromptMode.controller,
             ),
@@ -199,6 +229,7 @@ void main() {
 
     expect(find.text('X'), findsOneWidget);
     expect(find.text('B'), findsOneWidget);
+    expect(find.text('Y'), findsOneWidget);
     expect(find.text('A'), findsOneWidget);
     expect(find.text('SPACE'), findsNothing);
     expect(find.text('SHIFT'), findsNothing);

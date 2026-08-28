@@ -46,6 +46,12 @@ server-safe Dodge system owns its 1.8-unit collision sweep and 1.5-second
 cooldown for every connected avatar; client movement is only prediction. See
 ADR-037 and ADR-038.
 
+Stage 12.60 advances the handshake to protocol v7. The target-free Relic Mend
+command runs the shared server-safe RecoverySystem, while snapshots carry
+bounded remaining cooldown with authoritative health. Clients cannot author
+recovery amount or readiness. Restart resets this encounter-scoped state; save
+format v2 is unchanged. See ADR-039.
+
 Listen-host player movement uses the shared deterministic kinematic
 box-sweep/wall-slide system. Dynamic proof avatars copy the authored character
 controller and collider rather than bypassing authoritative collision.
